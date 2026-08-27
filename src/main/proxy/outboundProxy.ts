@@ -292,7 +292,7 @@ export class OutboundProxyManager {
         proxy: false,
         validateStatus: () => true,
       })
-      const allProxies: Record<string, { type?: string }> = response.data?.proxies ?? {}
+      const allProxies: Record<string, ClashProxyEntry> = response.data?.proxies ?? {}
       this.clashNodes = filterRealClashNodes(allProxies)
       return this.clashNodes
     } catch {
@@ -319,8 +319,33 @@ export class OutboundProxyManager {
   }
 
   /**
-   * Switch the Clash GLOBAL node to the next real proxy node. Returns the new
-   * node name, or null if there is nothing left to rotate to.
+   * Verify that the currently selected Clash node can actually reach the AI
+   * providers by issuing a small HTTPS request through the local mixed port.
+   * Returns true when the node is usable end-to-end.
+   */
+  private async verifyClashNodeExit(): Promise<boolean> {
+    const proxy = this.getActiveProxy()
+    if (!proxy) return false
+    try {
+      const response = await axios.get('https://chatglm.cn/', {
+        proxy: { protocol: 'http', host: proxy.host, port: proxy.port },
+        timeout: this.config.probeTimeoutMs * 8,
+        validateStatus: () => true,
+        maxRedirects: 0,
+      })
+      // 4xx/5xx from chatglm still means "we reached it"; a proxy-level failure
+      // surfaces as an exception instead.
+      return response.status >= 200 && response.status < 600
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Rotate to the next usable Clash node. Candidates are filtered to alive
+   * nodes; each switch is verified end-to-end and skipped when it fails, so a
+   * dead node is never handed to the forwarder. Returns the verified node name
+   * or null when every candidate failed.
    */
   async rotateToNextNode(): Promise<string | null> {
     if (this.clashNodes.length === 0 || !this.controllerUrl) {
@@ -328,14 +353,26 @@ export class OutboundProxyManager {
     }
     if (this.clashNodes.length === 0 || !this.controllerUrl) return null
 
-    this.clashNodeIndex = (this.clashNodeIndex + 1) % this.clashNodes.length
-    const node = this.clashNodes[this.clashNodeIndex]
-    if (!node || node === this.nodeBeforeProxy) return null
+    const startIndex = this.clashNodeIndex
+    const total = this.clashNodes.length
 
-    const ok = await this.changeClashNode(node)
-    if (!ok) return null
-    this.log(`Rotated outbound proxy node to: ${node}`)
-    return node
+    for (let i = 1; i <= total; i++) {
+      this.clashNodeIndex = (startIndex + i) % total
+      const node = this.clashNodes[this.clashNodeIndex]
+      if (!node) continue
+
+      const ok = await this.changeClashNode(node)
+      if (!ok) continue
+
+      if (await this.verifyClashNodeExit()) {
+        this.log(`Rotated outbound proxy node to: ${node} (verified)`)
+        return node
+      }
+      this.log(`Proxy node unusable, skipping: ${node}`)
+    }
+
+    this.log('All proxy nodes failed verification; keeping last selection')
+    return null
   }
 
   /** Current Clash GLOBAL node name (for diagnostics). */
@@ -563,13 +600,19 @@ export class OutboundProxyManager {
   }
 }
 
+export interface ClashProxyEntry {
+  type?: string
+  alive?: boolean
+  history?: Array<{ delay?: number }>
+}
+
 /**
- * Keep only the real proxy nodes from a Clash /proxies payload. Excludes
- * DIRECT/REJECT, traffic banners, and selector/url-test policy groups so node
- * rotation always lands on an actual exit server.
+ * Keep only the real, alive proxy nodes from a Clash /proxies payload. Excludes
+ * DIRECT/REJECT, traffic banners, dead nodes, and selector/url-test policy
+ * groups so node rotation always lands on an actual exit server that is up.
  */
 export function filterRealClashNodes(
-  allProxies: Record<string, { type?: string }>,
+  allProxies: Record<string, ClashProxyEntry | undefined>,
 ): string[] {
   const policyGroupTypes = new Set(['selector', 'urltest', 'fallback', 'loadbalance'])
   const nonNodeTypes = new Set([
@@ -577,12 +620,15 @@ export function filterRealClashNodes(
   ])
   const nodes: string[] = []
   for (const [name, entry] of Object.entries(allProxies)) {
-    const type = (entry?.type ?? '').toLowerCase()
+    if (!entry) continue
+    const type = (entry.type ?? '').toLowerCase()
     if (type.length === 0) continue
     if (policyGroupTypes.has(type)) continue
     if (nonNodeTypes.has(type)) continue
     if (name === 'DIRECT' || name === 'REJECT' || name === 'PASS') continue
     if (/^(剩余流量|套餐到期|过滤掉\d+条线路)/.test(name)) continue
+    // Skip nodes that mihomo's health checks have marked dead.
+    if (entry.alive === false) continue
     nodes.push(name)
   }
   return nodes

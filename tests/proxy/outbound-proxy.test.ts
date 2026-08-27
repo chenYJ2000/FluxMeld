@@ -57,3 +57,15 @@ test('filterRealClashNodes tolerates empty and missing payloads', () => {
   assert.deepEqual(filterRealClashNodes({}), [])
   assert.deepEqual(filterRealClashNodes({ foo: {} }), [])
 })
+
+test('filterRealClashNodes drops dead nodes', () => {
+  const proxies = {
+    '美国-在线': { type: 'Vmess', alive: true },
+    '美国-已死': { type: 'Vmess', alive: false },
+    '日本-未知状态': { type: 'Vmess' },
+  }
+  const nodes = filterRealClashNodes(proxies)
+  assert.ok(nodes.includes('美国-在线'))
+  assert.ok(nodes.includes('日本-未知状态'))
+  assert.ok(!nodes.includes('美国-已死'))
+})
