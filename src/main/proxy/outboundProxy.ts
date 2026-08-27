@@ -279,10 +279,9 @@ export class OutboundProxyManager {
   }
 
   /**
-   * Read every real proxy node the Clash instance knows about. Scans all proxy
-   * entries and keeps only actual exit servers (Vmess/Trojan/Hysteria/etc.);
-   * DIRECT, REJECT, traffic banners and selector/url-test policy groups are
-   * excluded so rotation always lands on a real node.
+   * Read the current real proxy nodes from the Clash instance. Called fresh on
+   * every rotation so nodes that recovered are picked up again and ones that
+   * just died are pushed to the back.
    */
   private async loadClashNodes(): Promise<string[]> {
     if (!this.controllerUrl) return []
@@ -342,15 +341,16 @@ export class OutboundProxyManager {
   }
 
   /**
-   * Rotate to the next usable Clash node. Candidates are filtered to alive
-   * nodes; each switch is verified end-to-end and skipped when it fails, so a
-   * dead node is never handed to the forwarder. Returns the verified node name
-   * or null when every candidate failed.
+   * Rotate to the next usable Clash node. Re-reads the node list on every call
+   * (so recovered nodes are eligible again), then walks candidates starting
+   * after the last selection, verifying each one end-to-end. Dead or broken
+   * nodes are skipped; the first node that actually reaches the provider wins.
+   * Returns the verified node name or null when nothing usable is found.
    */
   async rotateToNextNode(): Promise<string | null> {
-    if (this.clashNodes.length === 0 || !this.controllerUrl) {
-      await this.loadClashNodes()
-    }
+    // Fresh list each rotation — dead nodes may have recovered, and alive
+    // nodes are ordered first by mihomo health + latency.
+    await this.loadClashNodes()
     if (this.clashNodes.length === 0 || !this.controllerUrl) return null
 
     const startIndex = this.clashNodeIndex
@@ -607,9 +607,11 @@ export interface ClashProxyEntry {
 }
 
 /**
- * Keep only the real, alive proxy nodes from a Clash /proxies payload. Excludes
- * DIRECT/REJECT, traffic banners, dead nodes, and selector/url-test policy
- * groups so node rotation always lands on an actual exit server that is up.
+ * Keep the real proxy nodes from a Clash /proxies payload, sorted so that
+ * alive nodes (mihomo health-check OK) with the lowest latency come first.
+ * Dead nodes are NOT dropped — they can come back up later, so they stay in
+ * the pool ranked last. DIRECT/REJECT, traffic banners and policy groups are
+ * always excluded.
  */
 export function filterRealClashNodes(
   allProxies: Record<string, ClashProxyEntry | undefined>,
@@ -618,7 +620,7 @@ export function filterRealClashNodes(
   const nonNodeTypes = new Set([
     'compatible', 'pass', 'reject', 'rejectdrop', 'direct',
   ])
-  const nodes: string[] = []
+  const nodes: Array<{ name: string; alive: boolean; delay: number }> = []
   for (const [name, entry] of Object.entries(allProxies)) {
     if (!entry) continue
     const type = (entry.type ?? '').toLowerCase()
@@ -627,11 +629,17 @@ export function filterRealClashNodes(
     if (nonNodeTypes.has(type)) continue
     if (name === 'DIRECT' || name === 'REJECT' || name === 'PASS') continue
     if (/^(剩余流量|套餐到期|过滤掉\d+条线路)/.test(name)) continue
-    // Skip nodes that mihomo's health checks have marked dead.
-    if (entry.alive === false) continue
-    nodes.push(name)
+    const alive = entry.alive !== false
+    const delay = entry.history && entry.history[0]?.delay
+      ? entry.history[0].delay
+      : Number.MAX_SAFE_INTEGER
+    nodes.push({ name, alive, delay })
   }
-  return nodes
+  nodes.sort((a, b) => {
+    if (a.alive !== b.alive) return a.alive ? -1 : 1
+    return a.delay - b.delay
+  })
+  return nodes.map((n) => n.name)
 }
 
 export const outboundProxyManager = new OutboundProxyManager()

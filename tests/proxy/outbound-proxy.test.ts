@@ -58,14 +58,19 @@ test('filterRealClashNodes tolerates empty and missing payloads', () => {
   assert.deepEqual(filterRealClashNodes({ foo: {} }), [])
 })
 
-test('filterRealClashNodes drops dead nodes', () => {
+test('filterRealClashNodes ranks alive nodes first but keeps dead ones eligible', () => {
   const proxies = {
-    '美国-在线': { type: 'Vmess', alive: true },
-    '美国-已死': { type: 'Vmess', alive: false },
+    '美国-慢在线': { type: 'Vmess', alive: true, history: [{ delay: 500 }] },
+    '美国-快在线': { type: 'Vmess', alive: true, history: [{ delay: 100 }] },
+    '美国-已死（可能复活）': { type: 'Vmess', alive: false },
     '日本-未知状态': { type: 'Vmess' },
   }
   const nodes = filterRealClashNodes(proxies)
-  assert.ok(nodes.includes('美国-在线'))
-  assert.ok(nodes.includes('日本-未知状态'))
-  assert.ok(!nodes.includes('美国-已死'))
+  // Dead node stays in the pool so it can be used again after recovery,
+  // but alive nodes sort before it.
+  assert.ok(nodes.includes('美国-已死（可能复活）'))
+  assert.equal(nodes[0], '美国-快在线')
+  const deadIndex = nodes.indexOf('美国-已死（可能复活）')
+  const aliveSlowIndex = nodes.indexOf('美国-慢在线')
+  assert.ok(deadIndex > aliveSlowIndex, 'dead node ranks after alive nodes')
 })
