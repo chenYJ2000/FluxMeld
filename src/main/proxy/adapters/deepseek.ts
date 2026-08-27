@@ -131,7 +131,7 @@ export class DeepSeekAdapter {
         Authorization: `Bearer ${this.token}`,
         ...FAKE_HEADERS,
       },
-      timeout: 15000,
+      timeout: 1800000,
       validateStatus: () => true,
     })
 
@@ -185,7 +185,7 @@ export class DeepSeekAdapter {
           ...FAKE_HEADERS,
           Cookie: generateCookie(),
         },
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -215,7 +215,7 @@ export class DeepSeekAdapter {
             Authorization: `Bearer ${token}`,
             ...FAKE_HEADERS,
           },
-          timeout: 15000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -246,7 +246,7 @@ export class DeepSeekAdapter {
           Authorization: `Bearer ${token}`,
           ...FAKE_HEADERS,
         },
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -419,7 +419,7 @@ export class DeepSeekAdapter {
           Cookie: generateCookie(),
           'X-Ds-Pow-Response': challengeAnswer,
         },
-        timeout: 120000,
+        timeout: 1800000,
         validateStatus: () => true,
         responseType: 'stream',
       }
@@ -439,7 +439,7 @@ export class DeepSeekAdapter {
             Authorization: `Bearer ${token}`,
             ...FAKE_HEADERS,
           },
-          timeout: 30000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )

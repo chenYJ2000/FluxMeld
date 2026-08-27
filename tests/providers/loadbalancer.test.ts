@@ -90,3 +90,95 @@ test('model availability count follows persisted account and provider health', (
   provider.enabled = false
   assert.equal(loadBalancer.getAvailableAccountCount('Qwen3.6-Plus', provider.id), 0)
 })
+
+test('least-recently-used strategy picks the account unused the longest', (t) => {
+  const { provider, accounts } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  accounts[0].lastUsed = 1000
+  accounts[1].lastUsed = 2000
+
+  const selected = loadBalancer.selectAccount('Qwen3.6-Plus', 'least-recently-used', provider.id)
+  assert.equal(selected?.account.id, 'account-a')
+})
+
+test('least-recently-used strategy breaks lastUsed ties by todayUsed', (t) => {
+  const { provider, accounts } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  accounts[0].lastUsed = 2000
+  accounts[1].lastUsed = 2000
+  accounts[0].todayUsed = 50
+  accounts[1].todayUsed = 10
+
+  const selected = loadBalancer.selectAccount('Qwen3.6-Plus', 'least-recently-used', provider.id)
+  assert.equal(selected?.account.id, 'account-b')
+})
+
+test('least-recently-used strategy excludes quarantined accounts', (t) => {
+  const { provider, accounts } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  accounts[0].lastUsed = 1000
+  accounts[1].lastUsed = 2000
+  loadBalancer.markAccountFailed('account-a')
+  loadBalancer.markAccountFailed('account-a')
+  loadBalancer.markAccountFailed('account-a')
+
+  const selected = loadBalancer.selectAccount('Qwen3.6-Plus', 'least-recently-used', provider.id)
+  assert.equal(selected?.account.id, 'account-b')
+})
+
+test('balanced strategy keeps dispatch counts within 1 of each other', (t) => {
+  const { provider } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  const picked: string[] = []
+  for (let i = 0; i < 9; i++) {
+    const selected = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+    assert.ok(selected, `selection ${i} should succeed`)
+    picked.push(selected.account.id)
+    loadBalancer.releaseAccount(selected.account.id)
+  }
+
+  const countA = picked.filter((id) => id === 'account-a').length
+  const countB = picked.filter((id) => id === 'account-b').length
+  assert.ok(Math.abs(countA - countB) <= 1, `A=${countA}, B=${countB} must differ by <= 1`)
+})
+
+test('balanced strategy skips in-flight accounts and uses the idle one', (t) => {
+  const { provider } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  const first = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+  assert.ok(first, 'first selection')
+  const firstId = first.account.id
+
+  const second = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+  assert.ok(second, 'second selection')
+  assert.notEqual(second.account.id, firstId)
+
+  loadBalancer.releaseAccount(firstId)
+  const third = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+  assert.ok(third, 'third selection')
+  assert.equal(third.account.id, firstId)
+
+  loadBalancer.releaseAccount(second.account.id)
+  loadBalancer.releaseAccount(third.account.id)
+})
+
+test('balanced strategy does not deadlock when every account is in flight', (t) => {
+  const { provider } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  const a = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+  const b = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+  assert.ok(a && b, 'both accounts selected')
+
+  const c = loadBalancer.selectAccount('Qwen3.6-Plus', 'balanced', provider.id)
+  assert.ok(c, 'fallback selection still succeeds')
+
+  loadBalancer.releaseAccount(a.account.id)
+  loadBalancer.releaseAccount(b.account.id)
+  loadBalancer.releaseAccount(c.account.id)
+})

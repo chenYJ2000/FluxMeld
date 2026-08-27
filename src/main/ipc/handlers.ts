@@ -10,6 +10,7 @@ import { getBuiltinProviders, getBuiltinProvider } from '../providers/builtin'
 import { oauthManager } from '../oauth/manager'
 import { ProxyServer } from '../proxy/server'
 import { proxyStatusManager } from '../proxy/status'
+import { outboundProxyManager } from '../proxy/outboundProxy'
 import { sessionManager } from '../proxy/sessionManager'
 import { TrayManager } from '../tray/TrayManager'
 import { ConfigManager } from '../store/config'
@@ -190,6 +191,56 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       uptime: proxyStartTime && isRunning ? Date.now() - proxyStartTime : 0,
       connections: proxyStatusManager.getStatistics().activeConnections,
     }
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_GET_STATUS, async (): Promise<{
+    enabled: boolean
+    controllerUrl: string | null
+    proxyUrl: string
+    node: string | null
+  }> => {
+    return {
+      enabled: outboundProxyManager.isProxyMode(),
+      controllerUrl: outboundProxyManager.getControllerUrl(),
+      proxyUrl: outboundProxyManager.getProxyUrl(),
+      node: await outboundProxyManager.getClashNode(),
+    }
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_CHECK, async (): Promise<{
+    available: boolean
+    controllerUrl: string | null
+    proxyPorts: number[]
+    error?: string
+  }> => {
+    return outboundProxyManager.checkAvailability()
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_ENABLE, async (): Promise<{
+    success: boolean
+    error?: string
+    node?: string | null
+  }> => {
+    if (outboundProxyManager.isProxyMode()) {
+      return { success: true, node: await outboundProxyManager.getClashNode() }
+    }
+    return outboundProxyManager.enable()
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_DISABLE, async (): Promise<{ success: boolean }> => {
+    return outboundProxyManager.disable()
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_GET_NODES, async (): Promise<string[]> => {
+    return outboundProxyManager.getNodes()
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_SELECT_NODE, async (_, name: string): Promise<{
+    success: boolean
+    error?: string
+  }> => {
+    const ok = await outboundProxyManager.selectNode(name)
+    return ok ? { success: true } : { success: false, error: 'Failed to switch Clash node.' }
   })
 
   ipcMain.handle(IpcChannels.PROXY_GET_STATISTICS, async () => {

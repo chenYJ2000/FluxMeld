@@ -26,7 +26,7 @@ export interface CredentialField {
   helpText?: string
 }
 
-export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover'
+export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover' | 'least-recently-used' | 'balanced'
 
 export type Theme = 'light' | 'dark' | 'system'
 

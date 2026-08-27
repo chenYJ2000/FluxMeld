@@ -124,6 +124,8 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
       'round-robin': t('proxy.roundRobin'),
       'fill-first': t('proxy.fillFirst'),
       'failover': t('proxy.failover'),
+      'least-recently-used': t('proxy.leastRecentlyUsed'),
+      'balanced': t('proxy.balanced'),
     }
     return labels[strategy]
   }
@@ -133,6 +135,8 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
       'round-robin': t('proxy.roundRobinDesc'),
       'fill-first': t('proxy.fillFirstDesc'),
       'failover': t('proxy.failoverDesc'),
+      'least-recently-used': t('proxy.leastRecentlyUsedDesc'),
+      'balanced': t('proxy.balancedDesc'),
     }
     return descriptions[strategy]
   }
@@ -161,7 +165,7 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
               <SelectValue placeholder={t('proxy.selectStrategy')} />
             </SelectTrigger>
             <SelectContent>
-              {(['round-robin', 'fill-first', 'failover'] as LoadBalanceStrategy[]).map((strategy) => (
+              {(['round-robin', 'fill-first', 'failover', 'least-recently-used', 'balanced'] as LoadBalanceStrategy[]).map((strategy) => (
                 <SelectItem key={strategy} value={strategy}>
                   {getStrategyLabel(strategy)}
                 </SelectItem>

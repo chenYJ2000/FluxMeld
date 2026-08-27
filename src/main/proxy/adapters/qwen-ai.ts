@@ -326,7 +326,7 @@ export class QwenAiAdapter {
   private provider: Provider
   private account: Account
   private axiosInstance = axios.create({
-    timeout: 120000,
+    timeout: 1800000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity,
   })
@@ -578,7 +578,7 @@ export class QwenAiAdapter {
         'x-accel-buffering': 'no',
       },
       responseType: 'stream',
-      timeout: 120000,
+      timeout: 1800000,
       validateStatus: () => true,
     })
 

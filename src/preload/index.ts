@@ -57,6 +57,46 @@ const storeAPI = {
     ipcRenderer.invoke(IpcChannels.STORE_RETRY_INIT),
 }
 
+interface OutboundProxyStatus {
+  enabled: boolean
+  controllerUrl: string | null
+  proxyUrl: string
+  node: string | null
+}
+
+interface OutboundProxyCheckResult {
+  available: boolean
+  controllerUrl: string | null
+  proxyPorts: number[]
+  error?: string
+}
+
+interface OutboundProxyActionResult {
+  success: boolean
+  error?: string
+  node?: string | null
+}
+
+const outboundProxyAPI = {
+  getStatus: (): Promise<OutboundProxyStatus> =>
+    ipcRenderer.invoke(IpcChannels.OUTBOUND_PROXY_GET_STATUS),
+
+  check: (): Promise<OutboundProxyCheckResult> =>
+    ipcRenderer.invoke(IpcChannels.OUTBOUND_PROXY_CHECK),
+
+  enable: (): Promise<OutboundProxyActionResult> =>
+    ipcRenderer.invoke(IpcChannels.OUTBOUND_PROXY_ENABLE),
+
+  disable: (): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke(IpcChannels.OUTBOUND_PROXY_DISABLE),
+
+  getNodes: (): Promise<string[]> =>
+    ipcRenderer.invoke(IpcChannels.OUTBOUND_PROXY_GET_NODES),
+
+  selectNode: (name: string): Promise<OutboundProxyActionResult> =>
+    ipcRenderer.invoke(IpcChannels.OUTBOUND_PROXY_SELECT_NODE, name),
+}
+
 const providersAPI = {
   getAll: (): Promise<Provider[]> => 
     ipcRenderer.invoke(IpcChannels.PROVIDERS_GET_ALL),
@@ -702,6 +742,7 @@ const trayAPI = {
 
 const electronAPI = {
   proxy: proxyAPI,
+  outboundProxy: outboundProxyAPI,
   store: storeAPI,
   providers: providersAPI,
   accounts: accountsAPI,

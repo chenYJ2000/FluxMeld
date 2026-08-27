@@ -48,7 +48,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
   const validateTimeout = (value: string): string | undefined => {
     const timeout = parseInt(value, 10)
     if (isNaN(timeout)) return t('proxy.timeoutMustBeNumber')
-    if (timeout < 1 || timeout > 300) return t('proxy.timeoutRangeError')
+    if (timeout < 1 || timeout > 1800) return t('proxy.timeoutRangeError')
     return undefined
   }
 

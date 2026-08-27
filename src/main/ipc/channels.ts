@@ -6,6 +6,13 @@ export const IpcChannels = {
   PROXY_GET_STATISTICS: 'proxy:getStatistics',
   PROXY_RESET_STATISTICS: 'proxy:resetStatistics',
 
+  OUTBOUND_PROXY_GET_STATUS: 'outboundProxy:getStatus',
+  OUTBOUND_PROXY_CHECK: 'outboundProxy:check',
+  OUTBOUND_PROXY_ENABLE: 'outboundProxy:enable',
+  OUTBOUND_PROXY_DISABLE: 'outboundProxy:disable',
+  OUTBOUND_PROXY_GET_NODES: 'outboundProxy:getNodes',
+  OUTBOUND_PROXY_SELECT_NODE: 'outboundProxy:selectNode',
+
   CONFIG_GET: 'config:get',
   CONFIG_UPDATE: 'config:update',
   CONFIG_CHANGED: 'config:changed',

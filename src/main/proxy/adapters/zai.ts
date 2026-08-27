@@ -261,7 +261,7 @@ export class ZaiAdapter {
           'Cookie': `token=${token}`,
           Referer: `${ZAI_API_BASE}/`,
         },
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -287,7 +287,7 @@ export class ZaiAdapter {
             ...FAKE_HEADERS,
             Referer: `${ZAI_API_BASE}/`,
           },
-          timeout: 15000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -314,7 +314,7 @@ export class ZaiAdapter {
             ...FAKE_HEADERS,
             Referer: `${ZAI_API_BASE}/`,
           },
-          timeout: 30000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -532,7 +532,7 @@ export class ZaiAdapter {
           Priority: 'u=1, i',
         },
         responseType: 'stream',
-        timeout: 120000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -836,7 +836,7 @@ export class ZaiStreamHandler {
           console.log('[Z.ai] Non-stream timeout, resolving with current data, content length:', data.choices[0].message.content.length)
           resolveOnce(data)
         }
-      }, 60000)
+      }, 1800000)
 
       // Parameter is already response.data from forwarder.ts
       const streamData = response

@@ -267,7 +267,7 @@ export class MiniMaxAdapter {
           'x-signature': signature,
           'yy': yy,
         },
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -329,7 +329,7 @@ export class MiniMaxAdapter {
       method,
       url: `${AGENT_BASE_URL}${fullUri}`,
       data,
-      timeout: 15000,
+      timeout: 1800000,
       validateStatus: () => true,
       headers: {
         Referer: `${AGENT_BASE_URL}/`,
@@ -401,7 +401,7 @@ export class MiniMaxAdapter {
     }
 
     const stream = session.request(headers)
-    stream.setTimeout(120000)
+    stream.setTimeout(1800000)
     stream.setEncoding('utf8')
 
     stream.on('response', (respHeaders) => {

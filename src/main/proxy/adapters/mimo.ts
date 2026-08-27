@@ -372,7 +372,7 @@ export class MimoAdapter {
       },
       {
         headers: this.buildHeaders(serviceToken, userId, phToken),
-        timeout: 30000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -399,7 +399,7 @@ export class MimoAdapter {
         },
         {
           headers: this.buildHeaders(serviceToken, userId, phToken),
-          timeout: 30000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -491,7 +491,7 @@ export class MimoAdapter {
           Origin: MIMO_API_BASE,
           Referer: `${MIMO_API_BASE}/`,
         },
-        timeout: 30000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -535,7 +535,7 @@ export class MimoAdapter {
           Origin: MIMO_API_BASE,
           Referer: `${MIMO_API_BASE}/`,
         },
-        timeout: 60000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )

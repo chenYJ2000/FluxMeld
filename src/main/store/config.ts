@@ -275,8 +275,8 @@ export class ConfigManager {
    * @param timeout Timeout in milliseconds
    */
   static setRequestTimeout(timeout: number): void {
-    if (timeout < 1000 || timeout > 300000) {
-      throw new Error('Request timeout must be between 1000-300000 milliseconds')
+    if (timeout < 1000 || timeout > 1800000) {
+      throw new Error('Request timeout must be between 1000-1800000 milliseconds')
     }
     
     this.update({ requestTimeout: timeout })
@@ -325,8 +325,8 @@ export class ConfigManager {
     }
     
     if (config.requestTimeout !== undefined) {
-      if (config.requestTimeout < 1000 || config.requestTimeout > 300000) {
-        errors.push('Request timeout must be between 1000-300000 milliseconds')
+      if (config.requestTimeout < 1000 || config.requestTimeout > 1800000) {
+        errors.push('Request timeout must be between 1000-1800000 milliseconds')
       }
     }
     

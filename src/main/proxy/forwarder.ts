@@ -9,6 +9,7 @@ import { PassThrough } from 'stream'
 import { Account, Provider } from '../store/types'
 import { AccountSelection, ForwardResult, ChatCompletionRequest, ProxyContext } from './types'
 import { proxyStatusManager } from './status'
+import { outboundProxyManager } from './outboundProxy'
 import { loadBalancer } from './loadbalancer'
 import { storeManager } from '../store/store'
 import { DeepSeekAdapter } from './adapters/deepseek'
@@ -91,6 +92,26 @@ function isRetryableStatus(status: number | undefined, error?: string): boolean 
     || status === 425
     || status === 429
     || status >= 500
+}
+
+/**
+ * Whether the failure signals that the direct connection IP was rate-limited,
+ * blocked, or had transport-level problems — conditions where routing the
+ * reattempt through an outbound proxy is worth trying. Authentication failures
+ * (401) are excluded because they are credential problems, not IP problems.
+ */
+export function shouldRouteThroughProxy(
+  status: number | undefined,
+  error?: string,
+): boolean {
+  if (isToolCallingResponseErrorMessage(error)) return false
+  if (status === undefined) return true
+  return status === 403
+    || status === 408
+    || status === 409
+    || status === 425
+    || status === 429
+    || (status >= 500 && status <= 599)
 }
 
 function shouldMarkAccountFailed(
@@ -220,7 +241,7 @@ type ProviderForwarder = {
  */
 export class RequestForwarder {
   private axiosInstance = axios.create({
-    timeout: 120000,
+    timeout: 1800000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity,
   })
@@ -773,6 +794,12 @@ export class RequestForwarder {
         }
 
         if (result.success) {
+          // Non-streaming requests are finished here; the account lock can be
+          // released. For streaming, the lock stays held until the stream
+          // completes and the route layer releases it.
+          if (!(request.stream && result.stream)) {
+            loadBalancer.releaseAccount(currentSelection.account.id)
+          }
           return {
             ...result,
             contextMessages: modifiedRequest.messages.map(cloneChatMessage),
@@ -800,6 +827,9 @@ export class RequestForwarder {
         if (shouldMarkAccountFailed(lastStatus, lastError, lastToolCallingFailure)) {
           recordAccountFailure(currentSelection, lastStatus)
         }
+        // The final attempt is done; release its lock so the account can be
+        // picked by subsequent requests again.
+        loadBalancer.releaseAccount(currentSelection.account.id)
         break
       }
 
@@ -807,7 +837,23 @@ export class RequestForwarder {
         recordAccountFailure(currentSelection, lastStatus)
       }
 
+      // The direct connection was rate-limited, blocked, or failed at the
+      // transport layer. Route the reattempt through an outbound proxy so the
+      // next request leaves from a different IP. Await readiness (bounded) so
+      // this request's retry actually goes through the proxy. When already in
+      // proxy mode, rotate the Clash node to a different exit IP.
+      if (shouldRouteThroughProxy(lastStatus, lastError)) {
+        if (outboundProxyManager.isProxyMode()) {
+          await outboundProxyManager.rotateProxy()
+        } else {
+          await outboundProxyManager.ensureProxyForRequest()
+        }
+      }
+
       attemptedAccountIds.add(currentSelection.account.id)
+      // This account's attempt has finished (it failed). Release its lock so
+      // the concurrency counter reflects reality when we retry another account.
+      loadBalancer.releaseAccount(currentSelection.account.id)
       const nextSelection = loadBalancer.selectAccount(
         request.model,
         config.loadBalanceStrategy,

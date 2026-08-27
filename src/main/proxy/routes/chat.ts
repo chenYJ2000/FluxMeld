@@ -518,6 +518,7 @@ router.post('/completions', async (ctx: Context) => {
         streamSettled = true
         const finalLatency = Date.now() - startTime
 
+        loadBalancer.releaseAccount(usedAccount.id)
         persistSuccessfulSession(assistantMessageFromSSE(collectedContent))
 
         loadBalancer.clearAccountFailure(usedAccount.id)
@@ -556,6 +557,7 @@ router.post('/completions', async (ctx: Context) => {
         const finalLatency = Date.now() - startTime
         const statusCode = 502
 
+        loadBalancer.releaseAccount(usedAccount.id)
         loadBalancer.markAccountFailed(usedAccount.id)
         proxyStatusManager.recordRequestFailure(finalLatency)
         storeManager.recordRequestInStats(

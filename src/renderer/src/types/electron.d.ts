@@ -73,6 +73,35 @@ interface ProxyAPI {
   onStatusChanged: (callback: (status: ProxyStatus) => void) => () => void
 }
 
+interface OutboundProxyStatus {
+  enabled: boolean
+  controllerUrl: string | null
+  proxyUrl: string
+  node: string | null
+}
+
+interface OutboundProxyCheckResult {
+  available: boolean
+  controllerUrl: string | null
+  proxyPorts: number[]
+  error?: string
+}
+
+interface OutboundProxyActionResult {
+  success: boolean
+  error?: string
+  node?: string | null
+}
+
+interface OutboundProxyAPI {
+  getStatus: () => Promise<OutboundProxyStatus>
+  check: () => Promise<OutboundProxyCheckResult>
+  enable: () => Promise<OutboundProxyActionResult>
+  disable: () => Promise<{ success: boolean }>
+  getNodes: () => Promise<string[]>
+  selectNode: (name: string) => Promise<OutboundProxyActionResult>
+}
+
 interface StoreAPI {
   get: <T>(key: string) => Promise<T | undefined>
   set: <T>(key: string, value: T) => Promise<void>
@@ -464,6 +493,7 @@ interface ToolCallingAPI {
 
 interface ElectronAPI {
   proxy: ProxyAPI
+  outboundProxy: OutboundProxyAPI
   store: StoreAPI
   providers: ProvidersAPI
   accounts: AccountsAPI

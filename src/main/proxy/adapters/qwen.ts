@@ -114,7 +114,7 @@ export class QwenAdapter {
   private provider: Provider
   private account: Account
   private axiosInstance = axios.create({
-    timeout: 120000,
+    timeout: 1800000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity,
   })
@@ -203,7 +203,7 @@ export class QwenAdapter {
       {
         headers: this.getApiHeaders(ticket),
         params: this.getApiParams(),
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -238,7 +238,7 @@ export class QwenAdapter {
           nonce: generateNonce(),
           timestamp,
         }),
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -263,7 +263,7 @@ export class QwenAdapter {
       {
         headers: this.getApiHeaders(ticket),
         params: this.getApiParams(),
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -423,7 +423,7 @@ export class QwenAdapter {
         Cookie: `tongyi_sso_ticket=${ticket}`,
       },
       responseType: 'stream',
-      timeout: 120000,
+      timeout: 1800000,
       decompress: false,
     })
 

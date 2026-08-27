@@ -196,12 +196,14 @@ router.post('/completions', async (ctx: Context) => {
       const finishSuccess = () => {
         if (streamSettled) return
         streamSettled = true
+        loadBalancer.releaseAccount(usedAccount.id)
         recordSuccess(Date.now() - startTime)
       }
       const finishFailure = (error: Error) => {
         if (streamSettled) return
         streamSettled = true
         const finalLatency = Date.now() - startTime
+        loadBalancer.releaseAccount(usedAccount.id)
         loadBalancer.markAccountFailed(usedAccount.id)
         proxyStatusManager.recordRequestFailure(finalLatency)
         storeManager.addLog('error', `Completion stream error: ${error.message}`, {

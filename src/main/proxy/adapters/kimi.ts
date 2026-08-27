@@ -357,7 +357,7 @@ export class KimiAdapter {
           'Content-Type': 'application/connect+json',
           ...FAKE_HEADERS,
         },
-        timeout: 120000,
+        timeout: 1800000,
         validateStatus: () => true,
         responseType: 'stream',
       }
@@ -390,7 +390,7 @@ export class KimiAdapter {
             'Content-Type': 'application/json',
             ...FAKE_HEADERS,
           },
-          timeout: 15000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -418,7 +418,7 @@ export class KimiAdapter {
           'Content-Type': 'application/json',
           ...FAKE_HEADERS,
         },
-        timeout: 15000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )
@@ -450,7 +450,7 @@ export class KimiAdapter {
           'Content-Type': 'application/json',
           ...FAKE_HEADERS,
         },
-        timeout: 30000,
+        timeout: 1800000,
         validateStatus: () => true,
       }
     )

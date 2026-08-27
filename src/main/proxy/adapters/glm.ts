@@ -47,19 +47,19 @@ const FAKE_HEADERS = {
   Origin: 'https://chatglm.cn',
   Pragma: 'no-cache',
   Priority: 'u=1, i',
-  'Sec-Ch-Ua': '"Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
+  'Sec-Ch-Ua': '"Google Chrome";v="151", "Chromium";v="151", "Not=A?Brand";v="99"',
   'Sec-Ch-Ua-Mobile': '?0',
   'Sec-Ch-Ua-Platform': '"Windows"',
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'X-App-Fr': 'browser_extension',
+  'X-App-Fr': 'default',
   'X-App-Platform': 'pc',
   'X-App-Version': '0.0.1',
   'X-Device-Brand': '',
   'X-Device-Model': '',
   'X-Lang': 'zh',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36 Edg/143.0.0.0',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
 }
 
 interface TokenInfo {
@@ -244,7 +244,7 @@ export class GLMAdapter {
           'X-Sign': sign.sign,
           'X-Timestamp': sign.timestamp,
         },
-        timeout: getGLMRequestTimeout(15000, options),
+        timeout: getGLMRequestTimeout(1800000, options),
         signal: options?.signal,
         validateStatus: () => true,
       }
@@ -326,7 +326,7 @@ export class GLMAdapter {
       const response = await axios.get(fileUrl, {
         responseType: 'arraybuffer',
         maxContentLength: FILE_MAX_SIZE,
-        timeout: getGLMRequestTimeout(60000, options),
+        timeout: getGLMRequestTimeout(1800000, options),
         signal: options?.signal,
       })
       fileData = Buffer.from(response.data)
@@ -351,7 +351,7 @@ export class GLMAdapter {
           ...formData.getHeaders(),
         },
         maxBodyLength: FILE_MAX_SIZE,
-        timeout: getGLMRequestTimeout(60000, options),
+        timeout: getGLMRequestTimeout(1800000, options),
         signal: options?.signal,
         validateStatus: () => true,
       }
@@ -684,7 +684,7 @@ GLM STRICT RULES:
           'X-Timestamp': sign.timestamp,
           'X-Nonce': sign.nonce,
         },
-        timeout: getGLMRequestTimeout(120000, options),
+        timeout: getGLMRequestTimeout(1800000, options),
         signal: options?.signal,
         validateStatus: () => true,
         responseType: 'stream',
@@ -715,7 +715,7 @@ GLM STRICT RULES:
             'X-Nonce': sign.nonce,
             ...FAKE_HEADERS,
           },
-          timeout: 15000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -752,7 +752,7 @@ GLM STRICT RULES:
               'X-Nonce': sign.nonce,
               ...FAKE_HEADERS,
             },
-            timeout: 30000,
+            timeout: 1800000,
             validateStatus: () => true,
           }
         )
@@ -801,7 +801,7 @@ GLM STRICT RULES:
             'X-Nonce': sign.nonce,
             ...FAKE_HEADERS,
           },
-          timeout: 60000,
+          timeout: 1800000,
           validateStatus: () => true,
         }
       )
@@ -1202,7 +1202,7 @@ export class GLMStreamHandler {
       stream.once('end', onTransportEnd)
       stream.once('close', onTransportEnd)
 
-      const timeoutMs = getGLMRequestTimeout(120000, options)
+      const timeoutMs = getGLMRequestTimeout(1800000, options)
       timeoutHandle = setTimeout(() => failResponse(
         new RequestTimeoutError(
           options?.requestId ?? 'unknown',

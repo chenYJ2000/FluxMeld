@@ -16,6 +16,12 @@ export class LoadBalancer {
   private static readonly FAIL_THRESHOLD = 3
   private static readonly RECOVERY_TIME = 60000 // 1 minute
 
+  /** Per-account total dispatch count (every selection increments it). */
+  private dispatchCounts: Map<string, number> = new Map()
+
+  /** Per-account number of in-flight requests (concurrency lock). */
+  private inFlightCounts: Map<string, number> = new Map()
+
   /**
    * Mark account as failed
    */
@@ -32,6 +38,27 @@ export class LoadBalancer {
    */
   clearAccountFailure(accountId: string): void {
     this.failedAccounts.delete(accountId)
+  }
+
+  /**
+   * Release the concurrency lock for an account. Called once the request that
+   * selected the account has finished (success, failure, or stream end).
+   */
+  releaseAccount(accountId: string): void {
+    const current = this.inFlightCounts.get(accountId) || 0
+    if (current <= 1) {
+      this.inFlightCounts.delete(accountId)
+    } else {
+      this.inFlightCounts.set(accountId, current - 1)
+    }
+  }
+
+  /**
+   * Reset the dispatch counters (e.g. after accounts change).
+   */
+  resetDispatchCounts(): void {
+    this.dispatchCounts.clear()
+    this.inFlightCounts.clear()
   }
 
   /**
@@ -82,6 +109,14 @@ export class LoadBalancer {
 
     if (strategy === 'failover') {
       return this.selectFailover(candidates)
+    }
+
+    if (strategy === 'least-recently-used') {
+      return this.selectLeastRecentlyUsed(candidates)
+    }
+
+    if (strategy === 'balanced') {
+      return this.selectBalanced(candidates)
     }
 
     return this.selectRoundRobin(candidates)
@@ -310,6 +345,80 @@ export class LoadBalancer {
     })
 
     return sortedCandidates[0]
+  }
+
+  /**
+   * Least Recently Used strategy
+   * Select the account that has been unused the longest, giving preference
+   * to accounts with lower today-used counts when last-used ties.
+   */
+  private selectLeastRecentlyUsed(candidates: AccountSelection[]): AccountSelection {
+    return candidates.reduce((best, current) => {
+      const bestLastUsed = best.account.lastUsed || 0
+      const currentLastUsed = current.account.lastUsed || 0
+
+      if (currentLastUsed < bestLastUsed) {
+        return current
+      }
+
+      if (currentLastUsed === bestLastUsed) {
+        const bestUsed = best.account.todayUsed || 0
+        const currentUsed = current.account.todayUsed || 0
+
+        if (currentUsed < bestUsed) {
+          return current
+        }
+      }
+
+      return best
+    })
+  }
+
+  /**
+   * Strictly Balanced strategy
+   *
+   * Keeps the number of times each account has been dispatched within 1 of
+   * every other account, even under concurrency:
+   *   - Every selection increments that account's dispatch counter.
+   *   - Accounts with pending (in-flight) requests are skipped so a slow
+   *     account is never piled up with concurrent calls.
+   *   - The account with the lowest dispatch count is chosen; ties break by
+   *     the fewest in-flight requests, then by today's usage, then name.
+   */
+  private selectBalanced(candidates: AccountSelection[]): AccountSelection {
+    const available = candidates.filter(
+      (candidate) => !this.isInFlight(candidate.account.id),
+    )
+    const pool = available.length > 0 ? available : candidates
+
+    const selected = pool.reduce((best, current) => {
+      const bestDispatch = this.dispatchCounts.get(best.account.id) ?? 0
+      const currentDispatch = this.dispatchCounts.get(current.account.id) ?? 0
+
+      if (currentDispatch < bestDispatch) return current
+      if (currentDispatch > bestDispatch) return best
+
+      const bestInFlight = this.inFlightCounts.get(best.account.id) ?? 0
+      const currentInFlight = this.inFlightCounts.get(current.account.id) ?? 0
+      if (currentInFlight < bestInFlight) return current
+      if (currentInFlight > bestInFlight) return best
+
+      const bestUsed = best.account.todayUsed || 0
+      const currentUsed = current.account.todayUsed || 0
+      if (currentUsed < bestUsed) return current
+      if (currentUsed > bestUsed) return best
+
+      return (current.account.id < best.account.id) ? current : best
+    })
+
+    // Acquire the concurrency lock + count the dispatch.
+    this.dispatchCounts.set(selected.account.id, (this.dispatchCounts.get(selected.account.id) ?? 0) + 1)
+    this.inFlightCounts.set(selected.account.id, (this.inFlightCounts.get(selected.account.id) ?? 0) + 1)
+    return selected
+  }
+
+  private isInFlight(accountId: string): boolean {
+    return (this.inFlightCounts.get(accountId) ?? 0) > 0
   }
 
   /**

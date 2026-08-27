@@ -24,7 +24,7 @@ export class ProxyStatusManager {
   private config: ProxyConfig = {
     port: 8080,
     host: '0.0.0.0',
-    timeout: 120000,
+    timeout: 1800000,
     retryCount: 3,
     retryDelay: 5000,
     maxConnections: 100,
