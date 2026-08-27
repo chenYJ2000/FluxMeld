@@ -127,6 +127,11 @@ interface ChatCompletionRequest {
   chatId?: string
 }
 
+export interface QwenAiRequestOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
 export class QwenAiRequestValidationError extends Error {
   constructor(message: string) {
     super(message)
@@ -400,7 +405,11 @@ export class QwenAiAdapter {
     return model
   }
 
-  async createChat(modelId: string, title: string = 'New Chat'): Promise<string> {
+  async createChat(
+    modelId: string,
+    title: string = 'New Chat',
+    requestOptions: QwenAiRequestOptions = {},
+  ): Promise<string> {
     const url = `${QWEN_AI_BASE}/api/v2/chats/new`
     const payload = {
       title,
@@ -414,6 +423,8 @@ export class QwenAiAdapter {
     try {
       const response = await this.axiosInstance.post(url, payload, {
         headers: this.getHeaders(),
+        ...(requestOptions.timeoutMs !== undefined ? { timeout: requestOptions.timeoutMs } : {}),
+        ...(requestOptions.signal ? { signal: requestOptions.signal } : {}),
       })
 
       console.log('[QwenAI] Create chat response status:', response.status)
@@ -478,7 +489,10 @@ export class QwenAiAdapter {
     }
   }
 
-  async chatCompletion(request: ChatCompletionRequest): Promise<{
+  async chatCompletion(
+    request: ChatCompletionRequest,
+    requestOptions: QwenAiRequestOptions = {},
+  ): Promise<{
     response: AxiosResponse
     chatId: string
     parentId: string | null
@@ -513,7 +527,7 @@ export class QwenAiAdapter {
     const generationSettings = resolveQwenAiGenerationSettings(request, forceThinking)
 
     // Always create a new chat (single-turn mode only)
-    const chatId = await this.createChat(modelId, 'OpenAI_API_Chat')
+    const chatId = await this.createChat(modelId, 'OpenAI_API_Chat', requestOptions)
     console.log('[QwenAI] Created new chat:', chatId)
 
     // The Qwen web endpoint accepts one user message. Preserve the complete
@@ -578,7 +592,8 @@ export class QwenAiAdapter {
         'x-accel-buffering': 'no',
       },
       responseType: 'stream',
-      timeout: 1800000,
+      timeout: requestOptions.timeoutMs ?? 1800000,
+      ...(requestOptions.signal ? { signal: requestOptions.signal } : {}),
       validateStatus: () => true,
     })
 

@@ -248,11 +248,6 @@ router.post('/completions', async (ctx: Context) => {
   }
 
   const config = storeManager.getConfig()
-  const requestTimeoutMs = getEffectiveRequestTimeout(
-    request,
-    config.toolCallingConfig?.clientAdapterId,
-    config.requestTimeout,
-  )
   const preferredProviderId = modelMapper.getPreferredProvider(request.model)
   const preferredAccountId = modelMapper.getPreferredAccount(request.model)
 
@@ -318,6 +313,16 @@ router.post('/completions', async (ctx: Context) => {
       return
     }
   }
+
+  // Resolve client identity from the exact request that will be forwarded.
+  // Stateful callers may omit the persisted OpenCode system message from a
+  // continuation turn, so calculating this before session restoration would
+  // incorrectly retain the normal one-minute deadline.
+  const requestTimeoutMs = getEffectiveRequestTimeout(
+    forwardRequest,
+    config.toolCallingConfig?.clientAdapterId,
+    config.requestTimeout,
+  )
 
   const context: ProxyContext = {
     requestId,

@@ -25,6 +25,21 @@ test('RequestForwarder preserves Qwen generation controls', () => {
   assert.match(source, /maxCompletionTokens: request\.max_completion_tokens/)
 })
 
+test('Qwen AI uses the request deadline and preserves the selected history protocol', () => {
+  const forwarderSource = readFileSync(join(root, 'src/main/proxy/forwarder.ts'), 'utf8')
+  const adapterSource = readFileSync(join(root, 'src/main/proxy/adapters/qwen-ai.ts'), 'utf8')
+
+  assert.match(
+    forwarderSource,
+    /forwardQwenAi\(request, account, provider, actualModel, startTime, context\)/,
+  )
+  assert.match(forwarderSource, /toolProtocol: transformed\.plan\.protocol/)
+  assert.match(forwarderSource, /timeoutMs: getRemainingTimeout\(/)
+  assert.match(forwarderSource, /signal: context\.signal/)
+  assert.match(adapterSource, /timeout: requestOptions\.timeoutMs \?\? 1800000/)
+  assert.match(adapterSource, /signal: requestOptions\.signal/)
+})
+
 test('RequestForwarder preserves terminal HTTP status after retries', () => {
   const source = readFileSync(join(root, 'src/main/proxy/forwarder.ts'), 'utf8')
 

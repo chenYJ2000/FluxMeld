@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 import { getEffectiveRequestTimeout } from '../../src/main/proxy/requestTimeoutPolicy.ts'
@@ -50,5 +51,21 @@ test('other clients and requests without tools retain the configured deadline', 
   assert.equal(
     getEffectiveRequestTimeout({ ...toolRequest, tools: [] }, 'opencode', 60_000),
     60_000,
+  )
+})
+
+test('session restoration happens before the route resolves the OpenCode deadline', () => {
+  const routeSource = readFileSync(
+    new URL('../../src/main/proxy/routes/chat.ts', import.meta.url),
+    'utf8',
+  )
+  const sessionRestoreIndex = routeSource.indexOf('sessionManager.prepareSessionMessages')
+  const timeoutResolutionIndex = routeSource.indexOf('const requestTimeoutMs = getEffectiveRequestTimeout')
+
+  assert.ok(sessionRestoreIndex >= 0)
+  assert.ok(timeoutResolutionIndex > sessionRestoreIndex)
+  assert.match(
+    routeSource.slice(timeoutResolutionIndex),
+    /getEffectiveRequestTimeout\(\s*forwardRequest,/
   )
 })

@@ -274,8 +274,8 @@ export class RequestForwarder {
     {
       name: 'qwen-ai',
       matches: QwenAiAdapter.isQwenAiProvider,
-      forward: (request, account, provider, actualModel, startTime) =>
-        this.forwardQwenAi(request, account, provider, actualModel, startTime),
+      forward: (request, account, provider, actualModel, startTime, context) =>
+        this.forwardQwenAi(request, account, provider, actualModel, startTime, context),
     },
     {
       name: 'zai',
@@ -1464,9 +1464,11 @@ export class RequestForwarder {
     account: Account,
     provider: Provider,
     actualModel: string,
-    startTime: number
+    startTime: number,
+    context: ProxyContext,
   ): Promise<ForwardResult> {
     try {
+      throwIfAborted(context.signal)
       const transformed = this.transformRequestForPromptToolUse(request, provider)
       
       const adapter = new QwenAiAdapter(provider, account)
@@ -1481,8 +1483,17 @@ export class RequestForwarder {
         reasoning_effort: request.reasoning_effort,
         max_tokens: request.max_tokens,
         max_completion_tokens: request.max_completion_tokens,
-        toolProtocol: transformed.plan.shouldParseResponse ? transformed.plan.protocol : undefined,
+        // History serialization must keep the selected client protocol even
+        // when this turn disables response parsing with tool_choice: none.
+        toolProtocol: transformed.plan.protocol,
+      }, {
+        signal: context.signal,
+        timeoutMs: getRemainingTimeout(
+          context.deadlineAt,
+          context.timeoutMs ?? proxyStatusManager.getConfig().timeout,
+        ),
       })
+      throwIfAborted(context.signal)
 
       const latency = Date.now() - startTime
 

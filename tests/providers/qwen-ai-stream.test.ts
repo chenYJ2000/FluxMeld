@@ -5,6 +5,7 @@ import { Readable } from 'node:stream'
 import {
   buildQwenAiFeatureConfig,
   buildQwenAiPrompt,
+  QwenAiAdapter,
   QwenAiStreamHandler,
   resolveQwenAiGenerationSettings,
 } from '../../src/main/proxy/adapters/qwen-ai.ts'
@@ -22,6 +23,44 @@ async function collect(stream: NodeJS.ReadableStream): Promise<string> {
   }
   return chunks.join('')
 }
+
+test('Qwen AI applies the effective request deadline to chat creation and completion', async () => {
+  const adapter = new QwenAiAdapter({
+    id: 'qwen-ai',
+    name: 'Qwen AI',
+    apiEndpoint: 'https://chat.qwen.ai',
+    modelMappings: {},
+  } as any, {
+    id: 'account-1',
+    credentials: { token: 'test-token' },
+  } as any)
+  const requestConfigs: any[] = []
+  const controller = new AbortController()
+
+  ;(adapter as any).axiosInstance = {
+    post: async (url: string, _payload: unknown, config: unknown) => {
+      requestConfigs.push(config)
+      return url.endsWith('/chats/new')
+        ? { status: 200, data: { data: { id: 'chat-1' } } }
+        : { status: 200, data: Readable.from([]) }
+    },
+  }
+
+  await adapter.chatCompletion({
+    model: 'Qwen3.6-Plus',
+    messages: [{ role: 'user', content: 'Inspect the project.' }],
+  }, {
+    signal: controller.signal,
+    timeoutMs: 180_000,
+  })
+
+  assert.equal(requestConfigs.length, 2)
+  assert.deepEqual(
+    requestConfigs.map((config) => config.timeout),
+    [180_000, 180_000],
+  )
+  assert.ok(requestConfigs.every((config) => config.signal === controller.signal))
+})
 
 test('Qwen AI non-stream returns answer content and real upstream usage', async () => {
   const handler = new QwenAiStreamHandler('qwen3.6-plus')
