@@ -5,8 +5,10 @@
 | 供应商 ID | kimi |
 | 官网 | https://www.kimi.com |
 | API Base | https://www.kimi.com |
-| 认证 | JWT Token |
+| 认证 | JWT Token 或 v10 会话 Token（kimi-auth Cookie） |
 | 凭据字段 | `token` |
+
+新版 kimi.com 的 `kimi-auth` Cookie 值为 `v10` 开头的不透明会话 Token（base64 形式）。该格式通过 `Cookie: kimi-auth=<token>` 携带发送，不能走 `Authorization: Bearer`（服务器会报 token malformed）。会话过期后需重新登录获取，Kimi 不提供刷新接口。
 
 ## 默认模型
 

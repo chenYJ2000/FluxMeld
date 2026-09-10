@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { getBuiltinProvider } from './builtin'
+import { buildKimiAuthHeaders } from './kimiToken'
 import type { Provider, ProviderCheckResult, Account } from '../../shared/types'
 import type { BuiltinProviderConfig } from '../store/types'
 
@@ -337,7 +338,7 @@ export class ProviderChecker {
         {},
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...buildKimiAuthHeaders(token),
             'Content-Type': 'application/json',
             'Connect-Protocol-Version': '1',
             'Accept': '*/*',

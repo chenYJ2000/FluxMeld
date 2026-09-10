@@ -10,6 +10,7 @@ import { toolsToSystemPrompt, TOOL_WRAP_HINT, hasToolPromptInjected } from '../u
 import { parseToolCallsFromText } from '../utils/toolParser'
 import { createBaseChunk } from '../utils/streamToolHandler'
 import { createKimiChatPayload, encodeKimiGrpcFrame } from './providerModelOptions'
+import { buildKimiAuthHeaders } from '../../providers/kimiToken'
 import { getProviderToolProfile } from '../toolCalling/providerProfiles'
 import { ToolStreamParser } from '../toolCalling/ToolStreamParser'
 import type { ToolCallingPlan } from '../toolCalling/types'
@@ -145,7 +146,7 @@ export class KimiAdapter {
       return { accessToken: this.token, userId }
     }
 
-    console.log('[Kimi] Non-JWT token detected, attempting direct use...')
+    console.log('[Kimi] Non-JWT token detected (opaque v10 session token), sending via kimi-auth cookie')
     accessTokenMap.set(this.token, {
       accessToken: this.token,
       refreshToken: this.token,
@@ -353,7 +354,7 @@ export class KimiAdapter {
       frameBuffer,
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          ...buildKimiAuthHeaders(accessToken),
           'Content-Type': 'application/connect+json',
           ...FAKE_HEADERS,
         },
@@ -386,7 +387,7 @@ export class KimiAdapter {
         { chat_id: conversationId },
         {
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            ...buildKimiAuthHeaders(accessToken),
             'Content-Type': 'application/json',
             ...FAKE_HEADERS,
           },
@@ -414,7 +415,7 @@ export class KimiAdapter {
       },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          ...buildKimiAuthHeaders(accessToken),
           'Content-Type': 'application/json',
           ...FAKE_HEADERS,
         },
@@ -446,7 +447,7 @@ export class KimiAdapter {
       { chat_ids: chatIds },
       {
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          ...buildKimiAuthHeaders(accessToken),
           'Content-Type': 'application/json',
           ...FAKE_HEADERS,
         },

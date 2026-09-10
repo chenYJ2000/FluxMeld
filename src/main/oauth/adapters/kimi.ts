@@ -14,6 +14,7 @@ import {
   AdapterConfig,
   OAuthCallbackData,
 } from '../types'
+import { buildKimiAuthHeaders } from '../../providers/kimiToken'
 
 const KIMI_API_BASE = 'https://www.kimi.com'
 
@@ -120,7 +121,9 @@ export class KimiAdapter extends BaseOAuthAdapter {
     }
     
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+      for (const [key, value] of Object.entries(buildKimiAuthHeaders(token))) {
+        headers[key] = value
+      }
     }
     
     return headers
@@ -133,7 +136,7 @@ export class KimiAdapter extends BaseOAuthAdapter {
       body,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...buildKimiAuthHeaders(token),
           'Content-Type': 'application/json',
           'Connect-Protocol-Version': '1',
           ...FAKE_HEADERS,
@@ -186,7 +189,7 @@ export class KimiAdapter extends BaseOAuthAdapter {
     this.emitProgress('pending', 'Validating Token...')
     
     const tokenType = this.detectTokenType(token)
-    this.emitProgress('pending', `Detected token type: ${tokenType === 'jwt' ? 'JWT Access Token' : 'Unknown Token'}`)
+    this.emitProgress('pending', `Detected token type: ${tokenType === 'jwt' ? 'JWT Access Token' : 'Opaque Session Token (kimi-auth cookie)'}`)
     
     try {
       const credentials: Record<string, string> = { accessToken: token }
