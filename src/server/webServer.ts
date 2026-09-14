@@ -2,9 +2,9 @@
  * Headless web server.
  *
  * Serves the built renderer, exposes the IPC channels over HTTP
- * (`POST /api/invoke`), pushes backend events over SSE (`GET /api/events`) and
- * reverse-proxies the OpenAI/proxy + management API paths to the in-process
- * proxy server.
+ * (`POST /api/invoke`), pushes backend events over SSE (`GET /api/events`),
+ * hosts the management API (`/v0/management/*`) directly, and reverse-proxies
+ * the OpenAI-compatible paths (`/v1`, `/health`, `/stats`) to the proxy server.
  */
 
 import Koa, { type Context, type Next } from 'koa'
@@ -16,8 +16,9 @@ import { join, normalize, resolve, sep } from 'path'
 import mime from 'mime-types'
 import { ipcMain } from './stubs/electron'
 import { subscribeToEvents } from './eventBus'
+import managementRoutes from '../main/proxy/routes/management'
 
-const PROXY_PATH_PREFIXES = ['/v1', '/v0', '/health', '/stats']
+const PROXY_PATH_PREFIXES = ['/v1', '/health', '/stats']
 
 const BRIDGE_SCRIPT = `<script src="/__bridge.js"></script>`
 
@@ -38,12 +39,15 @@ function resolveBridgePath(explicit?: string): string {
   return explicit || process.env.FLUXMELD_BRIDGE_PATH || join(__dirname, '__bridge.js')
 }
 
-function injectBridge(html: string): string {
+function injectBridge(html: string, accessPasswordRequired: boolean): string {
+  const scripts =
+    `<script>window.__FLUXMELD_WEB_INFO__=${JSON.stringify({ accessPasswordRequired })}</script>\n  ` +
+    BRIDGE_SCRIPT
   if (html.includes('/__bridge.js')) return html
   if (html.includes('</head>')) {
-    return html.replace('</head>', `  ${BRIDGE_SCRIPT}\n</head>`)
+    return html.replace('</head>', `  ${scripts}\n</head>`)
   }
-  return `${BRIDGE_SCRIPT}\n${html}`
+  return `${scripts}\n${html}`
 }
 
 function proxyToProxyServer(proxyPort: number) {
@@ -93,8 +97,10 @@ export async function startWebServer(options: WebServerOptions): Promise<http.Se
   // Optional access password (disabled unless WEB_ACCESS_PASSWORD is set).
   if (options.accessPassword) {
     app.use(async (ctx: Context, next: Next) => {
+      const authHeader = ctx.get('Authorization') || ''
       const provided =
         ctx.get('x-access-password') ||
+        (authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '') ||
         ctx.cookies.get('fluxmeld_access') ||
         (ctx.query.access as string | undefined)
 
@@ -114,7 +120,29 @@ export async function startWebServer(options: WebServerOptions): Promise<http.Se
     })
   }
 
+  // Reverse proxy must run before bodyParser so request bodies can be streamed
+  // to the proxy server untouched (otherwise POST/PUT bodies are consumed).
+  const proxyMiddleware = async (ctx: Context, next: Next) => {
+    if (
+      PROXY_PATH_PREFIXES.some(
+        (prefix) => ctx.path === prefix || ctx.path.startsWith(`${prefix}/`),
+      )
+    ) {
+      await proxyToProxyServer(options.proxyPort)(ctx)
+      return
+    }
+    await next()
+  }
+  app.use(proxyMiddleware)
+
   app.use(bodyParser({ jsonLimit: '100mb', formLimit: '100mb', textLimit: '100mb' }))
+
+  // Management API is served here (port 3000) only. It is protected by the
+  // access password middleware above and managementAuthMiddleware per route.
+  for (const route of managementRoutes) {
+    app.use(route.routes())
+    app.use(route.allowedMethods())
+  }
 
   router.post('/api/invoke', async (ctx: Context) => {
     const body = (ctx.request.body || {}) as { channel?: string; args?: unknown[] }
@@ -177,19 +205,6 @@ export async function startWebServer(options: WebServerOptions): Promise<http.Se
     ctx.body = createReadStream(bridgePath)
   })
 
-  const proxyMiddleware = async (ctx: Context, next: Next) => {
-    if (
-      PROXY_PATH_PREFIXES.some(
-        (prefix) => ctx.path === prefix || ctx.path.startsWith(`${prefix}/`),
-      )
-    ) {
-      await proxyToProxyServer(options.proxyPort)(ctx)
-      return
-    }
-    await next()
-  }
-
-  app.use(proxyMiddleware)
   app.use(router.routes())
   app.use(router.allowedMethods())
 
@@ -227,7 +242,7 @@ export async function startWebServer(options: WebServerOptions): Promise<http.Se
 
     if (filePath.endsWith('index.html')) {
       ctx.type = 'html'
-      ctx.body = injectBridge(readFileSync(filePath, 'utf-8'))
+      ctx.body = injectBridge(readFileSync(filePath, 'utf-8'), Boolean(options.accessPassword))
       return
     }
 

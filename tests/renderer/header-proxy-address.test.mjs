@@ -29,5 +29,7 @@ test('tool calling smoke uses a local management API URL that is actually served
   assert.match(preloadSource, /configuredHost === '0\.0\.0\.0'/)
   assert.match(preloadSource, /return `http:\/\/\$\{host\}:\$\{config\.proxyPort\}\/v0\/management`/)
   assert.doesNotMatch(preloadSource, /managementApi\?\.managementApiPort \|\| config\.proxyPort/)
-  assert.match(managementSettingsSource, /const apiEndpoint = `http:\/\/127\.0\.0\.1:\$\{proxyPort\}\/v0\/management`/)
+  assert.match(managementSettingsSource, /const apiEndpoint = `\$\{window\.location\.origin\}\/v0\/management`/)
+  assert.match(managementSettingsSource, /window\.electronAPI\?\.platform === 'web'/)
+  assert.doesNotMatch(managementSettingsSource, /127\.0\.0\.1/)
 })

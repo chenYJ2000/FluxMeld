@@ -3,12 +3,11 @@
  * Implements proxy server based on Koa
  */
 
-import Koa, { type Context, type Next } from 'koa'
+import Koa from 'koa'
 import Router from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { Server as HttpServer } from 'http'
 import routes from './routes'
-import managementRoutes from './routes/management'
 import { proxyStatusManager } from './status'
 import { storeManager } from '../store/store'
 import { sessionManager } from './sessionManager'
@@ -63,12 +62,6 @@ export class ProxyServer {
       // Skip paths that don't require authentication
       const publicPaths = ['/', '/health', '/stats']
       if (publicPaths.includes(ctx.path)) {
-        await next()
-        return
-      }
-
-      // Skip management API paths - they have their own authentication
-      if (ctx.path.startsWith('/v0/management')) {
         await next()
         return
       }
@@ -195,52 +188,8 @@ export class ProxyServer {
       ctx.body = statistics
     })
 
-    // Management API enable check middleware
-    // This must be registered before management routes
-    const managementEnableCheck = async (ctx: Context, next: Next) => {
-      if (!ctx.path.startsWith('/v0/management')) {
-        await next()
-        return
-      }
-
-      if (process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS === '1') {
-        await next()
-        return
-      }
-
-      try {
-        const config = storeManager.getConfig()
-        if (!config.managementApi?.enableManagementApi) {
-          ctx.status = 404
-          ctx.body = {
-            success: false,
-            error: {
-              code: 'management_api_disabled',
-              message: 'Management API is not enabled',
-            },
-          }
-          return
-        }
-        await next()
-      } catch {
-        ctx.status = 503
-        ctx.body = {
-          success: false,
-          error: {
-            code: 'service_unavailable',
-            message: 'Service is initializing',
-          },
-        }
-      }
-    }
-
-    this.app.use(managementEnableCheck)
-
-    // Register all management routes (they already have /v0/management prefix)
-    for (const route of managementRoutes) {
-      this.app.use(route.routes())
-      this.app.use(route.allowedMethods())
-    }
+    // Management API is served by the web server only (see src/server/webServer.ts).
+    // This proxy exposes the OpenAI-compatible API exclusively.
 
     this.app.use(this.router.routes())
     this.app.use(this.router.allowedMethods())

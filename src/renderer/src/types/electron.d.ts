@@ -518,6 +518,10 @@ interface ElectronAPI {
 declare global {
   interface Window {
     electronAPI: ElectronAPI
+    /** Injected by the headless web server in web mode. */
+    __FLUXMELD_WEB_INFO__?: {
+      accessPasswordRequired: boolean
+    }
   }
 }
 

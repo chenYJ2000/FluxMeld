@@ -13,8 +13,13 @@
  *   FLUXMELD_BRIDGE_PATH                Built bridge script path
  */
 
-// Must be set before any management route handles a request.
-process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS = process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS || '1'
+// Management API authentication is derived from the optional web access
+// password: when set, management routes require it; otherwise they are open.
+if (process.env.WEB_ACCESS_PASSWORD) {
+  process.env.FLUXMELD_MANAGEMENT_ACCESS_PASSWORD = process.env.WEB_ACCESS_PASSWORD
+} else {
+  process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS = process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS || '1'
+}
 
 import { ipcMain, registerWebWindow } from './stubs/electron'
 import { registerIpcHandlers } from '../main/ipc/handlers'

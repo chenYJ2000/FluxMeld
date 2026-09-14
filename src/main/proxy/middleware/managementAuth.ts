@@ -68,6 +68,11 @@ function extractAuthToken(ctx: Context): string | null {
     return secretHeader.trim()
   }
 
+  const accessHeader = ctx.get('X-Access-Password')
+  if (accessHeader) {
+    return accessHeader.trim()
+  }
+
   return null
 }
 
@@ -78,8 +83,24 @@ function extractAuthToken(ctx: Context): string | null {
  * Returns 401 Unauthorized for invalid/missing authentication
  */
 export async function managementAuthMiddleware(ctx: Context, next: Next): Promise<void> {
-  // Headless web mode runs without authentication.
+  // Headless web mode without an access password runs unauthenticated.
   if (process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS === '1') {
+    await next()
+    return
+  }
+
+  // When the web access password is enabled, it also guards the management API.
+  const accessPassword = process.env.FLUXMELD_MANAGEMENT_ACCESS_PASSWORD
+  if (accessPassword) {
+    const provided = extractAuthToken(ctx)
+    if (!provided || provided !== accessPassword) {
+      ctx.status = 401
+      ctx.body = createUnauthorizedResponse(
+        'Authentication required. Provide Authorization: Bearer <password> or X-Access-Password header',
+        'missing_authentication',
+      )
+      return
+    }
     await next()
     return
   }

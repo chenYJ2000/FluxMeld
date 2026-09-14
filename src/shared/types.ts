@@ -290,6 +290,61 @@ export interface UpdateAccountRequest {
   dailyLimit?: number
 }
 
+export interface BatchCreateAccountsRequest {
+  accounts: CreateAccountRequest[]
+}
+
+export interface BatchUpdateAccountItem extends UpdateAccountRequest {
+  id: string
+  status?: AccountStatus
+}
+
+export interface BatchUpdateAccountsRequest {
+  updates: BatchUpdateAccountItem[]
+}
+
+export interface BatchDeleteAccountsRequest {
+  ids?: string[]
+  /** When set, every account of this provider is deleted. */
+  providerId?: string
+}
+
+export interface AccountQueryRequest {
+  ids?: string[]
+  providerId?: string
+  status?: AccountStatus
+  /** Case-insensitive substring match on the account name. */
+  name?: string
+  /** Case-insensitive substring match on the account email. */
+  email?: string
+  /** When true, returns plaintext credentials instead of masked values. */
+  includeCredentials?: boolean
+}
+
+export interface BatchAccountResult {
+  index: number
+  success: boolean
+  account?: Account
+  id?: string
+  error?: ManagementApiError
+}
+
+export interface BatchAccountsResponse {
+  total: number
+  succeeded: number
+  failed: number
+  results: BatchAccountResult[]
+}
+
+export interface BatchDeleteAccountsResponse extends BatchAccountsResponse {
+  deletedCount: number
+}
+
+export interface AccountsQueryResponse {
+  total: number
+  items: Account[]
+}
+
 export interface CreateApiKeyRequest {
   name: string
   description?: string
