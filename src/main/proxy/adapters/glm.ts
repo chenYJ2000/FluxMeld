@@ -1044,7 +1044,10 @@ export class GLMStreamHandler {
       let settled = false
       let timeoutHandle: ReturnType<typeof setTimeout> | undefined
 
-      const onData = (buffer: Buffer): void => parser.feed(buffer.toString())
+      const decoder = new TextDecoder('utf-8')
+      const onData = (buffer: Buffer | string): void => parser.feed(
+        typeof buffer === 'string' ? buffer : decoder.decode(buffer, { stream: true }),
+      )
       const onError = (error: Error): void => failResponse(
         new GLMUpstreamResponseError(`GLM upstream stream error: ${sanitizeGLMUpstreamMessage(error.message)}`),
       )
