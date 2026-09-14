@@ -3,11 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Router, CheckCircle2, XCircle, RefreshCw, Loader2 } from 'lucide-react'
+import { Router, CheckCircle2, XCircle, RefreshCw, Loader2, Save } from 'lucide-react'
 
 interface OutboundProxyConfigProps {
   onConfigChange?: () => void
@@ -26,6 +27,9 @@ export function OutboundProxyConfig({ onConfigChange }: OutboundProxyConfigProps
   const [loadingNodes, setLoadingNodes] = useState(false)
   const [checkError, setCheckError] = useState<string | null>(null)
   const [checked, setChecked] = useState(false)
+  const [controllerAddress, setControllerAddress] = useState('127.0.0.1:9097')
+  const [controllerSecret, setControllerSecret] = useState('')
+  const [savingController, setSavingController] = useState(false)
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -55,6 +59,44 @@ export function OutboundProxyConfig({ onConfigChange }: OutboundProxyConfigProps
   useEffect(() => {
     refreshStatus()
   }, [refreshStatus])
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const config = await window.electronAPI.config.get()
+        setControllerAddress(config.outboundProxy?.controllerUrl ?? '127.0.0.1:9097')
+        setControllerSecret(config.outboundProxy?.secret ?? '')
+      } catch (error) {
+        console.error('Failed to load controller config:', error)
+      }
+    })()
+  }, [])
+
+  const handleSaveController = async () => {
+    setSavingController(true)
+    try {
+      const ok = await window.electronAPI.config.update({
+        outboundProxy: {
+          controllerUrl: controllerAddress.trim(),
+          secret: controllerSecret.trim(),
+        },
+      })
+      toast({
+        title: ok ? t('common.success') : t('common.error'),
+        description: ok ? t('proxy.outboundControllerSaved') : t('proxy.configSaveFailed'),
+        variant: ok ? undefined : 'destructive',
+      })
+    } catch (error) {
+      console.error('Failed to save controller config:', error)
+      toast({
+        title: t('common.error'),
+        description: t('proxy.configSaveFailed'),
+        variant: 'destructive',
+      })
+    } finally {
+      setSavingController(false)
+    }
+  }
 
   const handleCheck = async () => {
     setChecking(true)
@@ -176,6 +218,37 @@ export function OutboundProxyConfig({ onConfigChange }: OutboundProxyConfigProps
             }}
             disabled={checking}
           />
+        </div>
+
+        <div className="space-y-3 pt-2 border-t">
+          <div className="space-y-1">
+            <Label htmlFor="clash-controller-address">{t('proxy.outboundControllerUrl')}</Label>
+            <Input
+              id="clash-controller-address"
+              value={controllerAddress}
+              onChange={(event) => setControllerAddress(event.target.value)}
+              placeholder="127.0.0.1:9097"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="clash-controller-secret">{t('proxy.outboundControllerSecret')}</Label>
+            <Input
+              id="clash-controller-secret"
+              type="password"
+              value={controllerSecret}
+              onChange={(event) => setControllerSecret(event.target.value)}
+              placeholder={t('proxy.outboundControllerSecretPlaceholder')}
+            />
+            <p className="text-xs text-muted-foreground">{t('proxy.outboundControllerHelp')}</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleSaveController} disabled={savingController}>
+            {savingController ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+            ) : (
+              <Save className="h-3.5 w-3.5 mr-1" />
+            )}
+            {t('common.save')}
+          </Button>
         </div>
 
         <div className="flex items-center justify-between space-x-2 pt-2 border-t">

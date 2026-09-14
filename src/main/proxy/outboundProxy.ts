@@ -11,7 +11,7 @@
  * switches the Clash GLOBAL node to the next usable server.
  */
 
-import axios from 'axios'
+import axios, { type AxiosResponse } from 'axios'
 import net from 'net'
 
 export interface OutboundProxyConfig {
@@ -49,6 +49,9 @@ export class OutboundProxyManager {
 
   /** Clash external controller URL (e.g. http://127.0.0.1:9097) when present */
   private controllerUrl: string | null = null
+
+  /** Clash external controller secret (Bearer token), empty when unauthenticated */
+  private controllerSecret = ''
 
   /** Clash "mode" observed before we switched it to global for proxy routing */
   private modeBeforeProxy: ClashMode | null = null
@@ -115,7 +118,7 @@ export class OutboundProxyManager {
         available: false,
         controllerUrl: null,
         proxyPorts,
-        error: 'Clash controller not detected. Enable the external controller (e.g. 127.0.0.1:9097).',
+        error: 'Clash controller not detected. Enable the external controller and set its address/secret in the outbound proxy settings.',
       }
     }
     return { available: true, controllerUrl: this.controllerUrl, proxyPorts }
@@ -224,58 +227,117 @@ export class OutboundProxyManager {
     return results
   }
 
+  /**
+   * Read the user-configured controller address/secret. Uses a lazy import to
+   * avoid a module cycle with the store.
+   */
+  private async getControllerSettings(): Promise<{ controllerUrl: string; secret: string }> {
+    try {
+      const { storeManager } = await import('../store/store')
+      const settings = storeManager.getConfig().outboundProxy
+      return {
+        controllerUrl: (settings?.controllerUrl ?? '').trim(),
+        secret: (settings?.secret ?? '').trim(),
+      }
+    } catch {
+      return { controllerUrl: '', secret: '' }
+    }
+  }
+
+  /** Authorization header for the Clash controller, when a secret is configured. */
+  private controllerHeaders(): Record<string, string> {
+    return this.controllerSecret ? { Authorization: `Bearer ${this.controllerSecret}` } : {}
+  }
+
+  /**
+   * Issue a request against the Clash controller with the configured auth
+   * header. Returns null when no controller is known or the request fails.
+   */
+  private async controllerRequest(
+    method: 'get' | 'patch' | 'put',
+    path: string,
+    data?: unknown,
+    timeoutMs: number = this.config.probeTimeoutMs,
+  ): Promise<AxiosResponse | null> {
+    if (!this.controllerUrl) return null
+    try {
+      return await axios.request({
+        method,
+        url: `${this.controllerUrl}${path}`,
+        data,
+        headers: { ...this.controllerHeaders() },
+        timeout: timeoutMs,
+        proxy: false,
+        validateStatus: () => true,
+      })
+    } catch {
+      return null
+    }
+  }
+
+  /** Normalize a user-entered controller address into an "http(s)://host:port" URL. */
+  private normalizeControllerUrl(value: string): string | null {
+    const trimmed = value.trim()
+    if (!trimmed) return null
+    try {
+      const url = trimmed.startsWith('http://') || trimmed.startsWith('https://')
+        ? new URL(trimmed)
+        : new URL(`http://${trimmed}`)
+      return `${url.protocol}//${url.host}`
+    } catch {
+      return null
+    }
+  }
+
+  /** Check whether a URL hosts a Clash/mihomo external controller. */
+  private async probeController(url: string): Promise<boolean> {
+    try {
+      const response = await axios.get(`${url}/version`, {
+        timeout: this.config.probeTimeoutMs,
+        proxy: false,
+        headers: { ...this.controllerHeaders() },
+        validateStatus: () => true,
+      })
+      return response.status === 200 && /"meta"|"version"|"Path"/.test(JSON.stringify(response.data))
+    } catch {
+      return false
+    }
+  }
+
   private async discoverController(): Promise<string | null> {
+    const settings = await this.getControllerSettings()
+    this.controllerSecret = settings.secret
+
+    // Prefer an explicitly configured controller address.
+    if (settings.controllerUrl) {
+      const url = this.normalizeControllerUrl(settings.controllerUrl)
+      if (url && (await this.probeController(url))) {
+        this.controllerUrl = url
+        return url
+      }
+    }
+
+    // Fall back to probing well-known local controller ports.
     const controllerPorts = [9097, 9090, 9091, 9098, 6170, 6171]
     for (const port of controllerPorts) {
       const url = `http://127.0.0.1:${port}`
-      try {
-        const response = await axios.get(`${url}/version`, {
-          timeout: this.config.probeTimeoutMs,
-          proxy: false,
-          validateStatus: () => true,
-        })
-        if (response.status === 200 && /"meta"|"version"|"Path"/.test(JSON.stringify(response.data))) {
-          this.controllerUrl = url
-          return url
-        }
-      } catch {
-        // not a controller on this port
+      if (await this.probeController(url)) {
+        this.controllerUrl = url
+        return url
       }
     }
     return null
   }
 
   private async getClashMode(): Promise<ClashMode | null> {
-    if (!this.controllerUrl) return null
-    try {
-      const response = await axios.get(`${this.controllerUrl}/configs`, {
-        timeout: this.config.probeTimeoutMs * 2,
-        proxy: false,
-        validateStatus: () => true,
-      })
-      const mode = response.data?.mode
-      return mode === 'rule' || mode === 'global' || mode === 'direct' ? mode : null
-    } catch {
-      return null
-    }
+    const response = await this.controllerRequest('get', '/configs', undefined, this.config.probeTimeoutMs * 2)
+    const mode = response?.data?.mode
+    return mode === 'rule' || mode === 'global' || mode === 'direct' ? mode : null
   }
 
   private async setClashMode(mode: ClashMode): Promise<boolean> {
-    if (!this.controllerUrl) return false
-    try {
-      const response = await axios.patch(
-        `${this.controllerUrl}/configs`,
-        { mode },
-        {
-          timeout: this.config.probeTimeoutMs * 2,
-          proxy: false,
-          validateStatus: () => true,
-        },
-      )
-      return response.status >= 200 && response.status < 300
-    } catch {
-      return false
-    }
+    const response = await this.controllerRequest('patch', '/configs', { mode }, this.config.probeTimeoutMs * 2)
+    return !!response && response.status >= 200 && response.status < 300
   }
 
   /**
@@ -284,37 +346,16 @@ export class OutboundProxyManager {
    * just died are pushed to the back.
    */
   private async loadClashNodes(): Promise<string[]> {
-    if (!this.controllerUrl) return []
-    try {
-      const response = await axios.get(`${this.controllerUrl}/proxies`, {
-        timeout: this.config.probeTimeoutMs * 2,
-        proxy: false,
-        validateStatus: () => true,
-      })
-      const allProxies: Record<string, ClashProxyEntry> = response.data?.proxies ?? {}
-      this.clashNodes = filterRealClashNodes(allProxies)
-      return this.clashNodes
-    } catch {
-      return []
-    }
+    const response = await this.controllerRequest('get', '/proxies', undefined, this.config.probeTimeoutMs * 2)
+    if (!response) return []
+    const allProxies: Record<string, ClashProxyEntry> = response.data?.proxies ?? {}
+    this.clashNodes = filterRealClashNodes(allProxies)
+    return this.clashNodes
   }
 
   private async changeClashNode(name: string): Promise<boolean> {
-    if (!this.controllerUrl) return false
-    try {
-      const response = await axios.put(
-        `${this.controllerUrl}/proxies/GLOBAL`,
-        { name },
-        {
-          timeout: this.config.probeTimeoutMs * 2,
-          proxy: false,
-          validateStatus: () => true,
-        },
-      )
-      return response.status >= 200 && response.status < 300
-    } catch {
-      return false
-    }
+    const response = await this.controllerRequest('put', '/proxies/GLOBAL', { name }, this.config.probeTimeoutMs * 2)
+    return !!response && response.status >= 200 && response.status < 300
   }
 
   /**
@@ -377,17 +418,8 @@ export class OutboundProxyManager {
 
   /** Current Clash GLOBAL node name (for diagnostics). */
   async getClashNode(): Promise<string | null> {
-    if (!this.controllerUrl) return null
-    try {
-      const response = await axios.get(`${this.controllerUrl}/proxies/GLOBAL`, {
-        timeout: this.config.probeTimeoutMs * 2,
-        proxy: false,
-        validateStatus: () => true,
-      })
-      return response.data?.now ?? null
-    } catch {
-      return null
-    }
+    const response = await this.controllerRequest('get', '/proxies/GLOBAL', undefined, this.config.probeTimeoutMs * 2)
+    return response?.data?.now ?? null
   }
 
   /**

@@ -111,6 +111,10 @@ export interface AppConfig {
   managementApi: ManagementApiConfig
   contextManagement?: unknown
   language: 'zh-CN' | 'en-US'
+  outboundProxy: {
+    controllerUrl: string
+    secret: string
+  }
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'

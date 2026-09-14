@@ -221,6 +221,19 @@ export interface AppConfig {
   managementApi: ManagementApiConfig
   /** Context management configuration */
   contextManagement: ContextManagementConfig
+  /** Outbound (Clash/mihomo) external controller settings */
+  outboundProxy: OutboundProxySettings
+}
+
+/**
+ * Outbound Proxy (Clash/mihomo external controller) Settings
+ * Used by the on-demand outbound proxy manager to reach the controller API.
+ */
+export interface OutboundProxySettings {
+  /** Clash external controller address, e.g. "127.0.0.1:9097" */
+  controllerUrl: string
+  /** Clash external controller secret (Bearer token) */
+  secret: string
 }
 
 /**
@@ -852,6 +865,10 @@ export const DEFAULT_CONFIG: AppConfig = {
   toolPromptConfig: undefined,
   managementApi: DEFAULT_MANAGEMENT_API_CONFIG,
   contextManagement: DEFAULT_CONTEXT_MANAGEMENT_CONFIG,
+  outboundProxy: {
+    controllerUrl: '127.0.0.1:9097',
+    secret: '',
+  },
 }
 
 /**

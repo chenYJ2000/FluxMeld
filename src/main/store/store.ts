@@ -335,6 +335,10 @@ class StoreManager {
         rawConfig.requestLogConfig || DEFAULT_REQUEST_LOG_CONFIG,
       ),
       contextManagement: normalizeContextManagementConfig(rawConfig.contextManagement),
+      outboundProxy: {
+        ...DEFAULT_CONFIG.outboundProxy,
+        ...(rawConfig.outboundProxy ?? {}),
+      },
       toolCallingConfig: normalizeToolCallingConfig(rawToolCallingConfig),
       toolPromptConfig: undefined,
     }
@@ -874,6 +878,13 @@ class StoreManager {
         ...currentConfig.requestLogConfig,
         ...updates.requestLogConfig,
       })
+    }
+
+    if (updates.outboundProxy) {
+      newConfig.outboundProxy = {
+        ...currentConfig.outboundProxy,
+        ...updates.outboundProxy,
+      }
     }
 
     const normalized = this.normalizeConfig(newConfig)

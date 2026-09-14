@@ -352,6 +352,25 @@ export class ConfigManager {
       }
     }
     
+    if (config.outboundProxy?.controllerUrl) {
+      const controllerUrl = String(config.outboundProxy.controllerUrl).trim()
+      if (controllerUrl) {
+        const normalized =
+          controllerUrl.startsWith('http://') || controllerUrl.startsWith('https://')
+            ? controllerUrl
+            : `http://${controllerUrl}`
+        try {
+          const parsed = new URL(normalized)
+          const port = parsed.port ? Number(parsed.port) : 80
+          if (!Number.isInteger(port) || port < 1 || port > 65535) {
+            errors.push('Clash controller port must be between 1-65535')
+          }
+        } catch {
+          errors.push('Clash controller address is invalid')
+        }
+      }
+    }
+
     return {
       valid: errors.length === 0,
       errors,
