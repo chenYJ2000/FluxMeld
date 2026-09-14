@@ -17,12 +17,12 @@ test('app check update delegates to UpdaterManager instead of GitHub REST versio
 })
 
 test('preload and renderer types expose updater status for checkUpdate', () => {
-  const preload = readFileSync('src/preload/index.ts', 'utf8')
+  const preloadApi = readFileSync('src/shared/clientApi.ts', 'utf8')
   const electronTypes = readFileSync('src/renderer/src/types/electron.d.ts', 'utf8')
 
-  assert.match(preload, /checkUpdate:\s*\(\): Promise<UpdateStatus>/)
+  assert.match(preloadApi, /checkUpdate:\s*\(\): Promise<UpdateStatus>/)
   assert.match(electronTypes, /checkUpdate:\s*\(\) => Promise<UpdateStatus>/)
-  assert.doesNotMatch(preload, /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/)
+  assert.doesNotMatch(preloadApi, /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/)
   assert.doesNotMatch(electronTypes, /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/)
 })
 

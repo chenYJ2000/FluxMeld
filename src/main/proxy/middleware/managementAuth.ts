@@ -78,6 +78,12 @@ function extractAuthToken(ctx: Context): string | null {
  * Returns 401 Unauthorized for invalid/missing authentication
  */
 export async function managementAuthMiddleware(ctx: Context, next: Next): Promise<void> {
+  // Headless web mode runs without authentication.
+  if (process.env.FLUXMELD_MANAGEMENT_AUTH_BYPASS === '1') {
+    await next()
+    return
+  }
+
   const config = storeManager.getConfig()
   const managementConfig = config.managementApi
 

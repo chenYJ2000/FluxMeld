@@ -492,6 +492,7 @@ interface ToolCallingAPI {
 }
 
 interface ElectronAPI {
+  platform: 'electron' | 'web'
   proxy: ProxyAPI
   outboundProxy: OutboundProxyAPI
   store: StoreAPI

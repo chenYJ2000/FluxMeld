@@ -1,10 +1,11 @@
 /**
  * Credential Storage Module - Core Storage Implementation
- * Uses electron-store for persistent storage
- * Uses Electron's safeStorage API for sensitive data encryption
+ * Uses electron-store for persistent storage.
+ * Data is stored as plaintext so the desktop app and the headless web server
+ * can share the same data.json (see FLUXMELD_DATA_DIR).
  */
 
-import { app, safeStorage, BrowserWindow } from 'electron'
+import type { BrowserWindow } from 'electron'
 import { homedir } from 'os'
 import { join } from 'path'
 import {
@@ -243,28 +244,23 @@ class StoreManager {
 
   /**
    * Get Storage Path
-   * Storage path: ~/.fluxmeld/
+   * Defaults to ~/.fluxmeld/ and can be overridden with FLUXMELD_DATA_DIR so
+   * the desktop app and the headless web server can share the same data file.
    */
   private getStoragePath(): string {
+    const configured = process.env.FLUXMELD_DATA_DIR?.trim()
+    if (configured) {
+      return configured
+    }
     return join(homedir(), '.fluxmeld')
   }
 
   /**
    * Get Encryption Key
-   * Returns a fixed encryption key for electron-store
-   * Note: electron-store uses this key to encrypt/decrypt the data file,
-   * so it must be stable across app restarts
+   * Storage is intentionally unencrypted so the desktop app and the web server
+   * can share the exact same data.json. Always returns undefined.
    */
   private getEncryptionKey(): string | undefined {
-    try {
-      if (safeStorage.isEncryptionAvailable()) {
-        // Use a fixed key - electron-store will use this to encrypt/decrypt data
-        // The key itself is not stored in the data file, only used for encryption
-        return 'fluxmeld-fixed-encryption-key-v1'
-      }
-    } catch (error) {
-      console.warn('Encryption unavailable, using unencrypted storage:', error)
-    }
     return undefined
   }
 
@@ -490,45 +486,19 @@ class StoreManager {
   }
 
   /**
-   * Encrypt Sensitive Data
-   * @param data Data to encrypt
-   * @returns Encrypted string
+   * Store Sensitive Data
+   * Credentials are stored as plaintext so the desktop app and the web server
+   * share a single, portable data file.
    */
   encryptData(data: string): string {
-    try {
-      console.log('[Store] Encrypting credential, input length:', data.length)
-      if (safeStorage.isEncryptionAvailable()) {
-        // Create new Buffer to store encryption result
-        const encrypted = Buffer.from(safeStorage.encryptString(data))
-        const result = encrypted.toString('base64')
-        console.log('[Store] Credential encrypted, output length:', result.length)
-        // Verify encryption is correct
-        const decrypted = safeStorage.decryptString(encrypted)
-        console.log('[Store] Credential encryption verified:', decrypted === data)
-        return result
-      } else {
-        console.log('[Store] Encryption unavailable, returning original data')
-      }
-    } catch (error) {
-      console.error('Failed to encrypt data:', error)
-    }
     return data
   }
 
   /**
-   * Decrypt Sensitive Data
-   * @param encryptedData Encrypted data
-   * @returns Decrypted string
+   * Read Sensitive Data
+   * Counterpart to encryptData; credentials are stored as plaintext.
    */
   decryptData(encryptedData: string): string {
-    try {
-      if (safeStorage.isEncryptionAvailable()) {
-        const buffer = Buffer.from(encryptedData, 'base64')
-        return safeStorage.decryptString(buffer)
-      }
-    } catch (error) {
-      console.error('Failed to decrypt data:', error)
-    }
     return encryptedData
   }
 
