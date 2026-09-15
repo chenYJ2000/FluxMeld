@@ -15,6 +15,7 @@ export interface ProxyConfig {
   enableCors: boolean
   corsOrigin: string
   maxConnections: number
+  trustedProxyHops: number
 }
 
 export interface AccountWeight {
@@ -60,6 +61,7 @@ const DEFAULT_PROXY_CONFIG: ProxyConfig = {
   enableCors: true,
   corsOrigin: '*',
   maxConnections: 100,
+  trustedProxyHops: 0,
 }
 
 const DEFAULT_STATISTICS: ProxyStatistics = {
@@ -186,6 +188,7 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
             host: config.proxyHost || '127.0.0.1',
             timeout: config.requestTimeout,
             retryCount: config.retryCount,
+            trustedProxyHops: config.trustedProxyHops ?? 0,
           },
         })
       }

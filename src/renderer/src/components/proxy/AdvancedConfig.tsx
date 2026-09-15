@@ -16,6 +16,7 @@ interface AdvancedConfigProps {
 interface FormErrors {
   timeout?: string
   retryCount?: string
+  trustedProxyHops?: string
 }
 
 export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
@@ -26,11 +27,13 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
   const initialFormDataRef = useRef({
     timeout: (proxyConfig.timeout / 1000).toString(),
     retryCount: proxyConfig.retryCount.toString(),
+    trustedProxyHops: proxyConfig.trustedProxyHops.toString(),
   })
 
   const [formData, setFormData] = useState({
     timeout: (proxyConfig.timeout / 1000).toString(),
     retryCount: proxyConfig.retryCount.toString(),
+    trustedProxyHops: proxyConfig.trustedProxyHops.toString(),
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
@@ -40,6 +43,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     const newFormData = {
       timeout: (proxyConfig.timeout / 1000).toString(),
       retryCount: proxyConfig.retryCount.toString(),
+      trustedProxyHops: proxyConfig.trustedProxyHops.toString(),
     }
     setFormData(newFormData)
     initialFormDataRef.current = newFormData
@@ -59,6 +63,13 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     return undefined
   }
 
+  const validateTrustedProxyHops = (value: string): string | undefined => {
+    const hops = parseInt(value, 10)
+    if (isNaN(hops)) return t('proxy.trustedProxyHopsMustBeNumber')
+    if (hops < 0 || hops > 10) return t('proxy.trustedProxyHopsRangeError')
+    return undefined
+  }
+
   const handleTimeoutChange = (value: string) => {
     setFormData((prev) => ({ ...prev, timeout: value }))
     const error = validateTimeout(value)
@@ -75,14 +86,24 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     onConfigChange?.()
   }
 
+  const handleTrustedProxyHopsChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, trustedProxyHops: value }))
+    const error = validateTrustedProxyHops(value)
+    setErrors((prev) => ({ ...prev, trustedProxyHops: error }))
+    setHasChanges(true)
+    onConfigChange?.()
+  }
+
   const handleSave = async () => {
     const timeoutError = validateTimeout(formData.timeout)
     const retryError = validateRetryCount(formData.retryCount)
+    const hopsError = validateTrustedProxyHops(formData.trustedProxyHops)
 
-    if (timeoutError || retryError) {
+    if (timeoutError || retryError || hopsError) {
       setErrors({
         timeout: timeoutError,
         retryCount: retryError,
+        trustedProxyHops: hopsError,
       })
       toast({
         title: t('proxy.validationFailed'),
@@ -95,6 +116,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     const newProxyConfig = {
       timeout: parseInt(formData.timeout, 10) * 1000,
       retryCount: parseInt(formData.retryCount, 10),
+      trustedProxyHops: parseInt(formData.trustedProxyHops, 10),
     }
 
     setProxyConfig(newProxyConfig)
@@ -102,6 +124,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     const success = await saveAppConfig({
       requestTimeout: newProxyConfig.timeout,
       retryCount: newProxyConfig.retryCount,
+      trustedProxyHops: newProxyConfig.trustedProxyHops,
     })
 
     if (success) {
@@ -125,7 +148,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     setHasChanges(false)
   }
 
-  const isValid = !errors.timeout && !errors.retryCount
+  const isValid = !errors.timeout && !errors.retryCount && !errors.trustedProxyHops
 
   return (
     <Card>
@@ -194,6 +217,32 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
                 className={errors.retryCount ? 'border-destructive' : ''}
               />
               <p className="text-xs text-muted-foreground">{t('proxy.retryCountHelp')}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="trustedProxyHops" className="flex items-center gap-2">
+                {t('proxy.trustedProxyHops')}
+                {errors.trustedProxyHops && (
+                  <span className="text-destructive text-xs flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    {errors.trustedProxyHops}
+                  </span>
+                )}
+                {!errors.trustedProxyHops && formData.trustedProxyHops && (
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                )}
+              </Label>
+              <Input
+                id="trustedProxyHops"
+                type="number"
+                placeholder="0"
+                value={formData.trustedProxyHops}
+                onChange={(e) => handleTrustedProxyHopsChange(e.target.value)}
+                className={errors.trustedProxyHops ? 'border-destructive' : ''}
+              />
+              <p className="text-xs text-muted-foreground">{t('proxy.trustedProxyHopsHelp')}</p>
             </div>
           </div>
         </div>

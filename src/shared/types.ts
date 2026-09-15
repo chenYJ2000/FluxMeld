@@ -169,6 +169,12 @@ export interface ApiKey {
 export interface AppConfig {
   proxyPort: number
   proxyHost: string
+  /**
+   * Number of trusted reverse proxies (nginx/frp, remote to FluxMeld) in front
+   * of this instance whose X-Forwarded-For entries may be skipped when resolving
+   * the client source IP. 0 = auto walk from the right skipping loopback hops.
+   */
+  trustedProxyHops: number
   loadBalanceStrategy: LoadBalanceStrategy
   modelMappings: Record<string, ModelMapping>
   /** Default model mappings have been seeded into editable config */

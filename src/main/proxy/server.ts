@@ -8,6 +8,7 @@ import Router from '@koa/router'
 import bodyParser from 'koa-bodyparser'
 import { Server as HttpServer } from 'http'
 import routes from './routes'
+import { resolveClientIp } from './middleware/clientIp'
 import { proxyStatusManager } from './status'
 import { storeManager } from '../store/store'
 import { sessionManager } from './sessionManager'
@@ -135,7 +136,11 @@ export class ProxyServer {
             path: ctx.path,
             status: ctx.status,
             latency,
-            clientIP: ctx.ip,
+            clientIP: resolveClientIp(
+              ctx.req.socket.remoteAddress,
+              ctx.get('x-forwarded-for'),
+              storeManager.getConfig().trustedProxyHops ?? 0,
+            ),
             slowRequest: latency >= SLOW_REQUEST_THRESHOLD_MS,
           },
         })

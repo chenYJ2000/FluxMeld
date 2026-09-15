@@ -315,6 +315,16 @@ export class ConfigManager {
       }
     }
 
+    if (config.trustedProxyHops !== undefined) {
+      if (
+        !Number.isInteger(config.trustedProxyHops) ||
+        config.trustedProxyHops < 0 ||
+        config.trustedProxyHops > 10
+      ) {
+        errors.push('trustedProxyHops must be an integer between 0-10')
+      }
+    }
+
     if (config.logRetentionDays !== undefined) {
       if (config.logRetentionDays < 1 || config.logRetentionDays > 365) {
         errors.push('Log retention days must be between 1-365')

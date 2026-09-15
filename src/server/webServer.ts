@@ -53,12 +53,22 @@ function injectBridge(html: string, accessPasswordRequired: boolean): string {
 function proxyToProxyServer(proxyPort: number) {
   return (ctx: Context): Promise<void> =>
     new Promise<void>((resolvePromise) => {
+      // Always append the peer address this web server observed; the proxy
+      // server resolves the real client by walking XFF from the right, and this
+      // entry must be attributable to this (trusted) local relay.
+      const existingXff = ctx.get('x-forwarded-for')
+      const forwardedFor = existingXff ? `${existingXff}, ${ctx.ip}` : ctx.ip
+
       const target = {
         hostname: '127.0.0.1',
         port: proxyPort,
         path: ctx.url,
         method: ctx.method,
-        headers: { ...ctx.headers, host: `127.0.0.1:${proxyPort}` },
+        headers: {
+          ...ctx.headers,
+          host: `127.0.0.1:${proxyPort}`,
+          'x-forwarded-for': forwardedFor,
+        },
       }
 
       const proxyReq = http.request(target, (proxyRes) => {

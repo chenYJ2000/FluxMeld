@@ -34,6 +34,7 @@ import {
 } from '../requestLifecycle'
 import { getEffectiveRequestTimeout } from '../requestTimeoutPolicy'
 import sessionManager from '../sessionManager'
+import { resolveClientIp } from '../middleware/clientIp'
 import {
   assistantMessageFromResponse,
   assistantMessageFromSSE,
@@ -54,12 +55,8 @@ function generateRequestId(): string {
  * Get Client IP
  */
 function getClientIP(ctx: Context): string {
-  return (
-    (ctx.headers['x-real-ip'] as string) ||
-    (ctx.headers['x-forwarded-for'] as string) ||
-    ctx.ip ||
-    'unknown'
-  )
+  const trustedProxyHops = storeManager.getConfig().trustedProxyHops ?? 0
+  return resolveClientIp(ctx.req.socket.remoteAddress, ctx.get('x-forwarded-for'), trustedProxyHops)
 }
 
 function normalizeSessionId(value: unknown, source: string): string | undefined {
