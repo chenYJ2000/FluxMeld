@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Globe,
   Brain,
+  Network,
 } from 'lucide-react'
 
 interface RequestLogEntry {
@@ -22,6 +23,7 @@ interface RequestLogEntry {
   timestamp: number
   status: 'success' | 'error'
   statusCode: number
+  clientIp?: string
   method: string
   url: string
   model: string
@@ -261,6 +263,17 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
                   label={t('logs.latency')}
                   value={formatLatency(log.latency)}
                   icon={<Zap className="h-3 w-3" />}
+                />
+                <InfoItem
+                  label={t('logs.clientIp')}
+                  value={
+                    log.clientIp ? (
+                      <span className="font-mono text-xs break-all">{log.clientIp}</span>
+                    ) : (
+                      '-'
+                    )
+                  }
+                  icon={<Network className="h-3 w-3" />}
                 />
                 <InfoItem
                   label={t('logs.method')}

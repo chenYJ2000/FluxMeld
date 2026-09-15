@@ -8,6 +8,7 @@ export function sanitizeRequestLogEntry(
   const sanitized: Omit<RequestLogEntry, 'id'> = {
     ...entry,
     userInput: sanitizeUserInput(entry.userInput, config),
+    clientIp: sanitizeClientIp(entry.clientIp),
     errorStack: undefined,
   }
 
@@ -38,6 +39,9 @@ export function sanitizeRequestLogUpdates(
   // erases the user input and other metadata captured when the request began.
   if (hasOwn(updates, 'userInput')) {
     sanitized.userInput = sanitizeUserInput(updates.userInput, config)
+  }
+  if (hasOwn(updates, 'clientIp')) {
+    sanitized.clientIp = sanitizeClientIp(updates.clientIp)
   }
   if (hasOwn(updates, 'errorStack')) {
     sanitized.errorStack = undefined
@@ -104,6 +108,17 @@ function sanitizeUserInput(
   if (!value) return value
   const redacted = config.redactSensitiveData ? redactSensitiveText(value) : value
   return truncateText(redacted, 500)
+}
+
+// Accept IPv4/IPv6-ish values and comma lists from X-Forwarded-For; reject
+// anything with unexpected characters so a crafted header cannot smuggle in
+// arbitrary log payloads.
+function sanitizeClientIp(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim().slice(0, 64)
+  if (!trimmed) return undefined
+  const candidate = trimmed.split(',')[0]?.trim() || trimmed
+  return /^[0-9a-fA-F:[\]._%-]+$/.test(candidate) ? candidate : undefined
 }
 
 function hasOwn<T extends object>(value: T, key: PropertyKey): boolean {

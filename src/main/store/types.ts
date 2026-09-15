@@ -143,6 +143,9 @@ export interface RequestLogEntry {
   /** HTTP status code */
   statusCode: number
 
+  /** Source IP of the client that called this proxy endpoint (already sanitized) */
+  clientIp?: string
+
   /** HTTP method */
   method: string
   /** Request URL path */

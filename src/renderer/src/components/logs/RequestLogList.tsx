@@ -27,6 +27,7 @@ interface RequestLogEntry {
   timestamp: number
   status: 'success' | 'error'
   statusCode: number
+  clientIp?: string
   method: string
   url: string
   model: string
@@ -194,6 +195,12 @@ export function RequestLogList() {
                   <>
                     <span>·</span>
                     <span>{log.accountName}</span>
+                  </>
+                )}
+                {log.clientIp && (
+                  <>
+                    <span>·</span>
+                    <span className="font-mono">{log.clientIp}</span>
                   </>
                 )}
               </div>

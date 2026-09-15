@@ -112,6 +112,7 @@ interface RequestLogEntry {
   timestamp: number
   status: 'success' | 'error'
   statusCode: number
+  clientIp?: string
   method: string
   url: string
   model: string

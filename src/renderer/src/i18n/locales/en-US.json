@@ -626,6 +626,7 @@
     "duration": "Duration",
     "latency": "Latency",
     "method": "Method",
+    "clientIp": "Client IP",
     "url": "URL",
     "stream": "Stream",
     "responseStatus": "Response Status",

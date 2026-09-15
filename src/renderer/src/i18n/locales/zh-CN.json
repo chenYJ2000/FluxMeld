@@ -626,6 +626,7 @@
     "duration": "耗时",
     "latency": "延迟",
     "method": "方法",
+    "clientIp": "源 IP",
     "url": "URL",
     "stream": "流式",
     "responseStatus": "响应状态",
