@@ -66,7 +66,7 @@ FluxMeld 的数据目录是 ~/.fluxmeld/，不会读取或覆盖旧应用安装�
 | Provider | 当前默认模型或状态 |
 | --- | --- |
 | DeepSeek | deepseek-v4-flash, deepseek-v4-pro |
-| GLM | GLM-5.2 |
+| GLM | GLM-5.3, GLM-5.3-Flash |
 | Kimi | Kimi-K3, Kimi-K2.6 |
 | MiniMax | MiniMax-M2.7 |
 | Mimo | MiMo-V2.5-Pro, MiMo-V2.5, MiMo-V2-Flash |

@@ -32,10 +32,11 @@ export const glmConfig: BuiltinProviderConfig = {
   },
   enabled: true,
   description:
-    'Zhipu Qingyan AI assistant, supports GLM-5.2 flagship model, graded reasoning and web search',
-  supportedModels: ['GLM-5.2'],
+    'Zhipu Qingyan AI assistant, supports GLM-5.3 and GLM-5.3-Flash models, graded reasoning and web search',
+  supportedModels: ['GLM-5.3', 'GLM-5.3-Flash'],
   modelMappings: {
-    'GLM-5.2': 'glm-5.2',
+    'GLM-5.3': 'glm-5.3',
+    'GLM-5.3-Flash': 'glm-5.3-flash',
   },
   credentialFields: [
     {

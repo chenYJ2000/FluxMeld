@@ -14,6 +14,7 @@ import { qwenConfig } from '../../src/main/providers/builtin/qwen.ts'
 import { qwenAiConfig } from '../../src/main/providers/builtin/qwen-ai.ts'
 import { zaiConfig } from '../../src/main/providers/builtin/zai.ts'
 import {
+  BUILTIN_PROVIDERS,
   DEEPSEEK_PRIMARY_MODELS,
   DEFAULT_DEEPSEEK_MODEL_MAPPINGS,
   createDefaultModelMappings,
@@ -193,8 +194,15 @@ test('DeepSeek provider config uses Web 2.0 browser headers', () => {
 })
 
 test('GLM, Kimi, and MiniMax built-in default models match current web providers', () => {
-  assert.deepEqual(glmConfig.supportedModels, ['GLM-5.2'])
-  assert.equal(glmConfig.modelMappings?.['GLM-5.2'], 'glm-5.2')
+  assert.deepEqual(glmConfig.supportedModels, ['GLM-5.3', 'GLM-5.3-Flash'])
+  assert.deepEqual(glmConfig.modelMappings, {
+    'GLM-5.3': 'glm-5.3',
+    'GLM-5.3-Flash': 'glm-5.3-flash',
+  })
+  assert.deepEqual(
+    BUILTIN_PROVIDERS.find((provider) => provider.id === 'glm'),
+    glmConfig,
+  )
   assert.equal(glmConfig.modelMappings?.['GLM-5.1'], undefined)
 
   assert.deepEqual(kimiConfig.supportedModels, ['Kimi-K3', 'Kimi-K2.6'])
@@ -215,7 +223,7 @@ test('GLM, Kimi, and MiniMax built-in default models match current web providers
   assert.doesNotMatch(minimaxAdapterSource, /MiniMax-M2\.5/)
 })
 
-test('GLM-5.2 reasoning effort maps to the current Qingyan web modes', () => {
+test('GLM-5.3 reasoning effort maps to the current Qingyan web modes', () => {
   assert.equal(resolveGLMChatMode(), 'thinking')
   assert.equal(resolveGLMChatMode(false), '')
   assert.equal(resolveGLMChatMode('none'), '')
