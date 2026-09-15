@@ -29,33 +29,33 @@ npm run preview
 ```
 src/
 ├── main/                    # Electron main process
-�?  ├── index.ts            # App entry point
-�?  ├── ipc/                # IPC handlers (main �?renderer communication)
-�?  ├── proxy/              # Proxy server (Koa)
-�?  �?  ├── server.ts       # HTTP server with middleware
-�?  �?  ├── forwarder.ts    # Request forwarding logic & auth
-�?  �?  ├── adapters/       # Provider-specific adapters
-�?  �?  ├── routes.ts       # Proxy routes registration
-�?  �?  ├── sessionManager.ts # Multi-turn conversation management
-�?  �?  └── services/       # Prompt injection & prompt generation
-�?  ├── oauth/              # OAuth authentication
-�?  �?  ├── manager.ts      # OAuth flow orchestration
-�?  �?  ├── inAppLogin.ts   # In-app browser login with token auto-extraction
-�?  �?  └── adapters/       # Provider-specific OAuth adapters
-�?  ├── providers/          # Provider configurations
-�?  �?  ├── builtin/        # Built-in provider configs (one file per provider)
-�?  �?  └── custom.ts       # Custom provider support
-�?  ├── store/              # Persistent storage (electron-store)
-�?  �?  ├── store.ts        # Main store manager with IPC bridge
-�?  �?  ├── types.ts        # Type definitions and default values
-�?  �?  └── config.ts       # Configuration management
-�?  └── tray/               # System tray integration
+│   ├── index.ts            # App entry point
+│   ├── ipc/                # IPC handlers (main ↔ renderer communication)
+│   ├── proxy/              # Proxy server (Koa)
+│   │   ├── server.ts       # HTTP server with middleware
+│   │   ├── forwarder.ts    # Request forwarding logic & auth
+│   │   ├── adapters/       # Provider-specific adapters
+│   │   ├── routes.ts       # Proxy routes registration
+│   │   ├── sessionManager.ts # Multi-turn conversation management
+│   │   └── services/       # Prompt injection & prompt generation
+│   ├── oauth/              # OAuth authentication
+│   │   ├── manager.ts      # OAuth flow orchestration
+│   │   ├── inAppLogin.ts   # In-app browser login with token auto-extraction
+│   │   └── adapters/       # Provider-specific OAuth adapters
+│   ├── providers/          # Provider configurations
+│   │   ├── builtin/        # Built-in provider configs (one file per provider)
+│   │   └── custom.ts       # Custom provider support
+│   ├── store/              # Persistent storage (electron-store)
+│   │   ├── store.ts        # Main store manager with IPC bridge
+│   │   ├── types.ts        # Type definitions and default values
+│   │   └── config.ts       # Configuration management
+│   └── tray/               # System tray integration
 ├── preload/                # Context bridge (IPC API exposure)
 ├── renderer/               # React frontend
-�?  ├── components/         # UI components
-�?  ├── pages/              # Page components
-�?  ├── stores/             # Zustand state management
-�?  └── i18n/               # Internationalization (en-US, zh-CN)
+│   ├── components/         # UI components
+│   ├── pages/              # Page components
+│   ├── stores/             # Zustand state management
+│   └── i18n/               # Internationalization (en-US, zh-CN)
 └── shared/                 # Shared types between main and renderer
 ```
 
@@ -63,7 +63,7 @@ src/
 
 ### Provider Adapters
 Each AI provider has a dedicated adapter in `src/main/proxy/adapters/` that handles:
-- Message format conversion (OpenAI format �?provider-specific format)
+- Message format conversion (OpenAI format → provider-specific format)
 - Authentication header construction
 - Stream response parsing
 - Multi-turn conversation context

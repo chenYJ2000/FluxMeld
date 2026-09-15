@@ -71,7 +71,7 @@ function isRetryableStatus(status: number | undefined, error?: string): boolean 
 
 /**
  * Whether the failure signals that the direct connection IP was rate-limited,
- * blocked, or had transport-level problems �?conditions where routing the
+ * blocked, or had transport-level problems —?conditions where routing the
  * reattempt through an outbound proxy is worth trying. Authentication failures
  * (401) are excluded because they are credential problems, not IP problems.
  */
@@ -888,69 +888,6 @@ export class RequestForwarder {
       }, ms)
       signal.addEventListener('abort', onAbort, { once: true })
     })
-  }
-
-  /**
-   * Forward Request to Specified URL
-   */
-  async forwardToUrl(
-    url: string,
-    method: string,
-    headers: Record<string, string>,
-    body: any,
-    isStream: boolean = false,
-  ): Promise<ForwardResult> {
-    const startTime = Date.now()
-
-    try {
-      const config: AxiosRequestConfig = {
-        method,
-        url,
-        headers,
-        data: body,
-        timeout: proxyStatusManager.getConfig().timeout,
-        responseType: isStream ? 'stream' : 'json',
-        validateStatus: () => true,
-      }
-
-      const response: AxiosResponse = await this.axiosInstance.request(config)
-      const latency = Date.now() - startTime
-
-      if (response.status >= 400) {
-        return {
-          success: false,
-          status: response.status,
-          error: this.extractErrorMessage(response),
-          latency,
-        }
-      }
-
-      if (isStream) {
-        return {
-          success: true,
-          status: response.status,
-          headers: this.extractHeaders(response.headers),
-          stream: response.data,
-          latency,
-        }
-      }
-
-      return {
-        success: true,
-        status: response.status,
-        headers: this.extractHeaders(response.headers),
-        body: response.data,
-        latency,
-      }
-    } catch (error) {
-      const latency = Date.now() - startTime
-
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        latency,
-      }
-    }
   }
 }
 

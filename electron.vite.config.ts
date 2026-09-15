@@ -13,7 +13,6 @@ export default defineConfig({
           'koa-bodyparser',
           'koa-router',
           'eventsource-parser',
-          'js-sha3',
           'mime-types',
           'zstd-codec',
           'electron-store',
