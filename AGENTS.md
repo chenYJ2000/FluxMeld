@@ -4,7 +4,7 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-FluxMeld Manager is an Electron desktop application that provides an OpenAI-compatible API proxy for multiple AI service providers (DeepSeek, GLM, Kimi, MiniMax, Qwen, Z.ai, Perplexity). It enables using any OpenAI-compatible client with these providers across macOS, Windows, and Linux.
+FluxMeld Manager is an Electron desktop application that provides an OpenAI-compatible API proxy for multiple AI service providers (DeepSeek, GLM, Kimi, Mimo, MiniMax, Qwen, Qwen AI, Z.ai, Perplexity). It enables using any OpenAI-compatible client with these providers across macOS, Windows, and Linux.
 
 ## Build Commands
 
@@ -29,33 +29,33 @@ npm run preview
 ```
 src/
 ├── main/                    # Electron main process
-│   ├── index.ts            # App entry point
-│   ├── ipc/                # IPC handlers (main ↔ renderer communication)
-│   ├── proxy/              # Proxy server (Koa)
-│   │   ├── server.ts       # HTTP server with middleware
-│   │   ├── forwarder.ts    # Request forwarding logic & auth
-│   │   ├── adapters/       # Provider-specific adapters
-│   │   ├── routes.ts       # Proxy routes registration
-│   │   ├── sessionManager.ts # Multi-turn conversation management
-│   │   └── services/       # Prompt injection & prompt generation
-│   ├── oauth/              # OAuth authentication
-│   │   ├── manager.ts      # OAuth flow orchestration
-│   │   ├── inAppLogin.ts   # In-app browser login with token auto-extraction
-│   │   └── adapters/       # Provider-specific OAuth adapters
-│   ├── providers/          # Provider configurations
-│   │   ├── builtin/        # Built-in provider configs (one file per provider)
-│   │   └── custom.ts       # Custom provider support
-│   ├── store/              # Persistent storage (electron-store)
-│   │   ├── store.ts        # Main store manager with IPC bridge
-│   │   ├── types.ts        # Type definitions and default values
-│   │   └── config.ts       # Configuration management
-│   └── tray/               # System tray integration
+�?  ├── index.ts            # App entry point
+�?  ├── ipc/                # IPC handlers (main �?renderer communication)
+�?  ├── proxy/              # Proxy server (Koa)
+�?  �?  ├── server.ts       # HTTP server with middleware
+�?  �?  ├── forwarder.ts    # Request forwarding logic & auth
+�?  �?  ├── adapters/       # Provider-specific adapters
+�?  �?  ├── routes.ts       # Proxy routes registration
+�?  �?  ├── sessionManager.ts # Multi-turn conversation management
+�?  �?  └── services/       # Prompt injection & prompt generation
+�?  ├── oauth/              # OAuth authentication
+�?  �?  ├── manager.ts      # OAuth flow orchestration
+�?  �?  ├── inAppLogin.ts   # In-app browser login with token auto-extraction
+�?  �?  └── adapters/       # Provider-specific OAuth adapters
+�?  ├── providers/          # Provider configurations
+�?  �?  ├── builtin/        # Built-in provider configs (one file per provider)
+�?  �?  └── custom.ts       # Custom provider support
+�?  ├── store/              # Persistent storage (electron-store)
+�?  �?  ├── store.ts        # Main store manager with IPC bridge
+�?  �?  ├── types.ts        # Type definitions and default values
+�?  �?  └── config.ts       # Configuration management
+�?  └── tray/               # System tray integration
 ├── preload/                # Context bridge (IPC API exposure)
 ├── renderer/               # React frontend
-│   ├── components/         # UI components
-│   ├── pages/              # Page components
-│   ├── stores/             # Zustand state management
-│   └── i18n/               # Internationalization (en-US, zh-CN)
+�?  ├── components/         # UI components
+�?  ├── pages/              # Page components
+�?  ├── stores/             # Zustand state management
+�?  └── i18n/               # Internationalization (en-US, zh-CN)
 └── shared/                 # Shared types between main and renderer
 ```
 
@@ -63,7 +63,7 @@ src/
 
 ### Provider Adapters
 Each AI provider has a dedicated adapter in `src/main/proxy/adapters/` that handles:
-- Message format conversion (OpenAI format → provider-specific format)
+- Message format conversion (OpenAI format �?provider-specific format)
 - Authentication header construction
 - Stream response parsing
 - Multi-turn conversation context
@@ -96,10 +96,11 @@ For models without native function calling, prompts are injected via `promptInje
 ## Data Storage
 
 Application data is stored in `~/.fluxmeld/`:
-- `config.json` - Application configuration
-- `providers.json` - Provider settings
-- `accounts.json` - Account credentials (encrypted)
-- `logs/` - Request logs
+- Config, providers, accounts, API keys, sessions: persisted through
+  `electron-store` by `src/main/store/store.ts` (single JSON store; account
+  credentials are stored as provided credentials).
+- `request-logs.ndjson` - Request logs (managed by `src/main/requestLogs/manager.ts`)
+- `app-logs.ndjson` - Application logs (managed by `src/main/appLogs/manager.ts`)
 
 ## Tech Stack
 
@@ -143,474 +144,48 @@ This trades some performance for stability.
 
 ## Adding a New Provider
 
-### Overview
-
-Adding a new provider requires modifications across 4 layers: Provider Config, OAuth Authentication, Proxy Adapter, and UI. The following guide covers all necessary steps.
-
-### Core File Modification Checklist
-
-#### 1. Provider Config Layer (Required)
-
-| File | Purpose |
-|------|---------|
-| `src/main/providers/builtin/<provider>.ts` | Provider configuration definition |
-| `src/main/providers/builtin/index.ts` | Register provider in `builtinProviders` array |
-| `src/main/store/types.ts` | Sync to `BUILTIN_PROVIDERS` array |
-
-#### 2. OAuth Authentication Layer (Required)
-
-| File | Purpose |
-|------|---------|
-| `src/main/oauth/adapters/<provider>.ts` | OAuth adapter implementation |
-| `src/main/oauth/adapters/index.ts` | Register in `createAdapter()` and `getSupportedAuthMethods()` |
-| `src/main/oauth/types.ts` | Add to `MANUAL_TOKEN_CONFIGS` (optional) |
-
-#### 3. Proxy Adapter Layer (Required)
-
-| File | Purpose |
-|------|---------|
-| `src/main/proxy/adapters/<provider>.ts` | Proxy adapter implementation |
-| `src/main/proxy/adapters/<provider>-stream.ts` | Stream handler implementation |
-| `src/main/proxy/adapters/index.ts` | Export adapter |
-| `src/main/proxy/forwarder.ts` | Add `forward<Provider>()` method |
-
-#### 4. UI Layer (Required)
-
-| File | Purpose |
-|------|---------|
-| `src/renderer/src/i18n/locales/zh-CN.json` | Chinese translations |
-| `src/renderer/src/i18n/locales/en-US.json` | English translations |
-| `src/renderer/src/components/providers/ProviderCard.tsx` | Add icon mapping |
-| `src/assets/providers/<provider>.svg` | Provider icon file |
-
-### Step-by-Step Implementation
-
-#### Step 1: Provider Configuration
-
-```typescript
-// src/main/providers/builtin/<provider>.ts
-import type { BuiltinProviderConfig } from '../../store/types'
-
-export const providerConfig: BuiltinProviderConfig = {
-  id: 'provider-id',
-  name: 'Provider Name',
-  type: 'builtin',
-  authType: 'userToken',  // See AuthType section below
-  apiEndpoint: 'https://api.example.com',
-  chatPath: '/chat/completions',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': '*/*',
-    'Origin': 'https://example.com',
-    'Referer': 'https://example.com/',
-  },
-  enabled: true,
-  description: 'Provider description',
-  supportedModels: ['Model-1', 'Model-2'],
-  modelMappings: {
-    'Model-1': 'model-1-id',
-    'Model-2': 'model-2-id',
-  },
-  credentialFields: [
-    {
-      name: 'token',
-      label: 'Token',
-      type: 'password',
-      required: true,
-      placeholder: 'Enter token',
-      helpText: 'How to get token',
-    },
-  ],
-  tokenCheckEndpoint: '/api/user',    // Optional
-  tokenCheckMethod: 'GET',            // Optional
-}
-
-export default providerConfig
-```
-
-#### Step 2: Register Provider
-
-```typescript
-// src/main/providers/builtin/index.ts
-import providerConfig from './provider'
-
-export const builtinProviders: BuiltinProviderConfig[] = [
-  // ...existing
-  providerConfig,
-]
-
-export const builtinProviderMap: Record<string, BuiltinProviderConfig> = {
-  // ...existing
-  'provider-id': providerConfig,
-}
-
-export { providerConfig }
-```
-
-**CRITICAL**: Must also update `src/main/store/types.ts` `BUILTIN_PROVIDERS` array with identical configuration.
-
-#### Step 3: OAuth Adapter
-
-```typescript
-// src/main/oauth/adapters/<provider>.ts
-import axios from 'axios'
-import { BaseOAuthAdapter } from './base'
-import { OAuthResult, OAuthOptions, TokenValidationResult, AdapterConfig } from '../types'
-
-const API_BASE = 'https://api.example.com'
-
-export class ProviderAdapter extends BaseOAuthAdapter {
-  constructor(config: AdapterConfig) {
-    super({
-      ...config,
-      providerType: 'provider-id',
-      authMethods: ['manual'],
-      loginUrl: API_BASE,
-      apiUrl: API_BASE,
-    })
-  }
-
-  async startLogin(options: OAuthOptions): Promise<OAuthResult> {
-    await shell.openExternal(API_BASE)
-    return {
-      success: false,
-      providerId: options.providerId,
-      error: 'Please log in via browser and enter Token manually',
-    }
-  }
-
-  async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
-    const token = credentials.token
-    if (!token) return { valid: false, error: 'Token cannot be empty' }
-
-    try {
-      const response = await axios.get(`${API_BASE}/api/user`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 15000,
-        validateStatus: () => true,
-      })
-
-      if (response.status !== 200) {
-        return { valid: false, error: 'Token is invalid or expired' }
-      }
-
-      return {
-        valid: true,
-        tokenType: 'access',
-        accountInfo: {
-          userId: response.data.id,
-          email: response.data.email,
-          name: response.data.name,
-        },
-      }
-    } catch (error) {
-      return { valid: false, error: error instanceof Error ? error.message : 'Validation failed' }
-    }
-  }
-
-  async refreshToken(credentials: Record<string, string>) {
-    return null  // Optional
-  }
-}
-
-export default ProviderAdapter
-```
-
-#### Step 4: Register OAuth Adapter
-
-```typescript
-// src/main/oauth/adapters/index.ts
-export { ProviderAdapter } from './provider'
-
-export function createAdapter(providerType: ProviderType, config: AdapterConfig): BaseOAuthAdapter {
-  switch (providerType) {
-    // ...existing
-    case 'provider-id':
-      return new ProviderAdapter(config)
-    default:
-      throw new Error(`Unsupported provider type: ${providerType}`)
-  }
-}
-
-export function getSupportedAuthMethods(providerType: ProviderType): string[] {
-  switch (providerType) {
-    // ...existing
-    case 'provider-id':
-      return ['manual']
-    default:
-      return ['manual']
-  }
-}
-```
-
-#### Step 5: Proxy Adapter
-
-```typescript
-// src/main/proxy/adapters/<provider>.ts
-import axios, { AxiosResponse } from 'axios'
-import { Account, Provider } from '../../store/types'
-
-const API_BASE = 'https://api.example.com'
-
-export class ProviderAdapter {
-  private provider: Provider
-  private account: Account
-  private token: string
-
-  constructor(provider: Provider, account: Account) {
-    this.provider = provider
-    this.account = account
-    this.token = account.credentials.token || ''
-  }
-
-  async chatCompletion(request: ChatCompletionRequest): Promise<{
-    response: AxiosResponse
-    sessionId: string
-  }> {
-    // 1. Get/refresh token
-    // 2. Build request
-    // 3. Send request
-    // 4. Return response
-  }
-
-  async deleteSession(sessionId: string): Promise<boolean> {
-    return true
-  }
-
-  static isProviderProvider(provider: Provider): boolean {
-    return provider.id === 'provider-id' || provider.apiEndpoint.includes('example.com')
-  }
-}
-
-export const providerAdapter = { ProviderAdapter }
-```
-
-#### Step 6: Stream Handler
-
-```typescript
-// src/main/proxy/adapters/<provider>-stream.ts
-import { PassThrough } from 'stream'
-
-export class ProviderStreamHandler {
-  private model: string
-  private sessionId: string
-  private isFirstChunk: boolean = true
-  private created: number
-
-  constructor(model: string, sessionId: string, onEnd?: () => void) {
-    this.model = model
-    this.sessionId = sessionId
-    this.created = Math.floor(Date.now() / 1000)
-  }
-
-  async handleStream(stream: NodeJS.ReadableStream): Promise<NodeJS.ReadableStream> {
-    const transStream = new PassThrough()
-    
-    stream.on('data', (chunk: Buffer) => {
-      // Parse SSE data
-      // Convert to OpenAI format
-      // Write to transStream
-    })
-
-    stream.on('end', () => {
-      transStream.write('data: [DONE]\n\n')
-      transStream.end()
-    })
-
-    return transStream
-  }
-
-  async handleNonStream(stream: NodeJS.ReadableStream): Promise<any> {
-    // Collect all data
-    // Return OpenAI format response
-  }
-
-  private createChunk(delta: any, finishReason?: string): string {
-    return `data: ${JSON.stringify({
-      id: this.sessionId,
-      model: this.model,
-      object: 'chat.completion.chunk',
-      choices: [{ index: 0, delta, finish_reason: finishReason || null }],
-      created: this.created,
-    })}\n\n`
-  }
-}
-```
-
-#### Step 7: Register Proxy Adapter
-
-```typescript
-// src/main/proxy/adapters/index.ts
-export { ProviderAdapter, ProviderStreamHandler, providerAdapter } from './provider'
-```
-
-#### Step 8: Add Forwarder Method
-
-```typescript
-// src/main/proxy/forwarder.ts
-import { ProviderAdapter } from './adapters/provider'
-import { ProviderStreamHandler } from './adapters/provider-stream'
-
-// In doForward method, add check:
-if (ProviderAdapter.isProviderProvider(provider)) {
-  return this.forwardProvider(request, account, provider, actualModel, startTime, sessionContext)
-}
-
-// Add forward method:
-private async forwardProvider(
-  request: ChatCompletionRequest,
-  account: Account,
-  provider: Provider,
-  actualModel: string,
-  startTime: number,
-  sessionContext: SessionContext
-): Promise<ForwardResult> {
-  // Implementation
-}
-```
-
-#### Step 9: Add UI Translations
-
-```json
-// src/renderer/src/i18n/locales/zh-CN.json
-{
-  "provider-id": {
-    "name": "供应商名称",
-    "description": "供应商描述",
-    "token": "Token",
-    "tokenPlaceholder": "请输入 Token",
-    "tokenHelp": "从网页版获取 Token",
-    "models": {
-      "Model-1": "模型 1 描述"
-    }
-  }
-}
-```
-
-```json
-// src/renderer/src/i18n/locales/en-US.json
-{
-  "provider-id": {
-    "name": "Provider Name",
-    "description": "Provider description",
-    "token": "Token",
-    "tokenPlaceholder": "Enter token",
-    "tokenHelp": "Get token from web version",
-    "models": {
-      "Model-1": "Model 1 description"
-    }
-  }
-}
-```
-
-#### Step 10: Add Icon Mapping
-
-```typescript
-// src/renderer/src/components/providers/ProviderCard.tsx
-import providerIcon from '@/assets/providers/provider.svg'
-
-const providerIcons: Record<string, string> = {
-  // ...existing
-  'provider-id': providerIcon,
-}
-```
+Provider support is organized around a registry so adding a provider is an
+additive change. See `docs/architecture/provider-plugin.md` for the full guide.
+
+Touch points:
+
+1. `src/main/providers/builtin/<provider>.ts` and `providers/builtin/index.ts` -
+   provider configuration.
+2. `src/main/proxy/adapters/<provider>.ts` - OpenAI <-> provider request/response
+   conversion (stream handlers may be co-located).
+3. `src/main/proxy/forwarders/<provider>.ts` plus `forwarders/index.ts` -
+   provider forwarding strategy.
+4. `src/main/oauth/adapters/<provider>.ts` plus `oauth/adapters/index.ts` - auth
+   adapter factory.
+5. `src/main/ipc/handlers.ts` - optional capability entries (e.g. clear chats).
+6. Renderer i18n + `ProviderCard.tsx` icon mapping +
+   `src/assets/providers/<provider>.svg`.
+
+`src/main/store/types.ts` re-exports `builtinProviders` as `BUILTIN_PROVIDERS`,
+so the model list has a single source of truth (do not duplicate it).
+
+> `RequestForwarder` in `src/main/proxy/forwarder.ts` must NOT be edited to add a
+> provider. It dispatches via `createProviderForwarders()`
+> (`src/main/proxy/forwarders/index.ts`). Extension happens in the registry.
 
 ### AuthType Reference
 
-| Type | Description | Providers | Credential Field |
-|------|-------------|-----------|------------------|
-| `userToken` | User Token | DeepSeek | `token` |
-| `jwt` | JWT Token | Kimi, MiniMax, Qwen AI, Z.ai | `token` |
-| `refresh_token` | Refresh Token | GLM | `refresh_token` |
-| `cookie` | Cookie Auth | Perplexity | `sessionToken` |
-| `tongyi_sso_ticket` | SSO Ticket | Qwen | `ticket` |
-| `token` | Generic Token | Z.ai | `token` |
+| Type | Credential Field | Providers |
+| --- | --- | --- |
+| `userToken` | `token` | DeepSeek |
+| `jwt` | `token` | Kimi, MiniMax, Qwen AI, Z.ai |
+| `refresh_token` | `refresh_token` | GLM |
+| `cookie` | `sessionToken` | Perplexity |
+| `tongyi_sso_ticket` | `ticket` | Qwen |
+| `token` | `token` | Z.ai |
 
-### Web Search Mode Implementation
+### Web Search / Thinking Mode
 
-Three ways to enable web search:
-
-1. **Model Mapping**: Auto-enable via model name
-```typescript
-const modelLower = request.model.toLowerCase()
-if (modelLower.includes('search')) {
-  searchEnabled = true
-}
-```
-
-2. **Custom Parameter**: Via `web_search` parameter
-```typescript
-if (request.web_search) {
-  searchEnabled = true
-}
-```
-
-3. **Custom Header**: Via request header
-```typescript
-if (headers['X-Enable-Search']) {
-  searchEnabled = true
-}
-```
-
-### Thinking Mode Implementation
-
-Three ways to enable thinking mode:
-
-1. **Model Mapping**: Auto-enable via model name
-```typescript
-const modelLower = request.model.toLowerCase()
-if (modelLower.includes('r1') || modelLower.includes('think')) {
-  thinkingEnabled = true
-}
-```
-
-2. **Custom Parameter**: Via `reasoning_effort` parameter
-```typescript
-if (request.reasoning_effort) {
-  thinkingEnabled = true
-}
-```
-
-3. **Custom Header**: Via request header
-```typescript
-if (headers['X-Enable-Thinking']) {
-  thinkingEnabled = true
-}
-```
-
-### Thinking Content Handling
-
-In stream handler, output thinking content to `reasoning_content` field:
-
-```typescript
-if (path === 'thinking') {
-  delta.reasoning_content = processedContent
-} else {
-  delta.content = processedContent
-}
-```
-
-### Model List Synchronization
-
-**CRITICAL**: Model list must be defined in TWO locations:
-
-1. `src/main/providers/builtin/<provider>.ts` - `supportedModels` array
-2. `src/main/store/types.ts` - `BUILTIN_PROVIDERS` array
-
-Both must be identical, otherwise configuration won't take effect.
-
-### Testing Checklist
-
-- [ ] Provider displays correctly
-- [ ] Account can be added
-- [ ] Account validation works
-- [ ] Streaming chat works
-- [ ] Non-streaming chat works
-- [ ] Web search mode works
-- [ ] Thinking mode works
-- [ ] Model mapping works
-- [ ] Multi-turn conversation works
-- [ ] Session deletion works
+Three ways to enable optional modes (see provider adapters): model-name mapping
+(e.g. `...search`, `...think`/`r1`), explicit request parameters
+(`web_search`, `reasoning_effort`, `enable_thinking`), or request headers
+(`X-Enable-Search`, `X-Enable-Thinking`). Thinking content is emitted on the
+`reasoning_content` field.
 
 ## Updating Provider Configuration
 

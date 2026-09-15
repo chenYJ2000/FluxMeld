@@ -11,33 +11,37 @@ const absoluteScript = path.resolve(script)
 function writeHar(file) {
   const har = {
     log: {
-      entries: [{
-        request: {
-          method: 'POST',
-          url: 'http://127.0.0.1:8080/v1/chat/completions',
-          headers: [
-            { name: 'Authorization', value: 'Bearer secret' },
-            { name: 'x-title', value: 'Cherry Studio' },
-            { name: 'User-Agent', value: 'CherryStudio/1.9.6' },
-          ],
-          postData: {
-            text: JSON.stringify({
-              model: 'deepseek-v4-flash',
-              stream: true,
-              messages: [{ role: 'user', content: 'Use weather' }],
-              tools: [{
-                type: 'function',
-                function: {
-                  name: 'mcp__weatherTest__getWeather',
-                  description: 'weather',
-                  parameters: { type: 'object' },
-                },
-              }],
-              tool_choice: 'auto',
-            }),
+      entries: [
+        {
+          request: {
+            method: 'POST',
+            url: 'http://127.0.0.1:8080/v1/chat/completions',
+            headers: [
+              { name: 'Authorization', value: 'Bearer secret' },
+              { name: 'x-title', value: 'Cherry Studio' },
+              { name: 'User-Agent', value: 'CherryStudio/1.9.6' },
+            ],
+            postData: {
+              text: JSON.stringify({
+                model: 'deepseek-v4-flash',
+                stream: true,
+                messages: [{ role: 'user', content: 'Use weather' }],
+                tools: [
+                  {
+                    type: 'function',
+                    function: {
+                      name: 'mcp__weatherTest__getWeather',
+                      description: 'weather',
+                      parameters: { type: 'object' },
+                    },
+                  },
+                ],
+                tool_choice: 'auto',
+              }),
+            },
           },
         },
-      }],
+      ],
     },
   }
   fs.writeFileSync(file, JSON.stringify(har))
@@ -49,9 +53,13 @@ test('extracts sanitized tool fixture from HAR', () => {
   const out = path.join(dir, 'fixture.json')
   writeHar(har)
 
-  const result = spawnSync('node', [script, '--har', har, '--out', out, '--client', 'cherry-studio'], {
-    encoding: 'utf8',
-  })
+  const result = spawnSync(
+    'node',
+    [script, '--har', har, '--out', out, '--client', 'cherry-studio'],
+    {
+      encoding: 'utf8',
+    },
+  )
 
   assert.equal(result.status, 0, result.stderr)
   const fixture = JSON.parse(fs.readFileSync(out, 'utf8'))
@@ -127,7 +135,10 @@ test('uses env fallback, exact chat path selection, and body secret redaction', 
   assert.equal(fixture.scenarios[0].body.api_key, '[REDACTED]')
   assert.equal(fixture.scenarios[0].body.nested.token, '[REDACTED]')
   assert.equal(fixture.scenarios[0].body.nested.password, '[REDACTED]')
-  assert.doesNotMatch(JSON.stringify(fixture), /secret-api-key|secret-token|secret-password|secret-cookie/)
+  assert.doesNotMatch(
+    JSON.stringify(fixture),
+    /secret-api-key|secret-token|secret-password|secret-cookie/,
+  )
 })
 
 test('redacts secret values from retained allowed headers', () => {
@@ -136,26 +147,32 @@ test('redacts secret values from retained allowed headers', () => {
   const out = path.join(dir, 'fixture.json')
   const harBody = {
     log: {
-      entries: [{
-        request: {
-          method: 'POST',
-          url: 'http://127.0.0.1:8080/v1/chat/completions',
-          headers: [
-            { name: 'x-title', value: 'Bearer header-secret-token' },
-            { name: 'User-Agent', value: 'CherryStudio/1.9.6' },
-          ],
-          postData: {
-            text: JSON.stringify({ messages: [{ role: 'user', content: 'hello' }] }),
+      entries: [
+        {
+          request: {
+            method: 'POST',
+            url: 'http://127.0.0.1:8080/v1/chat/completions',
+            headers: [
+              { name: 'x-title', value: 'Bearer header-secret-token' },
+              { name: 'User-Agent', value: 'CherryStudio/1.9.6' },
+            ],
+            postData: {
+              text: JSON.stringify({ messages: [{ role: 'user', content: 'hello' }] }),
+            },
           },
         },
-      }],
+      ],
     },
   }
   fs.writeFileSync(har, JSON.stringify(harBody))
 
-  const result = spawnSync('node', [script, '--har', har, '--out', out, '--client', 'cherry-studio'], {
-    encoding: 'utf8',
-  })
+  const result = spawnSync(
+    'node',
+    [script, '--har', har, '--out', out, '--client', 'cherry-studio'],
+    {
+      encoding: 'utf8',
+    },
+  )
 
   assert.equal(result.status, 0, result.stderr)
   const fixture = JSON.parse(fs.readFileSync(out, 'utf8'))
@@ -168,35 +185,44 @@ test('redacts token-like strings in request bodies', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fluxmeld-har-'))
   const har = path.join(dir, 'client.har')
   const out = path.join(dir, 'fixture.json')
-  const jwt = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
+  const jwt =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c'
   const hyphenKey = ['sk', 'abcdefghijklmnopqrstuvwxyz123456'].join('-')
   const dashLiveKey = ['sk', 'live', 'abcdefghijklmnopqrstuvwxyz123456'].join('-')
   const underscoreKey = ['sk', 'live', 'abcdefghijklmnopqrstuvwxyz123456'].join('_')
   const harBody = {
     log: {
-      entries: [{
-        request: {
-          method: 'POST',
-          url: 'http://127.0.0.1:8080/v1/chat/completions',
-          headers: [],
-          postData: {
-            text: JSON.stringify({
-              messages: [{
-                role: 'user',
-                content: `Use ${hyphenKey}, ${dashLiveKey} and ${jwt}`,
-              }],
-              tool_args: JSON.stringify({ apiKey: underscoreKey }),
-            }),
+      entries: [
+        {
+          request: {
+            method: 'POST',
+            url: 'http://127.0.0.1:8080/v1/chat/completions',
+            headers: [],
+            postData: {
+              text: JSON.stringify({
+                messages: [
+                  {
+                    role: 'user',
+                    content: `Use ${hyphenKey}, ${dashLiveKey} and ${jwt}`,
+                  },
+                ],
+                tool_args: JSON.stringify({ apiKey: underscoreKey }),
+              }),
+            },
           },
         },
-      }],
+      ],
     },
   }
   fs.writeFileSync(har, JSON.stringify(harBody))
 
-  const result = spawnSync('node', [script, '--har', har, '--out', out, '--client', 'cherry-studio'], {
-    encoding: 'utf8',
-  })
+  const result = spawnSync(
+    'node',
+    [script, '--har', har, '--out', out, '--client', 'cherry-studio'],
+    {
+      encoding: 'utf8',
+    },
+  )
 
   assert.equal(result.status, 0, result.stderr)
   const fixtureText = fs.readFileSync(out, 'utf8')
@@ -205,7 +231,9 @@ test('redacts token-like strings in request bodies', () => {
   assert.equal(fixture.scenarios[0].body.tool_args, '[REDACTED]')
   assert.doesNotMatch(
     fixtureText,
-    new RegExp(`${['sk', 'abcdefghijklmnopqrstuvwxyz'].join('-')}|${['sk', 'live'].join('-')}-|${['sk', 'live'].join('_')}_|eyJhbGciOi`),
+    new RegExp(
+      `${['sk', 'abcdefghijklmnopqrstuvwxyz'].join('-')}|${['sk', 'live'].join('-')}-|${['sk', 'live'].join('_')}_|eyJhbGciOi`,
+    ),
   )
 })
 

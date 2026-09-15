@@ -31,7 +31,8 @@ const FAKE_HEADERS = {
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
   'X-App-Version': '20241129.1',
   'X-Client-Locale': 'zh-CN',
   'X-Client-Platform': 'web',
@@ -54,11 +55,11 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
    */
   async startLogin(options: OAuthOptions): Promise<OAuthResult> {
     this.emitProgress('pending', 'Opening browser...')
-    
+
     try {
       await shell.openExternal(DEEPSEEK_API_BASE)
       this.emitProgress('pending', 'Please log in via browser and enter Token manually')
-      
+
       return {
         success: false,
         providerId: options.providerId,
@@ -69,7 +70,7 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
       console.error('[DeepSeek] startLogin error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Failed to open browser'
       this.emitProgress('error', errorMessage)
-      
+
       return {
         success: false,
         providerId: options.providerId,
@@ -84,10 +85,10 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
    */
   async loginWithToken(providerId: string, token: string): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating Token...')
-    
+
     try {
       const validation = await this.validateToken({ token })
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -96,9 +97,9 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
           error: validation.error || 'Token validation failed',
         }
       }
-      
+
       this.emitProgress('success', 'Token validation successful')
-      
+
       return {
         success: true,
         providerId,
@@ -109,7 +110,7 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       this.emitProgress('error', `Token validation failed: ${errorMessage}`)
-      
+
       return {
         success: false,
         providerId,
@@ -131,14 +132,14 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
    */
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
     const token = credentials.token || credentials.userToken
-    
+
     if (!token) {
       return {
         valid: false,
         error: 'Token cannot be empty',
       }
     }
-    
+
     try {
       const response = await axios.get(`${DEEPSEEK_API_BASE}/api/v0/users/current`, {
         headers: {
@@ -148,26 +149,26 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
         timeout: 15000,
         validateStatus: () => true,
       })
-      
+
       console.log('[DeepSeek OAuth] Response status:', response.status)
-      
+
       if (response.status !== 200 || !response.data) {
         return {
           valid: false,
           error: 'Token is invalid or expired',
         }
       }
-      
+
       // DeepSeek API returns: { code: 0, msg: '', data: { biz_code: 0, biz_msg: '', biz_data: { ... } } }
       const bizData = response.data?.data?.biz_data
-      
+
       if (!bizData) {
         return {
           valid: false,
           error: 'Token validation failed: Invalid response data',
         }
       }
-      
+
       return {
         valid: true,
         tokenType: 'access',
@@ -191,11 +192,11 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
    */
   async refreshToken(credentials: Record<string, string>): Promise<CredentialInfo | null> {
     const token = credentials.token || credentials.refreshToken
-    
+
     if (!token) {
       return null
     }
-    
+
     try {
       const response = await axios.get(`${DEEPSEEK_API_BASE}/api/v0/users/current`, {
         headers: {
@@ -205,13 +206,13 @@ export class DeepSeekAdapter extends BaseOAuthAdapter {
         timeout: 15000,
         validateStatus: () => true,
       })
-      
+
       if (response.status !== 200 || !response.data?.biz_data?.token) {
         return null
       }
-      
+
       const newToken = response.data.biz_data.token
-      
+
       return {
         type: 'access',
         value: newToken,

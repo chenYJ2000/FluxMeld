@@ -16,7 +16,8 @@ export function getEffectiveRequestTimeout(
   configuredTimeoutMs: number,
 ): number {
   const isOpenCodeToolRequest =
-    resolveToolClientAdapterForRequest(clientAdapterId ?? 'standard-openai-tools', request).adapter.id === 'opencode' &&
+    resolveToolClientAdapterForRequest(clientAdapterId ?? 'standard-openai-tools', request).adapter
+      .id === 'opencode' &&
     Array.isArray(request.tools) &&
     request.tools.length > 0
 

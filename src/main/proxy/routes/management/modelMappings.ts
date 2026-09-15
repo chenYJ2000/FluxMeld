@@ -80,7 +80,10 @@ router.post('/model-mappings', managementAuthMiddleware, async (ctx: Context) =>
     const existingMapping = ConfigManager.getModelMapping(request.requestModel)
     if (existingMapping) {
       ctx.status = 409
-      ctx.body = createErrorResponse('mapping_exists', `Model mapping already exists: ${request.requestModel}`)
+      ctx.body = createErrorResponse(
+        'mapping_exists',
+        `Model mapping already exists: ${request.requestModel}`,
+      )
       return
     }
 

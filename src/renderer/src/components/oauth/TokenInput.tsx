@@ -67,7 +67,7 @@ export function TokenInput({
           </Button>
         )}
       </div>
-      
+
       <div className="relative">
         <Input
           id="token-input"
@@ -77,10 +77,7 @@ export function TokenInput({
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={disabled}
-          className={cn(
-            'pr-10',
-            error && 'border-destructive focus-visible:ring-destructive'
-          )}
+          className={cn('pr-10', error && 'border-destructive focus-visible:ring-destructive')}
           autoComplete="off"
         />
         {isPassword && (
@@ -100,16 +97,10 @@ export function TokenInput({
           </Button>
         )}
       </div>
-      
-      <p className="text-xs text-muted-foreground">
-        {description}
-      </p>
-      
-      {error && (
-        <p className="text-xs text-destructive">
-          {error}
-        </p>
-      )}
+
+      <p className="text-xs text-muted-foreground">{description}</p>
+
+      {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   )
 }

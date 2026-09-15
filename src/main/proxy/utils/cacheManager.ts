@@ -86,7 +86,7 @@ export class LRUCache<K, V> {
   }
 
   values(): V[] {
-    return Array.from(this.cache.values()).map(entry => entry.value)
+    return Array.from(this.cache.values()).map((entry) => entry.value)
   }
 
   purgeStale(): number {
@@ -118,7 +118,9 @@ export class CacheManager {
 
     const cache = new LRUCache<string, any>(options)
     this.caches.set(name, cache)
-    console.log(`[CacheManager] Created cache "${name}" with maxSize=${options.maxSize || 100}, maxAge=${options.maxAge || 0}ms`)
+    console.log(
+      `[CacheManager] Created cache "${name}" with maxSize=${options.maxSize || 100}, maxAge=${options.maxAge || 0}ms`,
+    )
     return cache
   }
 

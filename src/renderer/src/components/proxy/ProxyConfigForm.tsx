@@ -30,23 +30,31 @@ interface FormErrors {
 
 export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
   const { t } = useTranslation()
-  const { proxyConfig, proxyStatus, setProxyConfig, saveAppConfig, startProxy, stopProxy, isLoading } = useProxyStore()
+  const {
+    proxyConfig,
+    proxyStatus,
+    setProxyConfig,
+    saveAppConfig,
+    startProxy,
+    stopProxy,
+    isLoading,
+  } = useProxyStore()
   const { toast } = useToast()
-  
+
   const initialConfigRef = useRef({
     port: proxyConfig.port.toString(),
     host: proxyConfig.host,
     enableCors: proxyConfig.enableCors,
     corsOrigin: proxyConfig.corsOrigin,
   })
-  
+
   const [formData, setFormData] = useState({
     port: proxyConfig.port.toString(),
     host: proxyConfig.host,
     enableCors: proxyConfig.enableCors,
     corsOrigin: proxyConfig.corsOrigin,
   })
-  
+
   const [errors, setErrors] = useState<FormErrors>({})
   const [hasChanges, setHasChanges] = useState(false)
   const [showRestartDialog, setShowRestartDialog] = useState(false)
@@ -78,8 +86,13 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
     const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/
     const ipv6Regex = /^\[?[0-9a-fA-F:]+\]?$/
     const hostnameRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?$/
-    
-    if (!ipv4Regex.test(value) && !ipv6Regex.test(value) && !hostnameRegex.test(value) && value !== 'localhost') {
+
+    if (
+      !ipv4Regex.test(value) &&
+      !ipv6Regex.test(value) &&
+      !hostnameRegex.test(value) &&
+      value !== 'localhost'
+    ) {
       return t('proxy.invalidIpOrHostname')
     }
     return undefined
@@ -89,7 +102,7 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
     if (!formData.enableCors) return undefined
     if (!value.trim()) return t('proxy.corsOriginEmpty')
     if (value !== '*') {
-      const origins = value.split(',').map(o => o.trim())
+      const origins = value.split(',').map((o) => o.trim())
       for (const origin of origins) {
         try {
           new URL(origin)
@@ -102,37 +115,37 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
   }
 
   const handlePortChange = (value: string) => {
-    setFormData(prev => ({ ...prev, port: value }))
+    setFormData((prev) => ({ ...prev, port: value }))
     const error = validatePort(value)
-    setErrors(prev => ({ ...prev, port: error }))
+    setErrors((prev) => ({ ...prev, port: error }))
     setHasChanges(true)
     onConfigChange?.()
   }
 
   const handleHostChange = (value: string) => {
-    setFormData(prev => ({ ...prev, host: value }))
+    setFormData((prev) => ({ ...prev, host: value }))
     const error = validateHost(value)
-    setErrors(prev => ({ ...prev, host: error }))
+    setErrors((prev) => ({ ...prev, host: error }))
     setHasChanges(true)
     onConfigChange?.()
   }
 
   const handleCorsToggle = (enabled: boolean) => {
-    setFormData(prev => ({ ...prev, enableCors: enabled }))
+    setFormData((prev) => ({ ...prev, enableCors: enabled }))
     if (enabled) {
       const error = validateCorsOrigin(formData.corsOrigin)
-      setErrors(prev => ({ ...prev, corsOrigin: error }))
+      setErrors((prev) => ({ ...prev, corsOrigin: error }))
     } else {
-      setErrors(prev => ({ ...prev, corsOrigin: undefined }))
+      setErrors((prev) => ({ ...prev, corsOrigin: undefined }))
     }
     setHasChanges(true)
     onConfigChange?.()
   }
 
   const handleCorsOriginChange = (value: string) => {
-    setFormData(prev => ({ ...prev, corsOrigin: value }))
+    setFormData((prev) => ({ ...prev, corsOrigin: value }))
     const error = validateCorsOrigin(value)
-    setErrors(prev => ({ ...prev, corsOrigin: error }))
+    setErrors((prev) => ({ ...prev, corsOrigin: error }))
     setHasChanges(true)
     onConfigChange?.()
   }
@@ -141,7 +154,7 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
     const portError = validatePort(formData.port)
     const hostError = validateHost(formData.host)
     const corsError = validateCorsOrigin(formData.corsOrigin)
-    
+
     if (portError || hostError || corsError) {
       setErrors({
         port: portError,
@@ -178,7 +191,7 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
     }
 
     setProxyConfig(newConfig)
-    
+
     const success = await saveAppConfig({
       proxyPort: newConfig.port,
       proxyHost: newConfig.host,
@@ -210,15 +223,15 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
     try {
       const newPort = parseInt(formData.port, 10)
       const newHost = formData.host
-      
+
       await performSave(newPort, newHost)
-      
+
       await stopProxy()
-      
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
       const success = await startProxy(newPort)
-      
+
       if (success) {
         toast({
           title: t('common.success'),
@@ -285,11 +298,9 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
                 onChange={(e) => handlePortChange(e.target.value)}
                 className={errors.port ? 'border-destructive' : ''}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('proxy.portRange')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('proxy.portRange')}</p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="host" className="flex items-center gap-2">
                 {t('proxy.bindAddress')}
@@ -310,9 +321,7 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
                 onChange={(e) => handleHostChange(e.target.value)}
                 className={errors.host ? 'border-destructive' : ''}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('proxy.bindAddressHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('proxy.bindAddressHelp')}</p>
             </div>
           </div>
 
@@ -320,9 +329,7 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
                 <Label htmlFor="cors-toggle">{t('proxy.enableCors')}</Label>
-                <p className="text-sm text-muted-foreground">
-                  {t('proxy.enableCorsHelp')}
-                </p>
+                <p className="text-sm text-muted-foreground">{t('proxy.enableCorsHelp')}</p>
               </div>
               <Switch
                 id="cors-toggle"
@@ -349,25 +356,16 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
                   onChange={(e) => handleCorsOriginChange(e.target.value)}
                   className={errors.corsOrigin ? 'border-destructive' : ''}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {t('proxy.corsOriginHelp')}
-                </p>
+                <p className="text-xs text-muted-foreground">{t('proxy.corsOriginHelp')}</p>
               </div>
             )}
           </div>
 
           <div className="flex justify-end space-x-2 pt-4">
-            <Button
-              variant="outline"
-              onClick={handleReset}
-              disabled={!hasChanges || isLoading}
-            >
+            <Button variant="outline" onClick={handleReset} disabled={!hasChanges || isLoading}>
               {t('common.reset')}
             </Button>
-            <Button
-              onClick={handleSave}
-              disabled={!hasChanges || !isValid || isLoading}
-            >
+            <Button onClick={handleSave} disabled={!hasChanges || !isValid || isLoading}>
               {isLoading ? t('proxy.saving') : t('proxy.saveConfig')}
             </Button>
           </div>
@@ -378,22 +376,17 @@ export function ProxyConfigForm({ onConfigChange }: ProxyConfigFormProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('proxy.restartRequired')}</DialogTitle>
-            <DialogDescription>
-              {t('proxy.restartRequiredDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('proxy.restartRequiredDesc')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowRestartDialog(false)}
               disabled={isRestarting}
             >
               {t('common.cancel')}
             </Button>
-            <Button 
-              onClick={handleRestartAndSave}
-              disabled={isRestarting}
-            >
+            <Button onClick={handleRestartAndSave} disabled={isRestarting}>
               {isRestarting ? (
                 <>
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />

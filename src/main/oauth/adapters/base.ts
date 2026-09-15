@@ -16,7 +16,7 @@ import {
   CredentialInfo,
   AdapterConfig,
   OAuthProgressEvent,
-} from './types'
+} from '../types'
 
 /**
  * OAuth adapter abstract base class
@@ -65,7 +65,11 @@ export abstract class BaseOAuthAdapter {
   /**
    * Emit progress event
    */
-  protected emitProgress(status: OAuthProgressEvent['status'], message: string, data?: Record<string, unknown>): void {
+  protected emitProgress(
+    status: OAuthProgressEvent['status'],
+    message: string,
+    data?: Record<string, unknown>,
+  ): void {
     if (this.progressCallback) {
       this.progressCallback({ status, message, data })
     }
@@ -164,9 +168,10 @@ export abstract class BaseOAuthAdapter {
       </head>
       <body>
         <div class="container">
-          ${data.error 
-            ? `<h1 class="error">❌ Login Failed</h1><p>${data.errorDescription || data.error}</p>`
-            : `<h1 class="success">✅ Login Successful</h1><p>Processing, please wait...</p>`
+          ${
+            data.error
+              ? `<h1 class="error">❌ Login Failed</h1><p>${data.errorDescription || data.error}</p>`
+              : `<h1 class="success">✅ Login Successful</h1><p>Processing, please wait...</p>`
           }
           <p style="font-size: 12px; opacity: 0.7;">This window can be closed</p>
         </div>
@@ -275,7 +280,7 @@ export abstract class BaseOAuthAdapter {
     try {
       const parts = token.split('.')
       if (parts.length !== 3) return null
-      
+
       const payload = Buffer.from(parts[1], 'base64').toString('utf-8')
       return JSON.parse(payload)
     } catch {

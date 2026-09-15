@@ -55,9 +55,7 @@ export function throwIfAborted(signal?: AbortSignal): void {
 }
 
 export function getRemainingTimeout(deadlineAt: number | undefined, fallbackMs: number): number {
-  const safeFallbackMs = Number.isFinite(fallbackMs)
-    ? Math.max(1, Math.floor(fallbackMs))
-    : 60000
+  const safeFallbackMs = Number.isFinite(fallbackMs) ? Math.max(1, Math.floor(fallbackMs)) : 60000
   if (deadlineAt === undefined || !Number.isFinite(deadlineAt)) return safeFallbackMs
   return Math.max(1, Math.min(safeFallbackMs, deadlineAt - Date.now()))
 }
@@ -71,9 +69,10 @@ export function createRequestDeadline(input: {
   const timeoutMs = Number.isFinite(input.timeoutMs)
     ? Math.max(1, Math.floor(input.timeoutMs))
     : 60000
-  const startedAt = typeof input.startedAt === 'number' && Number.isFinite(input.startedAt)
-    ? input.startedAt
-    : Date.now()
+  const startedAt =
+    typeof input.startedAt === 'number' && Number.isFinite(input.startedAt)
+      ? input.startedAt
+      : Date.now()
   const deadlineAt = startedAt + timeoutMs
   const remainingMs = Math.max(0, deadlineAt - Date.now())
   const controller = new AbortController()

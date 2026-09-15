@@ -1,4 +1,9 @@
-import type { NormalizedToolDefinition, NormalizedToolResult, ToolParseResult, ToolProtocolId } from '../types.ts'
+import type {
+  NormalizedToolDefinition,
+  NormalizedToolResult,
+  ToolParseResult,
+  ToolProtocolId,
+} from '../types.ts'
 import type { ToolProtocolDetection } from './base.ts'
 import type { ToolCall } from '../../types.ts'
 
@@ -146,7 +151,7 @@ export function parseJsonObject(value: string): Record<string, unknown> | undefi
   try {
     const parsed = JSON.parse(candidate)
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
+      ? (parsed as Record<string, unknown>)
       : undefined
   } catch {
     return undefined

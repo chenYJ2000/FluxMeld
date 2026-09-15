@@ -2,12 +2,7 @@ import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X, Copy, Check, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
@@ -54,17 +49,10 @@ function JsonViewer({ data }: { data: string }) {
   return (
     <div className="relative">
       <div className="bg-muted/50 rounded-lg p-3 overflow-x-auto">
-        <pre className="text-xs font-mono whitespace-pre-wrap break-all">
-          {data}
-        </pre>
+        <pre className="text-xs font-mono whitespace-pre-wrap break-all">{data}</pre>
       </div>
       <div className="absolute top-2 right-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 px-2"
-          onClick={handleCopy}
-        >
+        <Button variant="ghost" size="sm" className="h-6 px-2" onClick={handleCopy}>
           {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
         </Button>
       </div>
@@ -75,9 +63,8 @@ function JsonViewer({ data }: { data: string }) {
 export function LogDetailModal({ log, open, onClose }: LogDetailModalProps) {
   const { t } = useTranslation()
 
-  if (!log) return null
-
   const handleExport = useCallback(() => {
+    if (!log) return
     const blob = new Blob([JSON.stringify(log, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -86,6 +73,8 @@ export function LogDetailModal({ log, open, onClose }: LogDetailModalProps) {
     a.click()
     URL.revokeObjectURL(url)
   }, [log])
+
+  if (!log) return null
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -117,7 +106,7 @@ export function LogDetailModal({ log, open, onClose }: LogDetailModalProps) {
                   <span
                     className={cn(
                       'h-2 w-2 rounded-full shrink-0',
-                      log.status === 'success' ? 'bg-green-500' : 'bg-red-500'
+                      log.status === 'success' ? 'bg-green-500' : 'bg-red-500',
                     )}
                   />
                   <span className="break-all">{log.statusCode}</span>
@@ -137,7 +126,9 @@ export function LogDetailModal({ log, open, onClose }: LogDetailModalProps) {
               </div>
               <div className="min-w-0">
                 <label className="text-sm text-muted-foreground">{t('logs.duration')}</label>
-                <p className="font-medium">{log.duration ? `${(log.duration * 1000).toFixed(0)}ms` : '-'}</p>
+                <p className="font-medium">
+                  {log.duration ? `${(log.duration * 1000).toFixed(0)}ms` : '-'}
+                </p>
               </div>
             </div>
 

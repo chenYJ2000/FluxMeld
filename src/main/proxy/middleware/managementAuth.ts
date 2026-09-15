@@ -36,10 +36,7 @@ export function generateManagementSecret(): string {
  * @param code - Error code
  * @returns Error response object
  */
-function createUnauthorizedResponse(
-  message: string,
-  code: string
-): ManagementApiErrorResponse {
+function createUnauthorizedResponse(message: string, code: string): ManagementApiErrorResponse {
   return {
     success: false,
     error: {
@@ -112,7 +109,7 @@ export async function managementAuthMiddleware(ctx: Context, next: Next): Promis
     ctx.status = 404
     ctx.body = createUnauthorizedResponse(
       'Management API is not enabled',
-      'management_api_disabled'
+      'management_api_disabled',
     )
     return
   }
@@ -121,7 +118,7 @@ export async function managementAuthMiddleware(ctx: Context, next: Next): Promis
     ctx.status = 500
     ctx.body = createUnauthorizedResponse(
       'Management API secret is not configured',
-      'management_api_misconfigured'
+      'management_api_misconfigured',
     )
     return
   }
@@ -132,17 +129,14 @@ export async function managementAuthMiddleware(ctx: Context, next: Next): Promis
     ctx.status = 401
     ctx.body = createUnauthorizedResponse(
       'Authentication required. Provide Authorization: Bearer <secret> or X-Management-Secret header',
-      'missing_authentication'
+      'missing_authentication',
     )
     return
   }
 
   if (providedToken !== managementConfig.managementApiSecret) {
     ctx.status = 401
-    ctx.body = createUnauthorizedResponse(
-      'Invalid management API secret',
-      'invalid_secret'
-    )
+    ctx.body = createUnauthorizedResponse('Invalid management API secret', 'invalid_secret')
     return
   }
 

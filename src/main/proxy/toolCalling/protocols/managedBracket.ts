@@ -56,7 +56,15 @@ When calling tools, respond with only this block:
           continue
         }
 
-        toolCalls.push(buildToolCall(`call_${toolCalls.length}`, toolCalls.length, name, callMatch[2], callMatch[0]))
+        toolCalls.push(
+          buildToolCall(
+            `call_${toolCalls.length}`,
+            toolCalls.length,
+            name,
+            callMatch[2],
+            callMatch[0],
+          ),
+        )
       }
     }
 

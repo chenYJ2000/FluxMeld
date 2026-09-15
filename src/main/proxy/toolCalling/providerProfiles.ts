@@ -42,8 +42,10 @@ const profiles: Record<string, ProviderToolProfile> = {
 }
 
 export function getProviderToolProfile(providerId: string): ProviderToolProfile {
-  return profiles[providerId] ?? {
-    providerId,
-    ...fluxMeldXmlHistoryProfile,
-  }
+  return (
+    profiles[providerId] ?? {
+      providerId,
+      ...fluxMeldXmlHistoryProfile,
+    }
+  )
 }

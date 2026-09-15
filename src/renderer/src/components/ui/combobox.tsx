@@ -35,18 +35,19 @@ export function Combobox({
 
   const filteredOptions = React.useMemo(() => {
     if (!searchQuery) return options
-    return options.filter(option =>
-      option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      option.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      option.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    return options.filter(
+      (option) =>
+        option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        option.value.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        option.description?.toLowerCase().includes(searchQuery.toLowerCase()),
     )
   }, [options, searchQuery])
 
-  const selectedOption = options.find(option => option.value === value)
+  const selectedOption = options.find((option) => option.value === value)
 
   const groupedOptions = React.useMemo(() => {
     const groups: Record<string, ComboboxOption[]> = {}
-    filteredOptions.forEach(option => {
+    filteredOptions.forEach((option) => {
       const group = option.group || 'Other'
       if (!groups[group]) {
         groups[group] = []
@@ -84,9 +85,7 @@ export function Combobox({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full justify-between"
       >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : placeholder}
-        </span>
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
       </Button>
 
@@ -107,9 +106,7 @@ export function Combobox({
 
           <div className="max-h-60 overflow-auto">
             {filteredOptions.length === 0 ? (
-              <div className="py-6 text-center text-sm text-muted-foreground">
-                {emptyText}
-              </div>
+              <div className="py-6 text-center text-sm text-muted-foreground">{emptyText}</div>
             ) : (
               Object.entries(groupedOptions).map(([group, groupOptions]) => (
                 <div key={group}>
@@ -122,13 +119,13 @@ export function Combobox({
                       onClick={() => handleSelect(option.value)}
                       className={cn(
                         'flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-accent',
-                        value === option.value && 'bg-accent'
+                        value === option.value && 'bg-accent',
                       )}
                     >
                       <Check
                         className={cn(
                           'h-4 w-4',
-                          value === option.value ? 'opacity-100' : 'opacity-0'
+                          value === option.value ? 'opacity-100' : 'opacity-0',
                         )}
                       />
                       <div className="flex flex-col flex-1">

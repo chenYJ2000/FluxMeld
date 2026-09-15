@@ -4,16 +4,17 @@
  */
 
 import { ChatCompletionTool, ChatMessage } from '../types'
-import { CLIENT_SIGNATURES, GENERAL_TOOL_SIGNATURES, hasGeneralToolPromptSignature } from '../constants/signatures'
+import {
+  CLIENT_SIGNATURES,
+  GENERAL_TOOL_SIGNATURES,
+  hasGeneralToolPromptSignature,
+} from '../constants/signatures'
 
 // Re-export for backward compatibility
 export const TOOL_PROMPT_SIGNATURES = {
   general: GENERAL_TOOL_SIGNATURES,
   clients: Object.fromEntries(
-    Object.entries(CLIENT_SIGNATURES).map(([key, value]) => [
-      key,
-      value.detectPatterns,
-    ])
+    Object.entries(CLIENT_SIGNATURES).map(([key, value]) => [key, value.detectPatterns]),
   ),
 }
 
@@ -39,18 +40,33 @@ export interface ToolPromptConfig {
 export const DEFAULT_TOOL_PROMPT_CONFIG: ToolPromptConfig = {
   mode: 'smart',
   smartThreshold: 50,
-  keywords: ['search', 'find', 'get', 'call', 'use', 'tool', 'query', 'fetch', 'read', 'write', 'list', 'delete', 'update', 'create']
+  keywords: [
+    'search',
+    'find',
+    'get',
+    'call',
+    'use',
+    'tool',
+    'query',
+    'fetch',
+    'read',
+    'write',
+    'list',
+    'delete',
+    'update',
+    'create',
+  ],
 }
 
 export function shouldInjectToolPrompt(
   messages: ChatMessage[],
   tools: ChatCompletionTool[] | undefined,
-  config: ToolPromptConfig = DEFAULT_TOOL_PROMPT_CONFIG
+  config: ToolPromptConfig = DEFAULT_TOOL_PROMPT_CONFIG,
 ): boolean {
   if (!tools || tools.length === 0) return false
-  
+
   if (hasToolPromptInjected(messages)) return false
-  
+
   switch (config.mode) {
     case 'always':
       return true
@@ -64,30 +80,30 @@ export function shouldInjectToolPrompt(
 }
 
 function isComplexQuery(messages: ChatMessage[], config: ToolPromptConfig): boolean {
-  const lastUserMsg = [...messages].reverse().find(m => m.role === 'user')
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
   if (!lastUserMsg) return false
-  
+
   const content = typeof lastUserMsg.content === 'string' ? lastUserMsg.content : ''
-  
+
   if (content.length > config.smartThreshold) {
     return true
   }
-  
+
   const lowerContent = content.toLowerCase()
   for (const keyword of config.keywords) {
     if (lowerContent.includes(keyword.toLowerCase())) {
       return true
     }
   }
-  
+
   if (content.includes('?') || content.includes('？')) {
     return true
   }
-  
+
   if (content.includes('```') || content.includes('code')) {
     return true
   }
-  
+
   const actionPatterns = [
     /help me (\w+)/i,
     /can you (\w+)/i,
@@ -95,13 +111,13 @@ function isComplexQuery(messages: ChatMessage[], config: ToolPromptConfig): bool
     /i need to (\w+)/i,
     /i want to (\w+)/i,
   ]
-  
+
   for (const pattern of actionPatterns) {
     if (pattern.test(content)) {
       return true
     }
   }
-  
+
   return false
 }
 
@@ -110,13 +126,13 @@ export function toolsToSystemPrompt(tools: ChatCompletionTool[], simple: boolean
     return ''
   }
 
-  const toolDefinitions = tools.map(tool => {
-    const params = tool.function.parameters
-      ? JSON.stringify(tool.function.parameters)
-      : '{}'
+  const toolDefinitions = tools
+    .map((tool) => {
+      const params = tool.function.parameters ? JSON.stringify(tool.function.parameters) : '{}'
 
-    return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
-  }).join('\n')
+      return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
+    })
+    .join('\n')
 
   if (simple) {
     return `## Available Tools

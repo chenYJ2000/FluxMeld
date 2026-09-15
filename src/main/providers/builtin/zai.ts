@@ -9,12 +9,12 @@ export const zaiConfig: BuiltinProviderConfig = {
   chatPath: '/v2/chat/completions',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': '*/*',
+    Accept: '*/*',
     'Accept-Encoding': 'gzip, deflate, br, zstd',
     'Accept-Language': 'zh-CN',
     'Cache-Control': 'no-cache',
-    'Origin': 'https://chat.z.ai',
-    'Pragma': 'no-cache',
+    Origin: 'https://chat.z.ai',
+    Pragma: 'no-cache',
     'Sec-Ch-Ua': '"Not/A)Brand";v="99", "Chromium";v="148"',
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"macOS"',
@@ -26,13 +26,7 @@ export const zaiConfig: BuiltinProviderConfig = {
   },
   enabled: true,
   description: 'Z.ai - Free AI Chatbot powered by GLM-5.1, GLM-5, and GLM-4.7',
-  supportedModels: [
-    'GLM-5.1',
-    'GLM-5-Turbo',
-    'GLM-5V-Turbo',
-    'GLM-5',
-    'GLM-4.7',
-  ],
+  supportedModels: ['GLM-5.1', 'GLM-5-Turbo', 'GLM-5V-Turbo', 'GLM-5', 'GLM-4.7'],
   modelMappings: {
     'GLM-5.1': 'GLM-5.1',
     'GLM-5-Turbo': 'GLM-5-Turbo',
@@ -47,7 +41,8 @@ export const zaiConfig: BuiltinProviderConfig = {
       type: 'password',
       required: true,
       placeholder: 'Enter Z.ai JWT Token',
-      helpText: 'Get token from Z.ai web version, found in browser DevTools Application -> Cookie, starts with "eyJ..."',
+      helpText:
+        'Get token from Z.ai web version, found in browser DevTools Application -> Cookie, starts with "eyJ..."',
     },
     {
       name: 'captcha_verify_param',
@@ -55,7 +50,8 @@ export const zaiConfig: BuiltinProviderConfig = {
       type: 'password',
       required: false,
       placeholder: 'Optional captcha_verify_param from chat.z.ai HAR',
-      helpText: 'Optional. If Z.ai requires verification, copy captcha_verify_param from the latest /api/v2/chat/completions request body.',
+      helpText:
+        'Optional. If Z.ai requires verification, copy captcha_verify_param from the latest /api/v2/chat/completions request body.',
     },
   ],
   tokenCheckEndpoint: '/api/v1/users/user/settings',

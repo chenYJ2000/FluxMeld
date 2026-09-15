@@ -2,7 +2,13 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useSettingsStore, CloseBehavior, OAuthProxyMode } from '@/stores/settingsStore'
 import { Bell, Minimize2, Power, Globe } from 'lucide-react'
@@ -39,11 +45,7 @@ export function GeneralSettings() {
               <Label htmlFor="auto-start">{t('settings.autoStart')}</Label>
               <p className="text-sm text-muted-foreground">{t('settings.autoStartHelp')}</p>
             </div>
-            <Switch
-              id="auto-start"
-              checked={autoStart}
-              onCheckedChange={setAutoStart}
-            />
+            <Switch id="auto-start" checked={autoStart} onCheckedChange={setAutoStart} />
           </div>
           <Separator />
           <div className="flex items-center justify-between">
@@ -113,7 +115,9 @@ export function GeneralSettings() {
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="notifications">{t('settings.enableNotifications')}</Label>
-              <p className="text-sm text-muted-foreground">{t('settings.enableNotificationsHelp')}</p>
+              <p className="text-sm text-muted-foreground">
+                {t('settings.enableNotificationsHelp')}
+              </p>
             </div>
             <Switch
               id="notifications"

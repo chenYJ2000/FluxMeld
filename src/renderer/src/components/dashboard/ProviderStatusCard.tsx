@@ -98,10 +98,7 @@ export function ProviderStatusCard({ providers, className }: ProviderStatusCardP
           <ScrollArea className="pr-2" style={{ height: scrollHeight }}>
             <div className="space-y-2">
               {providers.map((provider) => {
-                const successRate = getSuccessRate(
-                  provider.successCount,
-                  provider.requestCount
-                )
+                const successRate = getSuccessRate(provider.successCount, provider.requestCount)
 
                 return (
                   <div
@@ -111,21 +108,25 @@ export function ProviderStatusCard({ providers, className }: ProviderStatusCardP
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div
-                          className={cn(
-                            'h-2 w-2 rounded-full',
-                            getStatusColor(provider.status)
-                          )}
+                          className={cn('h-2 w-2 rounded-full', getStatusColor(provider.status))}
                         />
                         <span className="font-medium text-sm">{provider.name}</span>
                       </div>
-                      <Badge variant={getStatusBadge(provider.status) as "default" | "secondary" | "destructive"} className="text-xs">
+                      <Badge
+                        variant={
+                          getStatusBadge(provider.status) as 'default' | 'secondary' | 'destructive'
+                        }
+                        className="text-xs"
+                      >
                         {getStatusIcon(provider.status)}
                         <span className="ml-1">{getStatusText(provider.status)}</span>
                       </Badge>
                     </div>
                     <div className="grid grid-cols-3 gap-2 text-xs">
                       <div>
-                        <span className="text-muted-foreground">{t('dashboard.totalRequests')}</span>
+                        <span className="text-muted-foreground">
+                          {t('dashboard.totalRequests')}
+                        </span>
                         <p className="font-medium">{provider.requestCount.toLocaleString()}</p>
                       </div>
                       <div>
@@ -134,7 +135,9 @@ export function ProviderStatusCard({ providers, className }: ProviderStatusCardP
                       </div>
                       <div>
                         <span className="text-muted-foreground">{t('providers.latency')}</span>
-                        <p className="font-medium">{provider.latency ? `${provider.latency}ms` : '-'}</p>
+                        <p className="font-medium">
+                          {provider.latency ? `${provider.latency}ms` : '-'}
+                        </p>
                       </div>
                     </div>
                   </div>

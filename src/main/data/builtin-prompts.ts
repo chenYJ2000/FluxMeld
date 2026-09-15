@@ -15,5 +15,5 @@ export const BUILTIN_PROMPTS: SystemPrompt[] = [
  * Get built-in prompt by ID
  */
 export function getBuiltinPromptById(id: string): SystemPrompt | undefined {
-  return BUILTIN_PROMPTS.find(p => p.id === id)
+  return BUILTIN_PROMPTS.find((p) => p.id === id)
 }

@@ -14,7 +14,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useProxyStore } from '@/stores/proxyStore'
@@ -30,14 +36,16 @@ function mergeToolCallingConfig(
       ...config.advanced,
       ...updates.advanced,
     },
-    enabled: updates.mode === 'off' ? false : updates.enabled ?? config.enabled,
+    enabled: updates.mode === 'off' ? false : (updates.enabled ?? config.enabled),
   }
 }
 
 export function ToolCallingPanel() {
   const { t } = useTranslation()
   const { appConfig, saveAppConfig } = useProxyStore()
-  const [smokeStatus, setSmokeStatus] = useState<'not_run' | 'running' | 'pass' | 'failed'>('not_run')
+  const [smokeStatus, setSmokeStatus] = useState<'not_run' | 'running' | 'pass' | 'failed'>(
+    'not_run',
+  )
   const config = appConfig?.toolCallingConfig ?? DEFAULT_TOOL_CALLING_CONFIG
   const clientAdapters = P0_TOOL_CLIENT_ADAPTERS
 
@@ -92,19 +100,25 @@ export function ToolCallingPanel() {
               <Label>{t('toolCalling.clientType')}</Label>
               <Select
                 value={config.clientAdapterId}
-                onValueChange={(value) => saveConfig({ clientAdapterId: value as ToolClientAdapterId })}
+                onValueChange={(value) =>
+                  saveConfig({ clientAdapterId: value as ToolClientAdapterId })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {clientAdapters.map((adapter) => (
-                    <SelectItem key={adapter.id} value={adapter.id}>{adapter.label}</SelectItem>
+                    <SelectItem key={adapter.id} value={adapter.id}>
+                      {adapter.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {selectedClient ? t(selectedClient.descriptionKey) : t('toolCalling.clients.unknown')}
+                {selectedClient
+                  ? t(selectedClient.descriptionKey)
+                  : t('toolCalling.clients.unknown')}
               </p>
             </div>
 
@@ -112,10 +126,12 @@ export function ToolCallingPanel() {
               <Label>{t('toolCalling.mode')}</Label>
               <Select
                 value={config.mode}
-                onValueChange={(value) => saveConfig({
-                  mode: value as ToolCallingModeSetting,
-                  enabled: value !== 'off',
-                })}
+                onValueChange={(value) =>
+                  saveConfig({
+                    mode: value as ToolCallingModeSetting,
+                    enabled: value !== 'off',
+                  })
+                }
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -152,7 +168,12 @@ export function ToolCallingPanel() {
               <Badge variant={smokeStatus === 'pass' ? 'default' : 'outline'}>
                 {t(`toolCalling.smoke.${smokeStatus}`)}
               </Badge>
-              <Button variant="outline" size="sm" onClick={runSmoke} disabled={smokeStatus === 'running'}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={runSmoke}
+                disabled={smokeStatus === 'running'}
+              >
                 <FlaskConical className="mr-2 h-4 w-4" />
                 {t('toolCalling.smoke.run')}
               </Button>
@@ -182,11 +203,15 @@ export function ToolCallingPanel() {
             <div className="flex items-center justify-between">
               <div>
                 <Label>{t('toolCalling.advanced.promptPreview')}</Label>
-                <p className="text-xs text-muted-foreground">{t('toolCalling.advanced.promptPreviewDesc')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('toolCalling.advanced.promptPreviewDesc')}
+                </p>
               </div>
               <Switch
                 checked={config.advanced.promptPreviewEnabled}
-                onCheckedChange={(promptPreviewEnabled) => saveConfig({ advanced: { promptPreviewEnabled } })}
+                onCheckedChange={(promptPreviewEnabled) =>
+                  saveConfig({ advanced: { promptPreviewEnabled } })
+                }
               />
             </div>
             <div className="space-y-2">
@@ -194,9 +219,14 @@ export function ToolCallingPanel() {
               <Textarea
                 className="min-h-[160px] font-mono text-xs"
                 value={config.advanced.customPromptTemplate ?? ''}
-                onChange={(event) => saveConfig({
-                  advanced: { customPromptTemplate: event.target.value || undefined },
-                })}
+                onChange={(event) =>
+                  saveConfig({
+                    advanced: {
+                      ...config.advanced,
+                      customPromptTemplate: event.target.value || undefined,
+                    },
+                  })
+                }
                 placeholder={t('toolCalling.advanced.customTemplatePlaceholder')}
               />
             </div>

@@ -9,11 +9,7 @@ export const QWEN_VARIANT: PromptVariant = {
   id: 'qwen',
   name: 'Qwen',
   description: 'Optimized prompt variant for Qwen models',
-  modelPatterns: [
-    'qwen',
-    'tongyi',
-    'dashscope',
-  ],
+  modelPatterns: ['qwen', 'tongyi', 'dashscope'],
   providerPatterns: ['qwen', 'qwen-ai'],
   systemPrompt: 'You are a helpful AI assistant.',
   toolPromptTemplate: `## Available Tools

@@ -26,7 +26,7 @@ class OpenAIValidator implements Validator {
 
   async validate(credentials: Record<string, string>): Promise<ValidationResult> {
     const apiKey = credentials.apiKey || credentials.token
-    
+
     if (!apiKey) {
       return {
         valid: false,
@@ -34,7 +34,7 @@ class OpenAIValidator implements Validator {
         validatedAt: Date.now(),
       }
     }
-    
+
     try {
       const response = await axios.get(`${this.apiEndpoint}/models`, {
         headers: {
@@ -42,7 +42,7 @@ class OpenAIValidator implements Validator {
         },
         timeout: 10000,
       })
-      
+
       if (response.status === 200) {
         return {
           valid: true,
@@ -52,7 +52,7 @@ class OpenAIValidator implements Validator {
           },
         }
       }
-      
+
       return {
         valid: false,
         error: `Validation failed: HTTP ${response.status}`,
@@ -66,7 +66,7 @@ class OpenAIValidator implements Validator {
   private handleError(error: unknown): ValidationResult {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ error?: { message?: string } }>
-      
+
       if (axiosError.response?.status === 401) {
         return {
           valid: false,
@@ -74,7 +74,7 @@ class OpenAIValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       if (axiosError.response?.status === 429) {
         return {
           valid: false,
@@ -82,7 +82,7 @@ class OpenAIValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       const message = axiosError.response?.data?.error?.message || axiosError.message
       return {
         valid: false,
@@ -90,7 +90,7 @@ class OpenAIValidator implements Validator {
         validatedAt: Date.now(),
       }
     }
-    
+
     return {
       valid: false,
       error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -111,7 +111,7 @@ class ClaudeValidator implements Validator {
 
   async validate(credentials: Record<string, string>): Promise<ValidationResult> {
     const apiKey = credentials.apiKey || credentials.token
-    
+
     if (!apiKey) {
       return {
         valid: false,
@@ -119,7 +119,7 @@ class ClaudeValidator implements Validator {
         validatedAt: Date.now(),
       }
     }
-    
+
     try {
       const response = await axios.post(
         `${this.apiEndpoint}/messages`,
@@ -135,9 +135,9 @@ class ClaudeValidator implements Validator {
             'Content-Type': 'application/json',
           },
           timeout: 15000,
-        }
+        },
       )
-      
+
       if (response.status === 200) {
         return {
           valid: true,
@@ -147,7 +147,7 @@ class ClaudeValidator implements Validator {
           },
         }
       }
-      
+
       return {
         valid: false,
         error: `Validation failed: HTTP ${response.status}`,
@@ -161,7 +161,7 @@ class ClaudeValidator implements Validator {
   private handleError(error: unknown): ValidationResult {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ error?: { message?: string; type?: string } }>
-      
+
       if (axiosError.response?.status === 401) {
         return {
           valid: false,
@@ -169,7 +169,7 @@ class ClaudeValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       if (axiosError.response?.status === 429) {
         return {
           valid: false,
@@ -177,7 +177,7 @@ class ClaudeValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       const errorData = axiosError.response?.data?.error
       if (errorData?.type === 'invalid_request_error' && errorData.message?.includes('credit')) {
         return {
@@ -186,7 +186,7 @@ class ClaudeValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       const message = errorData?.message || axiosError.message
       return {
         valid: false,
@@ -194,7 +194,7 @@ class ClaudeValidator implements Validator {
         validatedAt: Date.now(),
       }
     }
-    
+
     return {
       valid: false,
       error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -215,7 +215,7 @@ class ChatGPTWebValidator implements Validator {
 
   async validate(credentials: Record<string, string>): Promise<ValidationResult> {
     const cookie = credentials.cookie || credentials.sessionToken
-    
+
     if (!cookie) {
       return {
         valid: false,
@@ -223,7 +223,7 @@ class ChatGPTWebValidator implements Validator {
         validatedAt: Date.now(),
       }
     }
-    
+
     try {
       const response = await axios.get(`${this.apiEndpoint}/api/auth/session`, {
         headers: {
@@ -231,10 +231,10 @@ class ChatGPTWebValidator implements Validator {
         },
         timeout: 10000,
       })
-      
+
       if (response.status === 200 && response.data) {
         const data = response.data as { user?: { email?: string; name?: string } }
-        
+
         if (data.user) {
           return {
             valid: true,
@@ -245,13 +245,13 @@ class ChatGPTWebValidator implements Validator {
             },
           }
         }
-        
+
         return {
           valid: true,
           validatedAt: Date.now(),
         }
       }
-      
+
       return {
         valid: false,
         error: `Validation failed: HTTP ${response.status}`,
@@ -265,7 +265,7 @@ class ChatGPTWebValidator implements Validator {
   private handleError(error: unknown): ValidationResult {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError
-      
+
       if (axiosError.response?.status === 401 || axiosError.response?.status === 403) {
         return {
           valid: false,
@@ -273,7 +273,7 @@ class ChatGPTWebValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       if (axiosError.response?.status === 429) {
         return {
           valid: false,
@@ -281,14 +281,14 @@ class ChatGPTWebValidator implements Validator {
           validatedAt: Date.now(),
         }
       }
-      
+
       return {
         valid: false,
         error: `Validation failed: ${axiosError.message}`,
         validatedAt: Date.now(),
       }
     }
-    
+
     return {
       valid: false,
       error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -312,7 +312,7 @@ class GenericTokenValidator implements Validator {
 
   async validate(credentials: Record<string, string>): Promise<ValidationResult> {
     const token = credentials.apiKey || credentials.token || credentials.authorization
-    
+
     if (!token) {
       return {
         valid: false,
@@ -320,25 +320,25 @@ class GenericTokenValidator implements Validator {
         validatedAt: Date.now(),
       }
     }
-    
+
     try {
       const headers: Record<string, string> = {
         ...this.headers,
         Authorization: `Bearer ${token}`,
       }
-      
+
       const response = await axios.get(`${this.apiEndpoint}/models`, {
         headers,
         timeout: 10000,
       })
-      
+
       if (response.status === 200) {
         return {
           valid: true,
           validatedAt: Date.now(),
         }
       }
-      
+
       return {
         valid: false,
         error: `Validation failed: HTTP ${response.status}`,
@@ -347,7 +347,7 @@ class GenericTokenValidator implements Validator {
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError
-        
+
         if (axiosError.response?.status === 401) {
           return {
             valid: false,
@@ -355,14 +355,14 @@ class GenericTokenValidator implements Validator {
             validatedAt: Date.now(),
           }
         }
-        
+
         return {
           valid: false,
           error: `Validation failed: ${axiosError.message}`,
           validatedAt: Date.now(),
         }
       }
-      
+
       return {
         valid: false,
         error: `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -380,7 +380,7 @@ class GenericTokenValidator implements Validator {
  */
 export async function validateCredentials(
   provider: Provider,
-  credentials: Record<string, string>
+  credentials: Record<string, string>,
 ): Promise<ValidationResult> {
   // Built-in providers use ProviderChecker for validation
   if (provider.type === 'builtin') {
@@ -393,9 +393,9 @@ export async function validateCredentials(
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
-    
+
     const result = await ProviderChecker.checkAccountToken(provider, tempAccount)
-    
+
     return {
       valid: result.valid,
       error: result.error,
@@ -403,10 +403,10 @@ export async function validateCredentials(
       accountInfo: result.userInfo,
     }
   }
-  
+
   // Custom providers use generic validator
   const validator = new GenericTokenValidator(provider.apiEndpoint, provider.headers)
-  
+
   try {
     return await validator.validate(credentials)
   } catch (error) {
@@ -426,13 +426,13 @@ export async function validateCredentials(
  */
 export async function validateCredentialsBatch(
   providers: Provider[],
-  credentialsMap: Map<string, Record<string, string>>
+  credentialsMap: Map<string, Record<string, string>>,
 ): Promise<Map<string, ValidationResult>> {
   const results = new Map<string, ValidationResult>()
-  
+
   const promises = providers.map(async (provider) => {
     const credentials = credentialsMap.get(provider.id)
-    
+
     if (!credentials) {
       results.set(provider.id, {
         valid: false,
@@ -441,13 +441,13 @@ export async function validateCredentialsBatch(
       })
       return
     }
-    
+
     const result = await validateCredentials(provider, credentials)
     results.set(provider.id, result)
   })
-  
+
   await Promise.all(promises)
-  
+
   return results
 }
 

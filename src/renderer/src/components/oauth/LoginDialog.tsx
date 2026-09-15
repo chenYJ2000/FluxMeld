@@ -234,7 +234,7 @@ export function LoginDialog({
         progress: event.progress,
       })
     })
-    
+
     return () => {
       unsubscribe?.()
     }
@@ -259,7 +259,7 @@ export function LoginDialog({
 
   const handleOpenBrowser = async () => {
     if (!config?.loginUrl) return
-    
+
     try {
       await window.electronAPI?.invoke('app:openExternal', config.loginUrl)
     } catch (err) {
@@ -283,14 +283,14 @@ export function LoginDialog({
     setProgress({ status: 'pending', message: t('oauth.validatingToken') })
 
     try {
-      const result = await window.electronAPI?.invoke('oauth:loginWithToken', {
+      const result = (await window.electronAPI?.invoke('oauth:loginWithToken', {
         providerId,
         providerType,
         token,
         realUserID: isMiniMax ? realUserID.trim() : undefined,
         mimoUserId: isMimo ? mimoUserId.trim() : undefined,
         mimoPhToken: isMimo ? mimoPhToken.trim() : undefined,
-      }) as OAuthLoginResult | undefined
+      })) as OAuthLoginResult | undefined
 
       if (result?.success) {
         setProgress({ status: 'success', message: t('oauth.loginSuccess') })
@@ -313,7 +313,9 @@ export function LoginDialog({
     }
   }
 
-  const currentTokenConfig = config?.manualTokenConfigs.find(c => c.tokenType === tokenType) || config?.manualTokenConfigs[0]
+  const currentTokenConfig =
+    config?.manualTokenConfigs.find((c) => c.tokenType === tokenType) ||
+    config?.manualTokenConfigs[0]
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -322,9 +324,7 @@ export function LoginDialog({
           <DialogTitle className="flex items-center gap-2">
             {t('oauth.loginTo', { provider: displayName })}
           </DialogTitle>
-          <DialogDescription>
-            {t('oauth.selectLoginMethod')}
-          </DialogDescription>
+          <DialogDescription>{t('oauth.selectLoginMethod')}</DialogDescription>
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
@@ -334,21 +334,23 @@ export function LoginDialog({
           </TabsList>
 
           <TabsContent value="manual" className="mt-4 space-y-4">
-            {config?.manualTokenConfigs.length && config.manualTokenConfigs.length > 1 && !isMiniMax && (
-              <div className="flex gap-2">
-                {config.manualTokenConfigs.map((tc) => (
-                  <Button
-                    key={tc.tokenType}
-                    type="button"
-                    variant={tokenType === tc.tokenType ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setTokenType(tc.tokenType)}
-                  >
-                    {t(tc.labelKey)}
-                  </Button>
-                ))}
-              </div>
-            )}
+            {config?.manualTokenConfigs.length &&
+              config.manualTokenConfigs.length > 1 &&
+              !isMiniMax && (
+                <div className="flex gap-2">
+                  {config.manualTokenConfigs.map((tc) => (
+                    <Button
+                      key={tc.tokenType}
+                      type="button"
+                      variant={tokenType === tc.tokenType ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setTokenType(tc.tokenType)}
+                    >
+                      {t(tc.labelKey)}
+                    </Button>
+                  ))}
+                </div>
+              )}
 
             {currentTokenConfig && (
               <TokenInput
@@ -413,7 +415,7 @@ export function LoginDialog({
               <p className="text-center text-sm text-muted-foreground">
                 {t('oauth.clickToOpenBrowser')}
               </p>
-              
+
               <Button onClick={handleOpenBrowser} className="gap-2">
                 <ExternalLink className="h-4 w-4" />
                 {t('oauth.openLoginPage', { provider: displayName })}
@@ -443,17 +445,17 @@ export function LoginDialog({
         )}
 
         <DialogFooter className="mt-4">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             {t('common.cancel')}
           </Button>
           {activeTab === 'manual' && (
             <Button
               onClick={handleManualSubmit}
-              disabled={isLoading || !token.trim() || (isMimo && (!mimoUserId.trim() || !mimoPhToken.trim()))}
+              disabled={
+                isLoading ||
+                !token.trim() ||
+                (isMimo && (!mimoUserId.trim() || !mimoPhToken.trim()))
+              }
             >
               {isLoading ? t('oauth.validating') : t('oauth.confirmLogin')}
             </Button>

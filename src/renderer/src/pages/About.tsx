@@ -13,7 +13,8 @@ import {
 } from 'lucide-react'
 import logoIcon from '@/assets/fluxmeld-mark.svg'
 
-type UpdatePhase = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
+type UpdatePhase =
+  'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error'
 
 interface UpdateInfo {
   phase: UpdatePhase
@@ -40,7 +41,11 @@ export function About() {
     }
   }, [])
 
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({ phase: 'idle', latestVersion: null, error: null })
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo>({
+    phase: 'idle',
+    latestVersion: null,
+    error: null,
+  })
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null)
   const displayAppVersion = appVersion || '...'
 
@@ -74,14 +79,16 @@ export function About() {
       setDownloadProgress(null)
     })
 
-    const unsubscribeProgress = window.electronAPI.app.onUpdateProgress((progress: DownloadProgress) => {
-      setDownloadProgress(progress)
-      setUpdateInfo((current) => ({
-        ...current,
-        phase: 'downloading',
-        error: null,
-      }))
-    })
+    const unsubscribeProgress = window.electronAPI.app.onUpdateProgress(
+      (progress: DownloadProgress) => {
+        setDownloadProgress(progress)
+        setUpdateInfo((current) => ({
+          ...current,
+          phase: 'downloading',
+          error: null,
+        }))
+      },
+    )
 
     const unsubscribeDownloaded = window.electronAPI.app.onUpdateDownloaded((info) => {
       setUpdateInfo({
@@ -268,9 +275,7 @@ export function About() {
                     </span>
                   </div>
                   <div className="w-6 h-6 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)]/30 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                    <span className="text-[10px] text-[var(--text-primary)]">
-                      ↗
-                    </span>
+                    <span className="text-[10px] text-[var(--text-primary)]">↗</span>
                   </div>
                 </button>
               ))}
@@ -320,7 +325,8 @@ export function About() {
                       <div className="flex items-center justify-between text-xs text-[var(--text-dim)]">
                         <span>{formatSpeed(downloadProgress.bytesPerSecond)}</span>
                         <span>
-                          {formatBytes(downloadProgress.transferred)} / {formatBytes(downloadProgress.total)}
+                          {formatBytes(downloadProgress.transferred)} /{' '}
+                          {formatBytes(downloadProgress.total)}
                         </span>
                       </div>
                     </>

@@ -59,11 +59,11 @@ class SessionManagerClass {
 
   private startCleanupScheduler(): void {
     const CLEANUP_INTERVAL_MS = 60 * 1000
-    
+
     this.cleanupInterval = setInterval(() => {
       this.cleanExpiredSessions()
     }, CLEANUP_INTERVAL_MS)
-    
+
     console.log('[SessionManager] Cleanup scheduler started, interval: 1 minute')
   }
 
@@ -84,12 +84,13 @@ class SessionManagerClass {
       const existingSession = this.getSession(sessionId)
 
       if (existingSession) {
-        const reactivatedSession = existingSession.status === 'active'
-          ? existingSession
-          : storeManager.updateSession(sessionId, {
-              status: 'active',
-              lastActiveAt: Date.now(),
-            }) ?? existingSession
+        const reactivatedSession =
+          existingSession.status === 'active'
+            ? existingSession
+            : (storeManager.updateSession(sessionId, {
+                status: 'active',
+                lastActiveAt: Date.now(),
+              }) ?? existingSession)
 
         return {
           sessionId: reactivatedSession.id,
@@ -109,9 +110,9 @@ class SessionManagerClass {
         isNew: true,
       }
     }
-    
+
     const existingSession = this.getActiveSession(providerId, accountId)
-    
+
     if (existingSession) {
       return {
         sessionId: existingSession.id,
@@ -121,13 +122,13 @@ class SessionManagerClass {
         isNew: false,
       }
     }
-    
+
     const newSession = this.createSession({
       providerId,
       accountId,
       model,
     })
-    
+
     return {
       sessionId: newSession.id,
       providerSessionId: undefined,
@@ -139,15 +140,12 @@ class SessionManagerClass {
 
   getActiveSession(providerId: string, accountId: string): SessionRecord | undefined {
     const sessions = storeManager.getSessionsByProviderId(providerId)
-    const accountSessions = sessions.filter(s => s.accountId === accountId)
+    const accountSessions = sessions.filter((s) => s.accountId === accountId)
     const config = this.getSessionConfig()
     const timeoutMs = config.sessionTimeout * 60 * 1000
     const now = Date.now()
-    
-    return accountSessions.find(s => 
-      s.status === 'active' && 
-      (now - s.lastActiveAt) < timeoutMs
-    )
+
+    return accountSessions.find((s) => s.status === 'active' && now - s.lastActiveAt < timeoutMs)
   }
 
   createSession(options: CreateSessionOptions): SessionRecord {
@@ -158,7 +156,7 @@ class SessionManagerClass {
     if (storeManager.getSessionById(id)) {
       throw new Error(`Session already exists: ${id}`)
     }
-    
+
     const session: SessionRecord = {
       id,
       providerId,
@@ -170,7 +168,7 @@ class SessionManagerClass {
       status: 'active',
       model,
     }
-    
+
     storeManager.addSession(session)
     return session
   }
@@ -287,10 +285,14 @@ class SessionManagerClass {
       content: message.content,
       ...(message.name ? { name: message.name } : {}),
       ...(message.toolCallId ? { tool_call_id: message.toolCallId } : {}),
-      ...(message.toolCalls ? { tool_calls: message.toolCalls.map((toolCall) => ({
-        ...toolCall,
-        function: { ...toolCall.function },
-      })) } : {}),
+      ...(message.toolCalls
+        ? {
+            tool_calls: message.toolCalls.map((toolCall) => ({
+              ...toolCall,
+              function: { ...toolCall.function },
+            })),
+          }
+        : {}),
     })
   }
 
@@ -301,10 +303,14 @@ class SessionManagerClass {
       timestamp: Date.now(),
       ...(message.name ? { name: message.name } : {}),
       ...(message.tool_call_id ? { toolCallId: message.tool_call_id } : {}),
-      ...(message.tool_calls ? { toolCalls: message.tool_calls.map((toolCall) => ({
-        ...toolCall,
-        function: { ...toolCall.function },
-      })) } : {}),
+      ...(message.tool_calls
+        ? {
+            toolCalls: message.tool_calls.map((toolCall) => ({
+              ...toolCall,
+              function: { ...toolCall.function },
+            })),
+          }
+        : {}),
     }
   }
 
@@ -312,10 +318,14 @@ class SessionManagerClass {
     return {
       ...message,
       content: this.cloneContent(message.content),
-      ...(message.toolCalls ? { toolCalls: message.toolCalls.map((toolCall) => ({
-        ...toolCall,
-        function: { ...toolCall.function },
-      })) } : {}),
+      ...(message.toolCalls
+        ? {
+            toolCalls: message.toolCalls.map((toolCall) => ({
+              ...toolCall,
+              function: { ...toolCall.function },
+            })),
+          }
+        : {}),
     }
   }
 
@@ -329,7 +339,8 @@ class SessionManagerClass {
 
   private limitStoredMessages(messages: ChatMessage[]): ChatMessage[] {
     const maxMessages = Math.max(1, this.getSessionConfig().maxMessagesPerSession)
-    if (messages.length <= maxMessages) return messages.map((message) => this.cloneStoredMessage(message))
+    if (messages.length <= maxMessages)
+      return messages.map((message) => this.cloneStoredMessage(message))
 
     const systemMessages = messages.filter((message) => message.role === 'system')
     const nonSystemMessages = messages.filter((message) => message.role !== 'system')
@@ -345,21 +356,26 @@ class SessionManagerClass {
       if (precedingMessage?.role === 'assistant' && precedingMessage.toolCalls?.length) {
         start = toolGroupStart - 1
       } else {
-        while (start < nonSystemMessages.length && nonSystemMessages[start]?.role === 'tool') start++
+        while (start < nonSystemMessages.length && nonSystemMessages[start]?.role === 'tool')
+          start++
       }
     }
 
-    return [...systemMessages, ...nonSystemMessages.slice(start)]
-      .map((message) => this.cloneStoredMessage(message))
+    return [...systemMessages, ...nonSystemMessages.slice(start)].map((message) =>
+      this.cloneStoredMessage(message),
+    )
   }
 
   private extractSummary(messages: ChatMessage[]): string | undefined {
     const summaryPrefix = '[Conversation Summary]\n'
     const summaryMessage = [...messages]
       .reverse()
-      .find((message) => message.role === 'system'
-        && typeof message.content === 'string'
-        && message.content.startsWith(summaryPrefix))
+      .find(
+        (message) =>
+          message.role === 'system' &&
+          typeof message.content === 'string' &&
+          message.content.startsWith(summaryPrefix),
+      )
 
     return typeof summaryMessage?.content === 'string'
       ? summaryMessage.content.slice(summaryPrefix.length)

@@ -2,23 +2,12 @@ import type { ChatMessage, ChatCompletionTool, ToolCall } from '../types.ts'
 
 export type ToolCallingMode = 'managed' | 'disabled'
 export type ToolProtocolId =
-  | 'openai_chat'
-  | 'managed_bracket'
-  | 'managed_xml'
-  | 'anthropic_tool_use'
-  | 'codex_responses'
+  'openai_chat' | 'managed_bracket' | 'managed_xml' | 'anthropic_tool_use' | 'codex_responses'
 
 export type ToolSource = 'openai' | 'mcp'
 
 export type JsonRuntimeType =
-  | 'missing'
-  | 'null'
-  | 'array'
-  | 'object'
-  | 'string'
-  | 'number'
-  | 'boolean'
-  | 'unknown'
+  'missing' | 'null' | 'array' | 'object' | 'string' | 'number' | 'boolean' | 'unknown'
 
 /**
  * Structural validation context safe for diagnostics. Values are deliberately

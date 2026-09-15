@@ -55,7 +55,9 @@ export class ToolStreamParser {
           id: toolCall.id || `call_${this.nextToolCallIndex}`,
         }
         this.nextToolCallIndex += 1
-        chunks.push(createToolCallChunk(baseChunk, indexedToolCall, includeRole && !this.emittedToolCall))
+        chunks.push(
+          createToolCallChunk(baseChunk, indexedToolCall, includeRole && !this.emittedToolCall),
+        )
       }
       this.emittedToolCall = true
       this.isBufferingToolCall = false
@@ -95,8 +97,8 @@ export class ToolStreamParser {
     this.buffer = ''
     this.isBufferingToolCall = false
     this.assertRequiredToolCall(parsed)
-    const recognizedProtocol = parsed.protocol !== 'unknown'
-      || Boolean(parsed.detectedProtocols?.length)
+    const recognizedProtocol =
+      parsed.protocol !== 'unknown' || Boolean(parsed.detectedProtocols?.length)
     return shouldReleaseText && !recognizedProtocol
       ? [createContentChunk(baseChunk, text, false)]
       : []
@@ -132,7 +134,9 @@ export class ToolStreamParser {
         ? `invalid tools: ${parsed.invalidToolNames.map(sanitizeName).join(', ')}`
         : undefined,
       parsed?.malformedReason,
-    ].filter(Boolean).join('; ')
+    ]
+      .filter(Boolean)
+      .join('; ')
     throw new ToolCallingResponseError(
       `Upstream model did not return the required tool call${details ? ` (${details})` : ''}`,
       'missing_required_call',
@@ -158,7 +162,10 @@ function parseBufferedToolCall(buffer: string, plan: ToolCallingPlan) {
   return parsed
 }
 
-function findMarkerStart(buffer: string, plan: ToolCallingPlan): { matched: boolean; partial: boolean; index: number } {
+function findMarkerStart(
+  buffer: string,
+  plan: ToolCallingPlan,
+): { matched: boolean; partial: boolean; index: number } {
   return findToolProtocolMarkerStart(buffer, plan)
 }
 
@@ -169,14 +176,16 @@ function sanitizeName(name: string): string {
 function createContentChunk(baseChunk: any, content: string, includeRole: boolean): any {
   return {
     ...baseChunk,
-    choices: [{
-      index: 0,
-      delta: {
-        ...(includeRole ? { role: 'assistant' } : {}),
-        content,
+    choices: [
+      {
+        index: 0,
+        delta: {
+          ...(includeRole ? { role: 'assistant' } : {}),
+          content,
+        },
+        finish_reason: null,
       },
-      finish_reason: null,
-    }],
+    ],
   }
 }
 
@@ -186,13 +195,15 @@ function createToolCallChunk(baseChunk: any, toolCall: any, includeRole: boolean
 
   return {
     ...baseChunk,
-    choices: [{
-      index: 0,
-      delta: {
-        ...(includeRole ? { role: 'assistant' } : {}),
-        tool_calls: [openAiToolCall],
+    choices: [
+      {
+        index: 0,
+        delta: {
+          ...(includeRole ? { role: 'assistant' } : {}),
+          tool_calls: [openAiToolCall],
+        },
+        finish_reason: null,
       },
-      finish_reason: null,
-    }],
+    ],
   }
 }

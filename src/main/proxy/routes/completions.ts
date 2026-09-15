@@ -11,6 +11,7 @@ import { streamHandler } from '../stream'
 import { proxyStatusManager } from '../status'
 import { modelMapper } from '../modelMapper'
 import { storeManager } from '../../store/store'
+import type { ChatMessage } from '../types'
 
 const router = new Router({ prefix: '/v1' })
 
@@ -36,10 +37,10 @@ function generateRequestId(): string {
 /**
  * Convert prompt to messages format
  */
-function promptToMessages(prompt: string | string[]): Array<{ role: string; content: string }> {
+function promptToMessages(prompt: string | string[]): ChatMessage[] {
   if (Array.isArray(prompt)) {
     return prompt.map((p, index) => ({
-      role: index % 2 === 0 ? 'user' : 'assistant',
+      role: index % 2 === 0 ? ('user' as const) : ('assistant' as const),
       content: p,
     }))
   }
@@ -100,7 +101,7 @@ router.post('/completions', async (ctx: Context) => {
     request.model,
     config.loadBalanceStrategy,
     preferredProviderId,
-    preferredAccountId
+    preferredAccountId,
   )
 
   if (!selection) {
@@ -144,7 +145,7 @@ router.post('/completions', async (ctx: Context) => {
         actualModel,
         startTime,
         isStream: request.stream || false,
-      }
+      },
     )
 
     const latency = Date.now() - startTime

@@ -17,12 +17,9 @@ export function LogFilter() {
   const { filter, setFilter, autoScroll, setAutoScroll, refresh } = useLogsStore()
   const [keyword, setKeyword] = useState(filter.keyword)
 
-  const handleKeywordChange = useCallback(
-    (value: string) => {
-      setKeyword(value)
-    },
-    []
-  )
+  const handleKeywordChange = useCallback((value: string) => {
+    setKeyword(value)
+  }, [])
 
   const handleKeywordSubmit = useCallback(() => {
     setFilter({ keyword })
@@ -34,14 +31,14 @@ export function LogFilter() {
         handleKeywordSubmit()
       }
     },
-    [handleKeywordSubmit]
+    [handleKeywordSubmit],
   )
 
   const handleLevelChange = useCallback(
     (value: string) => {
       setFilter({ level: value as LogLevel | 'all' })
     },
-    [setFilter]
+    [setFilter],
   )
 
   const handleClearFilter = useCallback(() => {
@@ -55,7 +52,7 @@ export function LogFilter() {
       const startTime = now - hours * 60 * 60 * 1000
       setFilter({ startTime, endTime: undefined })
     },
-    [setFilter]
+    [setFilter],
   )
 
   return (

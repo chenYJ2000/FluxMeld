@@ -60,7 +60,7 @@ export interface PromptAdapter {
     messages: ChatMessage[],
     tools: ChatCompletionTool[] | undefined,
     model: string,
-    provider?: string
+    provider?: string,
   ): TransformResult
 }
 
@@ -76,14 +76,14 @@ export abstract class BasePromptAdapter implements PromptAdapter {
 
   hasPromptInjected(messages: ChatMessage[]): boolean {
     const allContent = this.extractAllContent(messages)
-    
+
     for (const sig of this.detectSignatures) {
       if (allContent.includes(sig)) {
         console.log(`[${this.name}] Detected existing prompt injection with signature: ${sig}`)
         return true
       }
     }
-    
+
     return false
   }
 
@@ -92,7 +92,7 @@ export abstract class BasePromptAdapter implements PromptAdapter {
 
   getPromptVariant(model: string, provider?: string): PromptVariant | null {
     const lowerModel = model.toLowerCase()
-    
+
     for (const variant of this.variants) {
       for (const pattern of variant.modelPatterns) {
         if (lowerModel.includes(pattern.toLowerCase())) {
@@ -100,7 +100,7 @@ export abstract class BasePromptAdapter implements PromptAdapter {
         }
       }
     }
-    
+
     return null
   }
 
@@ -108,7 +108,7 @@ export abstract class BasePromptAdapter implements PromptAdapter {
     messages: ChatMessage[],
     tools: ChatCompletionTool[] | undefined,
     model: string,
-    provider?: string
+    provider?: string,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       return { messages, tools: undefined, injected: false }
@@ -118,9 +118,9 @@ export abstract class BasePromptAdapter implements PromptAdapter {
       return { messages, tools: undefined, injected: false }
     }
 
-    const variant = this.getPromptVariant(model, provider)
+    const variant = this.getPromptVariant(model, provider) ?? undefined
     const toolsPrompt = this.toolsToPrompt(tools, variant)
-    
+
     const transformedMessages = this.injectPrompt(messages, toolsPrompt)
 
     return {
@@ -137,9 +137,8 @@ export abstract class BasePromptAdapter implements PromptAdapter {
 
     for (const msg of messages) {
       if (msg.role === 'system' && !systemInjected) {
-        const enhancedContent = typeof msg.content === 'string'
-          ? `${msg.content}\n\n${prompt}`
-          : msg.content
+        const enhancedContent =
+          typeof msg.content === 'string' ? `${msg.content}\n\n${prompt}` : msg.content
         result.push({ ...msg, content: enhancedContent })
         systemInjected = true
       } else {
@@ -165,7 +164,12 @@ export abstract class BasePromptAdapter implements PromptAdapter {
           for (const part of msg.content) {
             if (typeof part === 'string') {
               parts.push(part)
-            } else if (part && typeof part === 'object' && 'text' in part) {
+            } else if (
+              part &&
+              typeof part === 'object' &&
+              'text' in part &&
+              typeof part.text === 'string'
+            ) {
               parts.push(part.text)
             }
           }

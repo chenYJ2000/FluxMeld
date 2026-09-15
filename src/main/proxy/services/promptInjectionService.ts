@@ -1,7 +1,7 @@
 /**
  * Prompt Injection Service
  * Single entry point for all tool prompt injection logic
- * 
+ *
  * Responsibilities:
  * 1. Read configuration
  * 2. Detect client and tool source
@@ -113,16 +113,20 @@ export class PromptInjectionService {
     messages: ChatMessage[],
     tools: ChatCompletionTool[],
     model: string,
-    provider?: string
+    provider?: string,
   ): InjectionResult {
     const config = this.getConfig()
 
-    console.log(`[PromptInjectionService] Processing: mode=${config.mode}, format=${config.defaultFormat}, tools=${tools?.length || 0}`)
+    console.log(
+      `[PromptInjectionService] Processing: mode=${config.mode}, format=${config.defaultFormat}, tools=${tools?.length || 0}`,
+    )
 
     // Detect client and tool source
     const detection = detectClient(messages, tools)
 
-    console.log(`[PromptInjectionService] Detection: client=${detection.clientType}, toolSource=${detection.toolSource}, isKnownClient=${detection.isKnownClient}`)
+    console.log(
+      `[PromptInjectionService] Detection: client=${detection.clientType}, toolSource=${detection.toolSource}, isKnownClient=${detection.isKnownClient}`,
+    )
 
     // Decide whether to inject
     const decision = this.shouldInject(detection, config)
@@ -175,7 +179,8 @@ export class PromptInjectionService {
       mode: (toolConfig?.mode as InjectionMode) || DEFAULT_CONFIG.mode,
       defaultFormat: (toolConfig?.defaultFormat as ProtocolFormat) || DEFAULT_CONFIG.defaultFormat,
       customPromptTemplate: toolConfig?.customPromptTemplate,
-      enableToolCallParsing: toolConfig?.enableToolCallParsing ?? DEFAULT_CONFIG.enableToolCallParsing,
+      enableToolCallParsing:
+        toolConfig?.enableToolCallParsing ?? DEFAULT_CONFIG.enableToolCallParsing,
     }
   }
 
@@ -185,7 +190,7 @@ export class PromptInjectionService {
    */
   private shouldInject(
     detection: ClientDetectionResult,
-    config: InjectionConfig
+    config: InjectionConfig,
   ): { shouldInject: boolean; reason: string } {
     // Mode: never
     if (config.mode === 'never') {
@@ -229,7 +234,7 @@ export class PromptInjectionService {
     messages: ChatMessage[],
     detection: ClientDetectionResult,
     config: InjectionConfig,
-    provider?: string
+    provider?: string,
   ): string {
     // Has OpenAI tools - generate full prompt
     if (detection.toolSource === 'openai' && detection.tools) {
@@ -261,7 +266,7 @@ export class PromptInjectionService {
   private generatePerplexityPromptFromMCP(
     messages: ChatMessage[],
     tools: ChatCompletionTool[],
-    config: InjectionConfig
+    config: InjectionConfig,
   ): string {
     if (tools.length === 0) {
       return generateGenericToolCallPrompt(config.defaultFormat)

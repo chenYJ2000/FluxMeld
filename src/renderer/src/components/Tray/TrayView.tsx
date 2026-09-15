@@ -1,5 +1,18 @@
 import { useEffect, useState, useMemo } from 'react'
-import { Power, Copy, Check, Play, Square, RotateCw, ExternalLink, Moon, Sun, Zap, Wifi, WifiOff } from 'lucide-react'
+import {
+  Power,
+  Copy,
+  Check,
+  Play,
+  Square,
+  RotateCw,
+  ExternalLink,
+  Moon,
+  Sun,
+  Zap,
+  Wifi,
+  WifiOff,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -16,7 +29,8 @@ interface ProviderInfo {
 export function TrayView() {
   const { toggleTheme, isDark } = useTheme()
   const { language } = useSettingsStore()
-  const { providers, accounts, setProviders, setAccounts, setIsLoading, isLoading } = useProvidersStore()
+  const { providers, accounts, setProviders, setAccounts, setIsLoading, isLoading } =
+    useProvidersStore()
 
   const [proxyRunning, setProxyRunning] = useState(false)
   const [proxyLoading, setProxyLoading] = useState(false)
@@ -30,14 +44,14 @@ export function TrayView() {
     const loadProxyStatus = async () => {
       const status = await window.electronAPI?.proxy?.getStatus?.()
       setProxyRunning(status.isRunning)
-      
+
       const config = await window.electronAPI?.config?.get?.()
       if (config) {
         setPort(config.proxyPort || 8080)
         setHost(config.proxyHost || '127.0.0.1')
       }
     }
-    
+
     loadProxyStatus()
 
     const unsubscribeProxy = window.electronAPI?.proxy?.onStatusChanged?.((status) => {
@@ -156,12 +170,14 @@ export function TrayView() {
       <div className="absolute top-0 left-0 right-0 h-6 drag-region z-50" />
 
       {/* Header with gradient */}
-      <div className={cn(
-        "flex-none relative overflow-hidden",
-        proxyRunning 
-          ? "bg-gradient-to-r from-emerald-500/90 via-teal-500/90 to-cyan-500/90" 
-          : "bg-gradient-to-r from-slate-400/90 via-slate-500/90 to-slate-600/90"
-      )}>
+      <div
+        className={cn(
+          'flex-none relative overflow-hidden',
+          proxyRunning
+            ? 'bg-gradient-to-r from-emerald-500/90 via-teal-500/90 to-cyan-500/90'
+            : 'bg-gradient-to-r from-slate-400/90 via-slate-500/90 to-slate-600/90',
+        )}
+      >
         <div className="absolute inset-0 bg-black/5" />
         <div className="relative px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -174,12 +190,16 @@ export function TrayView() {
                 {proxyRunning ? (
                   <>
                     <Wifi size={12} className="text-white/90" />
-                    <span className="text-xs text-white/90 font-medium">{isZh ? '服务运行中' : 'Service Running'}</span>
+                    <span className="text-xs text-white/90 font-medium">
+                      {isZh ? '服务运行中' : 'Service Running'}
+                    </span>
                   </>
                 ) : (
                   <>
                     <WifiOff size={12} className="text-white/90" />
-                    <span className="text-xs text-white/90 font-medium">{isZh ? '服务已停止' : 'Service Stopped'}</span>
+                    <span className="text-xs text-white/90 font-medium">
+                      {isZh ? '服务已停止' : 'Service Stopped'}
+                    </span>
                   </>
                 )}
               </div>
@@ -191,13 +211,20 @@ export function TrayView() {
               disabled={isLoading || isRefreshing}
               className="p-2 rounded-lg hover:bg-white/20 transition-colors disabled:opacity-30"
             >
-              <RotateCw size={15} className={cn('text-white', (isLoading || isRefreshing) && 'animate-spin')} />
+              <RotateCw
+                size={15}
+                className={cn('text-white', (isLoading || isRefreshing) && 'animate-spin')}
+              />
             </button>
             <button
               onClick={toggleTheme}
               className="p-2 rounded-lg hover:bg-white/20 transition-colors"
             >
-              {isDark ? <Sun size={15} className="text-white" /> : <Moon size={15} className="text-white" />}
+              {isDark ? (
+                <Sun size={15} className="text-white" />
+              ) : (
+                <Moon size={15} className="text-white" />
+              )}
             </button>
           </div>
         </div>
@@ -210,19 +237,21 @@ export function TrayView() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
                 <Zap size={12} className="text-amber-500" />
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">API Endpoint</span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">
+                  API Endpoint
+                </span>
               </div>
-              <button
-                onClick={handleCopyUrl}
-                className="flex items-center gap-1.5 group"
-              >
+              <button onClick={handleCopyUrl} className="flex items-center gap-1.5 group">
                 <code className="text-sm font-mono font-semibold text-slate-800 dark:text-white truncate">
                   {host}:{port}
                 </code>
                 {copied ? (
                   <Check size={12} className="text-emerald-500 flex-shrink-0" />
                 ) : (
-                  <Copy size={12} className="text-slate-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <Copy
+                    size={12}
+                    className="text-slate-400 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
                 )}
               </button>
             </div>
@@ -230,14 +259,18 @@ export function TrayView() {
               onClick={toggleProxy}
               disabled={proxyLoading}
               className={cn(
-                "flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md",
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-md',
                 proxyRunning
-                  ? "bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 shadow-rose-500/25"
-                  : "bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/25"
+                  ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white hover:from-rose-600 hover:to-pink-600 shadow-rose-500/25'
+                  : 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:from-emerald-600 hover:to-teal-600 shadow-emerald-500/25',
               )}
             >
-              {proxyRunning ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-              <span>{proxyRunning ? (isZh ? '停止' : 'Stop') : (isZh ? '启动' : 'Start')}</span>
+              {proxyRunning ? (
+                <Square size={14} fill="currentColor" />
+              ) : (
+                <Play size={14} fill="currentColor" />
+              )}
+              <span>{proxyRunning ? (isZh ? '停止' : 'Stop') : isZh ? '启动' : 'Start'}</span>
             </button>
           </div>
         </div>
@@ -252,17 +285,16 @@ export function TrayView() {
                 key={p.id}
                 onClick={() => setSelectedProvider(p.id)}
                 className={cn(
-                  "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all backdrop-blur-sm",
+                  'flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all backdrop-blur-sm',
                   selectedProvider === p.id
-                    ? "bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 shadow-md"
-                    : "bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-700/80"
+                    ? 'bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 shadow-md'
+                    : 'bg-slate-100/80 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:bg-slate-200/80 dark:hover:bg-slate-700/80',
                 )}
               >
                 {p.name}
-                <span className={cn(
-                  "ml-1",
-                  selectedProvider === p.id ? "opacity-70" : "opacity-50"
-                )}>
+                <span
+                  className={cn('ml-1', selectedProvider === p.id ? 'opacity-70' : 'opacity-50')}
+                >
                   {p.activeCount}/{p.accountCount}
                 </span>
               </button>
@@ -282,7 +314,9 @@ export function TrayView() {
             <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-2">
               <WifiOff size={20} className="text-slate-400" />
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">{isZh ? '暂无账户' : 'No accounts'}</p>
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+              {isZh ? '暂无账户' : 'No accounts'}
+            </p>
           </div>
         ) : (
           <div className="space-y-2 pb-3">
@@ -292,28 +326,34 @@ export function TrayView() {
                 <div
                   key={account.id}
                   className={cn(
-                    "flex items-center justify-between p-3 rounded-xl transition-colors backdrop-blur-sm",
-                    isActive 
-                      ? "bg-emerald-50/80 dark:bg-emerald-900/30 border border-emerald-200/50 dark:border-emerald-800/30"
-                      : "bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50"
+                    'flex items-center justify-between p-3 rounded-xl transition-colors backdrop-blur-sm',
+                    isActive
+                      ? 'bg-emerald-50/80 dark:bg-emerald-900/30 border border-emerald-200/50 dark:border-emerald-800/30'
+                      : 'bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50',
                   )}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={cn(
-                      "w-2.5 h-2.5 rounded-full flex-shrink-0",
-                      isActive ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-slate-300 dark:bg-slate-600"
-                    )} />
+                    <div
+                      className={cn(
+                        'w-2.5 h-2.5 rounded-full flex-shrink-0',
+                        isActive
+                          ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
+                          : 'bg-slate-300 dark:bg-slate-600',
+                      )}
+                    />
                     <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                       {account.name || account.email || 'Unknown'}
                     </span>
                   </div>
-                  <span className={cn(
-                    "text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0",
-                    isActive
-                      ? "bg-emerald-500 text-white"
-                      : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                  )}>
-                    {isActive ? (isZh ? '在线' : 'Active') : (isZh ? '离线' : 'Inactive')}
+                  <span
+                    className={cn(
+                      'text-[10px] font-semibold px-2 py-1 rounded-full flex-shrink-0',
+                      isActive
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
+                    )}
+                  >
+                    {isActive ? (isZh ? '在线' : 'Active') : isZh ? '离线' : 'Inactive'}
                   </span>
                 </div>
               )

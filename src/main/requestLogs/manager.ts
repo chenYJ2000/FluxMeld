@@ -146,7 +146,9 @@ export class RequestLogManager {
     const today = new Date().toISOString().split('T')[0]
     const todayStart = new Date(today).getTime()
     const todayEnd = todayStart + 24 * 60 * 60 * 1000
-    const todayLogs = this.requestLogs.filter((entry) => entry.timestamp >= todayStart && entry.timestamp < todayEnd)
+    const todayLogs = this.requestLogs.filter(
+      (entry) => entry.timestamp >= todayStart && entry.timestamp < todayEnd,
+    )
 
     return {
       total: this.requestLogs.length,
@@ -169,7 +171,9 @@ export class RequestLogManager {
       const dayStart = todayStart - i * dayMs
       const dayEnd = dayStart + dayMs
       const date = new Date(dayStart).toISOString().split('T')[0]
-      const dayLogs = this.requestLogs.filter((entry) => entry.timestamp >= dayStart && entry.timestamp < dayEnd)
+      const dayLogs = this.requestLogs.filter(
+        (entry) => entry.timestamp >= dayStart && entry.timestamp < dayEnd,
+      )
       const successLogs = dayLogs.filter((entry) => entry.status === 'success')
       const errorLogs = dayLogs.filter((entry) => entry.status === 'error')
       const totalLatency = successLogs.reduce((sum, entry) => sum + entry.latency, 0)

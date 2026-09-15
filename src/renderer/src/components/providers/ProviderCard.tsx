@@ -3,25 +3,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Copy, 
-  RefreshCw, 
+import {
+  MoreVertical,
+  Edit,
+  Trash2,
+  Copy,
+  RefreshCw,
   Users,
   Plus,
   LogIn,
   Info,
   Download,
-  Settings
+  Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Provider, ProviderStatus } from '@/types/electron'
@@ -114,11 +114,7 @@ export function ProviderCard({
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center overflow-hidden">
             {icon ? (
-              <img 
-                src={icon} 
-                alt={provider.name}
-                className="h-8 w-8 object-contain"
-              />
+              <img src={icon} alt={provider.name} className="h-8 w-8 object-contain" />
             ) : (
               <span className="text-xl">🔌</span>
             )}
@@ -133,7 +129,8 @@ export function ProviderCard({
               )}
             </CardTitle>
             <CardDescription className="text-xs mt-1">
-              {getProviderDescription() || `${provider.supportedModels?.length || 0} ${t('providers.models').toLowerCase()}`}
+              {getProviderDescription() ||
+                `${provider.supportedModels?.length || 0} ${t('providers.models').toLowerCase()}`}
             </CardDescription>
             {provider.id === 'perplexity' && (
               <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-1">
@@ -193,10 +190,7 @@ export function ProviderCard({
                 </>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDelete(provider.id)}
-                className="text-destructive"
-              >
+              <DropdownMenuItem onClick={() => onDelete(provider.id)} className="text-destructive">
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t('providers.deleteProvider')}
               </DropdownMenuItem>
@@ -215,9 +209,7 @@ export function ProviderCard({
             </div>
             <div className="flex flex-col">
               <span className="text-muted-foreground text-xs">{t('providers.models')}</span>
-              <span className="font-medium">
-                {provider.supportedModels?.length || 0}
-              </span>
+              <span className="font-medium">{provider.supportedModels?.length || 0}</span>
             </div>
             <div className="flex flex-col">
               <span className="text-muted-foreground text-xs">{t('providers.authType')}</span>
@@ -226,7 +218,7 @@ export function ProviderCard({
               </span>
             </div>
           </div>
-          
+
           <Button
             size="sm"
             variant={accountCount === 0 ? 'default' : 'outline'}

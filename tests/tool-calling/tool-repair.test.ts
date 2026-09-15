@@ -18,18 +18,20 @@ const request: ChatCompletionRequest = {
   enable_thinking: true,
   thinking_budget: 4096,
   tool_choice: 'required',
-  tools: [{
-    type: 'function',
-    function: {
-      name: 'signal_wait',
-      parameters: {
-        type: 'object',
-        properties: { pair: { type: 'string' } },
-        required: ['pair'],
-        additionalProperties: false,
+  tools: [
+    {
+      type: 'function',
+      function: {
+        name: 'signal_wait',
+        parameters: {
+          type: 'object',
+          properties: { pair: { type: 'string' } },
+          required: ['pair'],
+          additionalProperties: false,
+        },
       },
     },
-  }],
+  ],
 }
 
 const invalidResult: ForwardResult = {
@@ -46,14 +48,28 @@ const invalidResult: ForwardResult = {
 test('bounded repair includes required missing calls and remains single-attempt', () => {
   assert.equal(shouldAttemptToolRepair(invalidResult, request, false), true)
   assert.equal(shouldAttemptToolRepair(invalidResult, request, true), false)
-  assert.equal(shouldAttemptToolRepair({
-    ...invalidResult,
-    toolCallingFailure: { code: 'missing_required_call', repairable: false },
-  }, request, false), true)
-  assert.equal(shouldAttemptToolRepair({
-    ...invalidResult,
-    toolCallingFailure: { code: 'missing_required_call', repairable: false },
-  }, { ...request, tool_choice: 'auto' }, false), false)
+  assert.equal(
+    shouldAttemptToolRepair(
+      {
+        ...invalidResult,
+        toolCallingFailure: { code: 'missing_required_call', repairable: false },
+      },
+      request,
+      false,
+    ),
+    true,
+  )
+  assert.equal(
+    shouldAttemptToolRepair(
+      {
+        ...invalidResult,
+        toolCallingFailure: { code: 'missing_required_call', repairable: false },
+      },
+      { ...request, tool_choice: 'auto' },
+      false,
+    ),
+    false,
+  )
   const openCodeRefusal = {
     ...invalidResult,
     toolCallingFailure: {
@@ -71,10 +87,17 @@ test('bounded repair includes required missing calls and remains single-attempt'
     createToolRepairRequest({ ...request, tool_choice: 'auto' }, openCodeRefusal).tool_choice,
     { type: 'function', function: { name: 'signal_wait' } },
   )
-  assert.equal(shouldAttemptToolRepair({
-    ...invalidResult,
-    toolCallingFailure: { code: 'upstream_incomplete_response', repairable: true },
-  }, request, false), true)
+  assert.equal(
+    shouldAttemptToolRepair(
+      {
+        ...invalidResult,
+        toolCallingFailure: { code: 'upstream_incomplete_response', repairable: true },
+      },
+      request,
+      false,
+    ),
+    true,
+  )
 })
 
 test('missing required-call repair explicitly requests the omitted call', () => {
@@ -109,7 +132,10 @@ test('repair request preserves schema and forces one known tool with reasoning d
     function: { name: 'signal_wait' },
   })
   assert.match(String(repaired.messages.at(-1)?.content), /strict JSON Schema validation/)
-  assert.match(String(repaired.messages.at(-1)?.content), /exactly one final FluxMeld tool_calls block/)
+  assert.match(
+    String(repaired.messages.at(-1)?.content),
+    /exactly one final FluxMeld tool_calls block/,
+  )
 })
 
 test('repair prompt includes the rejected candidate, exact type issue, and complete target schema', () => {
@@ -161,22 +187,23 @@ test('repair prompt includes the rejected candidate, exact type issue, and compl
   const productionFailure: ForwardResult = {
     success: false,
     status: 502,
-    error: 'Upstream model returned invalid tool arguments for "signal_entry_short": /take_profit_ladder must be array',
+    error:
+      'Upstream model returned invalid tool arguments for "signal_entry_short": /take_profit_ladder must be array',
     toolCallingFailure: {
       code: 'invalid_arguments',
       toolName: 'signal_entry_short',
       repairable: true,
       rejectedArguments,
-      validationErrors: [
-        '/take_profit_ladder must be array (expected array, actual string)',
+      validationErrors: ['/take_profit_ladder must be array (expected array, actual string)'],
+      validationIssues: [
+        {
+          jsonPointer: '/take_profit_ladder',
+          keyword: 'type',
+          message: 'must be array',
+          expected: 'array',
+          actualType: 'string',
+        },
       ],
-      validationIssues: [{
-        jsonPointer: '/take_profit_ladder',
-        keyword: 'type',
-        message: 'must be array',
-        expected: 'array',
-        actualType: 'string',
-      }],
     },
   }
 
@@ -202,14 +229,16 @@ test('repair result gate rejects multiple calls with 502 instead of dropping ext
     success: true,
     status: 200,
     body: {
-      choices: [{
-        message: {
-          tool_calls: [
-            { type: 'function', function: { name: 'signal_wait', arguments: '{}' } },
-            { type: 'function', function: { name: 'signal_wait', arguments: '{}' } },
-          ],
+      choices: [
+        {
+          message: {
+            tool_calls: [
+              { type: 'function', function: { name: 'signal_wait', arguments: '{}' } },
+              { type: 'function', function: { name: 'signal_wait', arguments: '{}' } },
+            ],
+          },
         },
-      }],
+      ],
     },
   }
 
@@ -230,13 +259,15 @@ test('repair telemetry logs attempt count, first/final errors, types, and result
     toolCallingFailure: {
       ...invalidResult.toolCallingFailure!,
       validationErrors: ['/take_profit_ladder must be array'],
-      validationIssues: [{
-        jsonPointer: '/take_profit_ladder',
-        keyword: 'type',
-        message: 'must be array',
-        expected: 'array',
-        actualType: 'string',
-      }],
+      validationIssues: [
+        {
+          jsonPointer: '/take_profit_ladder',
+          keyword: 'type',
+          message: 'must be array',
+          expected: 'array',
+          actualType: 'string',
+        },
+      ],
     },
   }
   const telemetry = createToolRepairTelemetry(firstFailure, {
@@ -251,12 +282,14 @@ test('repair telemetry logs attempt count, first/final errors, types, and result
   assert.equal(logData.first_validation_error, '/take_profit_ladder must be array')
   assert.equal(logData.final_validation_error, null)
   assert.equal(logData.repair_result, 'succeeded')
-  assert.deepEqual(logData.first_field_types, [{
-    json_pointer: '/take_profit_ladder',
-    expected: 'array',
-    actual_type: 'string',
-    keyword: 'type',
-  }])
+  assert.deepEqual(logData.first_field_types, [
+    {
+      json_pointer: '/take_profit_ladder',
+      expected: 'array',
+      actual_type: 'string',
+      keyword: 'type',
+    },
+  ])
 })
 
 test('incomplete-response repair explains truncation and keeps strict controls', () => {
@@ -276,25 +309,40 @@ test('incomplete-response repair explains truncation and keeps strict controls',
 
 test('repair response preserves original enabled reasoning without mutation', () => {
   const body = {
-    choices: [{
-      message: {
-        role: 'assistant',
-        content: null,
-        tool_calls: [{ id: 'call_1', type: 'function', function: { name: 'signal_wait', arguments: '{}' } }],
+    choices: [
+      {
+        message: {
+          role: 'assistant',
+          content: null,
+          tool_calls: [
+            { id: 'call_1', type: 'function', function: { name: 'signal_wait', arguments: '{}' } },
+          ],
+        },
+        finish_reason: 'tool_calls',
       },
-      finish_reason: 'tool_calls',
-    }],
+    ],
   }
-  const merged = mergeOriginalReasoningIntoRepairResponse(body, {
-    ...request,
-    reasoning_effort: 'enabled',
-  }, 'checked the schema')
+  const merged = mergeOriginalReasoningIntoRepairResponse(
+    body,
+    {
+      ...request,
+      reasoning_effort: 'enabled',
+    },
+    'checked the schema',
+  )
 
   assert.notEqual(merged, body)
   assert.equal(merged.choices[0].message.reasoning_content, 'checked the schema')
   assert.equal(body.choices[0].message.reasoning_content, undefined)
-  assert.equal(mergeOriginalReasoningIntoRepairResponse(body, {
-    ...request,
-    reasoning_effort: 'off',
-  }, 'must stay hidden'), body)
+  assert.equal(
+    mergeOriginalReasoningIntoRepairResponse(
+      body,
+      {
+        ...request,
+        reasoning_effort: 'off',
+      },
+      'must stay hidden',
+    ),
+    body,
+  )
 })

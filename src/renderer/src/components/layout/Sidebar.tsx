@@ -113,7 +113,7 @@ export function Sidebar() {
             cn(
               'sidebar-nav-item',
               sidebarCollapsed ? 'collapsed' : 'expanded',
-              isActive ? 'active' : 'inactive'
+              isActive ? 'active' : 'inactive',
             )
           }
         >
@@ -121,7 +121,7 @@ export function Sidebar() {
           <span
             className={cn(
               'whitespace-nowrap transition-all duration-300',
-              sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100'
+              sidebarCollapsed ? 'w-0 opacity-0 overflow-hidden' : 'w-auto opacity-100',
             )}
           >
             {title}
@@ -129,7 +129,7 @@ export function Sidebar() {
         </NavLink>
       </div>
     )
-    
+
     if (sidebarCollapsed) {
       return <Tooltip label={title}>{buttonContent}</Tooltip>
     }
@@ -141,7 +141,7 @@ export function Sidebar() {
       <aside
         className={cn(
           'command-rail flex flex-col transition-all duration-300 ease-in-out',
-          sidebarCollapsed ? 'w-[84px]' : 'w-[248px]'
+          sidebarCollapsed ? 'w-[84px]' : 'w-[248px]',
         )}
       >
         <div className={cn('command-brand', sidebarCollapsed && 'is-collapsed')}>
@@ -166,8 +166,16 @@ export function Sidebar() {
           <button
             className="command-rail-toggle"
             onClick={toggleSidebar}
-            aria-label={sidebarCollapsed ? t('settings.sidebarCollapsedHelp') : t('settings.sidebarCollapsedHelp')}
-            title={sidebarCollapsed ? t('settings.sidebarCollapsedHelp') : t('settings.sidebarCollapsedHelp')}
+            aria-label={
+              sidebarCollapsed
+                ? t('settings.sidebarCollapsedHelp')
+                : t('settings.sidebarCollapsedHelp')
+            }
+            title={
+              sidebarCollapsed
+                ? t('settings.sidebarCollapsedHelp')
+                : t('settings.sidebarCollapsedHelp')
+            }
           >
             {sidebarCollapsed ? (
               <PanelLeftOpen className="h-5 w-5" />
@@ -193,10 +201,7 @@ export function Sidebar() {
             <Button variant="outline" onClick={handleCancelNavigation}>
               {t('common.cancel')}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleConfirmNavigation}
-            >
+            <Button variant="destructive" onClick={handleConfirmNavigation}>
               {t('proxy.discardAndLeave')}
             </Button>
           </DialogFooter>

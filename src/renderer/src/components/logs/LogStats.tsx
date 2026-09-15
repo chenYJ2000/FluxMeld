@@ -68,13 +68,11 @@ export function LogStats({ showTrend = true }: LogStatsProps) {
                 key={item.label}
                 className={cn(
                   'flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200 hover:-translate-y-0.5',
-                  item.bgColor
+                  item.bgColor,
                 )}
               >
                 <item.icon className={cn('h-5 w-5 mb-1', item.color)} />
-                <span className={cn('text-2xl font-bold', item.color)}>
-                  {item.value}
-                </span>
+                <span className={cn('text-2xl font-bold', item.color)}>{item.value}</span>
                 <span className="text-xs text-muted-foreground">{item.label}</span>
               </div>
             ))}
@@ -98,10 +96,7 @@ export function LogStats({ showTrend = true }: LogStatsProps) {
           <CardContent>
             <div className="flex items-end justify-between gap-2 h-32">
               {trend.map((day) => (
-                <div
-                  key={day.date}
-                  className="flex-1 flex flex-col items-center gap-1"
-                >
+                <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                   <div className="w-full flex flex-col gap-0.5 h-24 justify-end">
                     {day.error > 0 && (
                       <div

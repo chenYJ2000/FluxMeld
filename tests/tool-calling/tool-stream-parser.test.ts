@@ -48,14 +48,18 @@ const baseChunk = {
 test('bracket marker split across chunks emits a tool call', () => {
   const parser = new ToolStreamParser(plan('managed_bracket'))
   assert.deepEqual(parser.push('[fun', baseChunk), [])
-  const chunks = parser.push('ction_calls][call:default_api:read_file]{"filePath":"/tmp/a"}[/call][/function_calls]', baseChunk)
+  const chunks = parser.push(
+    'ction_calls][call:default_api:read_file]{"filePath":"/tmp/a"}[/call][/function_calls]',
+    baseChunk,
+  )
 
   assert.equal(chunks.at(-1)?.choices[0].delta.tool_calls[0].function.name, 'default_api:read_file')
 })
 
 test('bracket output is autodetected when XML protocol is selected', () => {
   const parser = new ToolStreamParser(plan('managed_xml'))
-  const text = '[function_calls][call:default_api:read_file]{"filePath":"/tmp/a"}[/call][/function_calls]'
+  const text =
+    '[function_calls][call:default_api:read_file]{"filePath":"/tmp/a"}[/call][/function_calls]'
   const chunks = parser.push(text, baseChunk)
 
   assert.equal(chunks.length, 1)
@@ -65,7 +69,10 @@ test('bracket output is autodetected when XML protocol is selected', () => {
 test('XML marker split across chunks emits a tool call', () => {
   const parser = new ToolStreamParser(plan('managed_xml'))
   assert.deepEqual(parser.push('<tool_', baseChunk), [])
-  const chunks = parser.push('calls><invoke name="default_api:read_file"><parameter name="filePath">/tmp/a</parameter></invoke></tool_calls>', baseChunk)
+  const chunks = parser.push(
+    'calls><invoke name="default_api:read_file"><parameter name="filePath">/tmp/a</parameter></invoke></tool_calls>',
+    baseChunk,
+  )
 
   assert.equal(chunks.at(-1)?.choices[0].delta.tool_calls[0].function.name, 'default_api:read_file')
 })
@@ -73,7 +80,10 @@ test('XML marker split across chunks emits a tool call', () => {
 test('FluxMeld XML marker split across chunks emits a tool call', () => {
   const parser = new ToolStreamParser(plan('managed_xml'))
   assert.deepEqual(parser.push('<|FLUXMELD|tool_', baseChunk), [])
-  const chunks = parser.push('calls><|FLUXMELD|invoke name="default_api:read_file"><|FLUXMELD|parameter name="filePath">/tmp/a</|FLUXMELD|parameter></|FLUXMELD|invoke></|FLUXMELD|tool_calls>', baseChunk)
+  const chunks = parser.push(
+    'calls><|FLUXMELD|invoke name="default_api:read_file"><|FLUXMELD|parameter name="filePath">/tmp/a</|FLUXMELD|parameter></|FLUXMELD|invoke></|FLUXMELD|tool_calls>',
+    baseChunk,
+  )
 
   assert.equal(chunks.at(-1)?.choices[0].delta.tool_calls[0].function.name, 'default_api:read_file')
 })
@@ -88,22 +98,35 @@ test('partial FluxMeld start marker is reported as buffered so stream handlers d
 
 test('text before tool call is preserved only before tool calling begins', () => {
   const parser = new ToolStreamParser(plan('managed_xml'))
-  const chunks = parser.push('before <tool_calls><invoke name="default_api:read_file"><parameter name="filePath">/tmp/a</parameter></invoke></tool_calls> after', baseChunk)
+  const chunks = parser.push(
+    'before <tool_calls><invoke name="default_api:read_file"><parameter name="filePath">/tmp/a</parameter></invoke></tool_calls> after',
+    baseChunk,
+  )
 
   assert.equal(chunks[0].choices[0].delta.content, 'before ')
-  assert.equal(chunks.some((chunk) => chunk.choices[0].delta.content === ' after'), false)
+  assert.equal(
+    chunks.some((chunk) => chunk.choices[0].delta.content === ' after'),
+    false,
+  )
 })
 
 test('invalid tool name is not emitted as a tool call', () => {
   const parser = new ToolStreamParser(plan('managed_xml'))
-  const chunks = parser.push('<tool_calls><invoke name="missing"><parameter name="x">1</parameter></invoke></tool_calls>', baseChunk)
+  const chunks = parser.push(
+    '<tool_calls><invoke name="missing"><parameter name="x">1</parameter></invoke></tool_calls>',
+    baseChunk,
+  )
 
-  assert.equal(chunks.some((chunk) => chunk.choices[0].delta.tool_calls), false)
+  assert.equal(
+    chunks.some((chunk) => chunk.choices[0].delta.tool_calls),
+    false,
+  )
 })
 
 test('fenced tool blocks preserve their contents and emit tool calls without fence leakage', () => {
   const parser = new ToolStreamParser(plan('managed_xml'))
-  const text = '```xml\n<tool_calls><invoke name="default_api:read_file"><parameter name="filePath">fake</parameter></invoke></tool_calls>\n```'
+  const text =
+    '```xml\n<tool_calls><invoke name="default_api:read_file"><parameter name="filePath">fake</parameter></invoke></tool_calls>\n```'
   const chunks = parser.push(text, baseChunk)
 
   assert.equal(chunks.length, 1)
@@ -121,12 +144,18 @@ test('pretty-printed OpenAI JSON split before its first key does not leak as tex
 
   assert.equal(chunks.length, 1)
   assert.equal(chunks[0].choices[0].delta.content, undefined)
-  assert.equal(chunks[0].choices[0].delta.tool_calls[0].function.arguments, '{"filePath":"/tmp/pretty"}')
+  assert.equal(
+    chunks[0].choices[0].delta.tool_calls[0].function.arguments,
+    '{"filePath":"/tmp/pretty"}',
+  )
 })
 
 test('generated call IDs stay stable between emitted chunks and final state', () => {
   const parser = new ToolStreamParser(plan('managed_bracket'))
-  const chunks = parser.push('[function_calls][call:default_api:read_file]{"filePath":"/tmp/a"}[/call][/function_calls]', baseChunk)
+  const chunks = parser.push(
+    '[function_calls][call:default_api:read_file]{"filePath":"/tmp/a"}[/call][/function_calls]',
+    baseChunk,
+  )
   const emittedId = chunks.at(-1)?.choices[0].delta.tool_calls[0].id
 
   assert.equal(parser.hasEmittedToolCall(), true)
@@ -136,19 +165,15 @@ test('generated call IDs stay stable between emitted chunks and final state', ()
 
 test('required stream classifies an empty legal invoke as repairable invalid arguments', () => {
   const parser = new ToolStreamParser(requiredPlan())
-  parser.push(
-    '<tool_calls><invoke name="default_api:read_file"></invoke></tool_calls>',
-    baseChunk,
-  )
+  parser.push('<tool_calls><invoke name="default_api:read_file"></invoke></tool_calls>', baseChunk)
 
   assert.throws(
     () => parser.flush(baseChunk),
-    (error: unknown) => (
-      error instanceof ToolCallingResponseError
-      && error.code === 'invalid_arguments'
-      && error.toolName === 'default_api:read_file'
-      && error.repairable
-    ),
+    (error: unknown) =>
+      error instanceof ToolCallingResponseError &&
+      error.code === 'invalid_arguments' &&
+      error.toolName === 'default_api:read_file' &&
+      error.repairable,
   )
 })
 
@@ -158,10 +183,9 @@ test('required stream rejects a completed plain-text response at flush', () => {
 
   assert.throws(
     () => parser.flush(baseChunk),
-    (error: unknown) => (
-      error instanceof ToolCallingResponseError
-      && error.code === 'missing_required_call'
-      && !error.repairable
-    ),
+    (error: unknown) =>
+      error instanceof ToolCallingResponseError &&
+      error.code === 'missing_required_call' &&
+      !error.repairable,
   )
 })

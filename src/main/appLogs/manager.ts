@@ -52,9 +52,7 @@ export class AppLogManager {
       byId.set(entry.id, entry)
     }
 
-    this.logs = this.trimLogs(
-      [...byId.values()].sort((a, b) => a.timestamp - b.timestamp),
-    )
+    this.logs = this.trimLogs([...byId.values()].sort((a, b) => a.timestamp - b.timestamp))
     this.schedulePersist()
     return true
   }
@@ -138,7 +136,9 @@ export class AppLogManager {
 
   getAccountTrend(accountId: string, days: number = 7): AppLogTrendPoint[] {
     this.ensureInitialized()
-    const accountLogs = this.logs.filter((entry) => entry.accountId === accountId && entry.requestId)
+    const accountLogs = this.logs.filter(
+      (entry) => entry.accountId === accountId && entry.requestId,
+    )
     return this.getTrendFromLogs(accountLogs, days, true)
   }
 
@@ -160,7 +160,11 @@ export class AppLogManager {
     this.persistNow()
   }
 
-  private getTrendFromLogs(logs: LogEntry[], days: number, totalUsesInfo = false): AppLogTrendPoint[] {
+  private getTrendFromLogs(
+    logs: LogEntry[],
+    days: number,
+    totalUsesInfo = false,
+  ): AppLogTrendPoint[] {
     const dayMs = 24 * 60 * 60 * 1000
     const today = new Date().toISOString().split('T')[0]
     const todayStart = new Date(today).getTime()
@@ -170,7 +174,9 @@ export class AppLogManager {
       const dayStart = todayStart - i * dayMs
       const dayEnd = dayStart + dayMs
       const date = new Date(dayStart).toISOString().split('T')[0]
-      const dayLogs = logs.filter((entry) => entry.timestamp >= dayStart && entry.timestamp < dayEnd)
+      const dayLogs = logs.filter(
+        (entry) => entry.timestamp >= dayStart && entry.timestamp < dayEnd,
+      )
       const info = dayLogs.filter((entry) => entry.level === 'info').length
       const warn = dayLogs.filter((entry) => entry.level === 'warn').length
       const error = dayLogs.filter((entry) => entry.level === 'error').length

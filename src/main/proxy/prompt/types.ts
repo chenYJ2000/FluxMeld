@@ -43,4 +43,4 @@ export const BUILTIN_VARIANT_IDS = {
   ANTHROPIC: 'anthropic',
 } as const
 
-export type BuiltinVariantId = typeof BUILTIN_VARIANT_IDS[keyof typeof BUILTIN_VARIANT_IDS]
+export type BuiltinVariantId = (typeof BUILTIN_VARIANT_IDS)[keyof typeof BUILTIN_VARIANT_IDS]

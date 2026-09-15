@@ -119,7 +119,7 @@ function parseMCPArguments(argsContent: string): Record<string, unknown> {
     const propsMatch = argsContent.match(/<properties>([\s\S]*?)<\/properties>/i)
     if (propsMatch) {
       const propMatches = propsMatch[1].matchAll(
-        /<property>\s*<name>([^<]*)<\/name>\s*<type>([^<]*)<\/type>([\s\S]*?)<\/property>/gi
+        /<property>\s*<name>([^<]*)<\/name>\s*<type>([^<]*)<\/type>([\s\S]*?)<\/property>/gi,
       )
 
       for (const match of propMatches) {
@@ -157,7 +157,7 @@ function parseMCPArguments(argsContent: string): Record<string, unknown> {
  */
 function detectToolSource(
   messages: ChatMessage[],
-  openaiTools: any[] | undefined
+  openaiTools: any[] | undefined,
 ): ToolDetectionResult {
   if (openaiTools && openaiTools.length > 0) {
     return {
@@ -186,10 +186,7 @@ function detectToolSource(
 /**
  * Detect client and tool information from messages
  */
-export function detectClient(
-  messages: ChatMessage[],
-  openaiTools?: any[]
-): ClientDetectionResult {
+export function detectClient(messages: ChatMessage[], openaiTools?: any[]): ClientDetectionResult {
   const allContent = extractAllContent(messages)
   const clientResult = detectClientFromContent(allContent)
   const toolResult = detectToolSource(messages, openaiTools)
@@ -235,7 +232,7 @@ export function getToolCallFormatForClient(clientType: ClientType): ToolCallForm
  * Get prompt section markers for client
  */
 export function getPromptSectionMarkers(
-  clientType: ClientType
+  clientType: ClientType,
 ): { start: string; end: string } | null {
   const config = CLIENT_SIGNATURES[clientType]
   return config?.promptSectionMarkers || null

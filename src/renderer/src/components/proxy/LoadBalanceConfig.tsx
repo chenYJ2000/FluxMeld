@@ -5,7 +5,13 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Slider } from '@/components/ui/slider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useProxyStore, type AccountWeight } from '@/stores/proxyStore'
 import { useToast } from '@/hooks/use-toast'
 import type { LoadBalanceStrategy, Account, Provider } from '@/types/electron'
@@ -26,10 +32,10 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
     isLoading,
   } = useProxyStore()
   const { toast } = useToast()
-  
+
   const initialStrategyRef = useRef<LoadBalanceStrategy>(loadBalanceStrategy)
   const initialWeightsRef = useRef<AccountWeight[]>(accountWeights)
-  
+
   const [selectedStrategy, setSelectedStrategy] = useState<LoadBalanceStrategy>(loadBalanceStrategy)
   const [weights, setWeights] = useState<AccountWeight[]>(accountWeights)
   const [accounts, setAccounts] = useState<(Account & { provider?: Provider })[]>([])
@@ -50,24 +56,24 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
     try {
       const allAccounts = await window.electronAPI.accounts.getAll()
       const providers = await window.electronAPI.providers.getAll()
-      
-      const accountsWithProvider = allAccounts.map(account => ({
+
+      const accountsWithProvider = allAccounts.map((account) => ({
         ...account,
-        provider: providers.find(p => p.id === account.providerId),
+        provider: providers.find((p) => p.id === account.providerId),
       }))
-      
+
       setAccounts(accountsWithProvider)
-      
-      const defaultWeights = accountsWithProvider.map(account => ({
+
+      const defaultWeights = accountsWithProvider.map((account) => ({
         accountId: account.id,
         weight: 100,
       }))
-      
-      const mergedWeights = defaultWeights.map(dw => {
-        const existing = accountWeights.find(w => w.accountId === dw.accountId)
+
+      const mergedWeights = defaultWeights.map((dw) => {
+        const existing = accountWeights.find((w) => w.accountId === dw.accountId)
         return existing || dw
       })
-      
+
       setWeights(mergedWeights)
     } catch (error) {
       console.error(t('proxy.failedToGetAccounts'), error)
@@ -81,9 +87,7 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
   }
 
   const handleWeightChange = (accountId: string, weight: number) => {
-    setWeights(prev => prev.map(w =>
-      w.accountId === accountId ? { ...w, weight } : w
-    ))
+    setWeights((prev) => prev.map((w) => (w.accountId === accountId ? { ...w, weight } : w)))
     setHasChanges(true)
     onConfigChange?.()
   }
@@ -91,7 +95,7 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
   const handleSave = async () => {
     setLoadBalanceStrategy(selectedStrategy)
     setAccountWeights(weights)
-    
+
     const success = await saveAppConfig({
       loadBalanceStrategy: selectedStrategy,
     })
@@ -117,15 +121,15 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
     setHasChanges(false)
   }
 
-  const activeAccounts = accounts.filter(a => a.status === 'active')
+  const activeAccounts = accounts.filter((a) => a.status === 'active')
 
   const getStrategyLabel = (strategy: LoadBalanceStrategy): string => {
     const labels: Record<LoadBalanceStrategy, string> = {
       'round-robin': t('proxy.roundRobin'),
       'fill-first': t('proxy.fillFirst'),
-      'failover': t('proxy.failover'),
+      failover: t('proxy.failover'),
       'least-recently-used': t('proxy.leastRecentlyUsed'),
-      'balanced': t('proxy.balanced'),
+      balanced: t('proxy.balanced'),
     }
     return labels[strategy]
   }
@@ -134,9 +138,9 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
     const descriptions: Record<LoadBalanceStrategy, string> = {
       'round-robin': t('proxy.roundRobinDesc'),
       'fill-first': t('proxy.fillFirstDesc'),
-      'failover': t('proxy.failoverDesc'),
+      failover: t('proxy.failoverDesc'),
       'least-recently-used': t('proxy.leastRecentlyUsedDesc'),
-      'balanced': t('proxy.balancedDesc'),
+      balanced: t('proxy.balancedDesc'),
     }
     return descriptions[strategy]
   }
@@ -165,7 +169,15 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
               <SelectValue placeholder={t('proxy.selectStrategy')} />
             </SelectTrigger>
             <SelectContent>
-              {(['round-robin', 'fill-first', 'failover', 'least-recently-used', 'balanced'] as LoadBalanceStrategy[]).map((strategy) => (
+              {(
+                [
+                  'round-robin',
+                  'fill-first',
+                  'failover',
+                  'least-recently-used',
+                  'balanced',
+                ] as LoadBalanceStrategy[]
+              ).map((strategy) => (
                 <SelectItem key={strategy} value={strategy}>
                   {getStrategyLabel(strategy)}
                 </SelectItem>
@@ -184,20 +196,15 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
           <div className="space-y-4 pt-4 border-t">
             <div className="flex items-center justify-between">
               <Label>{t('proxy.accountWeightConfig')}</Label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchAccounts}
-                className="h-8 px-2"
-              >
+              <Button variant="ghost" size="sm" onClick={fetchAccounts} className="h-8 px-2">
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />
                 {t('common.refresh')}
               </Button>
             </div>
-            
+
             <div className="space-y-4">
-              {activeAccounts.map(account => {
-                const weight = weights.find(w => w.accountId === account.id)?.weight || 100
+              {activeAccounts.map((account) => {
+                const weight = weights.find((w) => w.accountId === account.id)?.weight || 100
                 return (
                   <div key={account.id} className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -224,10 +231,8 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
                 )
               })}
             </div>
-            
-            <p className="text-xs text-muted-foreground">
-              {t('proxy.weightHelp')}
-            </p>
+
+            <p className="text-xs text-muted-foreground">{t('proxy.weightHelp')}</p>
           </div>
         )}
 
@@ -239,17 +244,10 @@ export function LoadBalanceConfig({ onConfigChange }: LoadBalanceConfigProps) {
         )}
 
         <div className="flex justify-end space-x-2 pt-4">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={!hasChanges || isLoading}
-          >
+          <Button variant="outline" onClick={handleReset} disabled={!hasChanges || isLoading}>
             {t('common.reset')}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || isLoading}
-          >
+          <Button onClick={handleSave} disabled={!hasChanges || isLoading}>
             {isLoading ? t('proxy.saving') : t('proxy.saveConfig')}
           </Button>
         </div>

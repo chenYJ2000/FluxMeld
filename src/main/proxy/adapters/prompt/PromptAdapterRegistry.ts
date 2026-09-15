@@ -9,7 +9,11 @@ import { PromptAdapter, PromptVariant, TransformResult, ParseResult } from './Ba
 import { DefaultPromptAdapter, defaultPromptAdapter } from './DefaultPromptAdapter'
 import { CherryStudioPromptAdapter, cherryStudioPromptAdapter } from './CherryStudioPromptAdapter'
 import { KiloCodePromptAdapter, kiloCodePromptAdapter } from './KiloCodePromptAdapter'
-import { detectClientPromptType, ClientType, hasAnyToolPromptInjected } from '../../utils/promptSignatures'
+import {
+  detectClientPromptType,
+  ClientType,
+  hasAnyToolPromptInjected,
+} from '../../utils/promptSignatures'
 import { hasGeneralToolPromptSignature } from '../../constants/signatures'
 
 /**
@@ -73,19 +77,19 @@ export class PromptAdapterRegistry {
     messages: ChatMessage[],
     tools: ChatCompletionTool[] | undefined,
     model: string,
-    provider?: string
+    provider?: string,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       return { messages, tools: undefined, injected: false }
     }
 
     const detectedAdapter = this.detect(messages)
-    
+
     if (detectedAdapter) {
       console.log(`[PromptAdapterRegistry] Using detected adapter: ${detectedAdapter.name}`)
       return detectedAdapter.transformRequest(messages, tools, model, provider)
     }
-    
+
     return this.defaultAdapter.transformRequest(messages, tools, model, provider)
   }
 
@@ -99,14 +103,21 @@ export class PromptAdapterRegistry {
     model: string,
     format: 'bracket' | 'xml',
     provider?: string,
-    skipDetection: boolean = false
+    skipDetection: boolean = false,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       return { messages, tools: undefined, injected: false }
     }
 
     if (this.defaultAdapter instanceof DefaultPromptAdapter) {
-      return this.defaultAdapter.transformRequestWithFormat(messages, tools, model, format, provider, skipDetection)
+      return this.defaultAdapter.transformRequestWithFormat(
+        messages,
+        tools,
+        model,
+        format,
+        provider,
+        skipDetection,
+      )
     }
 
     return this.defaultAdapter.transformRequest(messages, tools, model, provider)
@@ -116,12 +127,14 @@ export class PromptAdapterRegistry {
    * Parse tool calls from response content
    */
   parseToolCalls(content: string, adapterName?: string): ParseResult {
-    const adapter = adapterName ? this.adapters.get(adapterName) : this.detectAdapterFromContent(content)
-    
+    const adapter = adapterName
+      ? this.adapters.get(adapterName)
+      : this.detectAdapterFromContent(content)
+
     if (adapter) {
       return adapter.parseToolCalls(content)
     }
-    
+
     return this.defaultAdapter.parseToolCalls(content)
   }
 
@@ -137,14 +150,14 @@ export class PromptAdapterRegistry {
    */
   private detect(messages: ChatMessage[]): PromptAdapter | undefined {
     const clientType = this.detectClient(messages)
-    
+
     if (clientType !== 'unknown') {
       const adapter = this.findAdapterByClientType(clientType)
       if (adapter) {
         return adapter
       }
     }
-    
+
     return undefined
   }
 
@@ -167,7 +180,7 @@ export class PromptAdapterRegistry {
     if (content.includes('<tool_use>')) {
       return this.adapters.get('cherryStudio')
     }
-    
+
     if (content.includes('[function_calls]')) {
       return this.defaultAdapter
     }
@@ -193,7 +206,12 @@ export class PromptAdapterRegistry {
           for (const part of msg.content) {
             if (typeof part === 'string') {
               parts.push(part)
-            } else if (part && typeof part === 'object' && 'text' in part) {
+            } else if (
+              part &&
+              typeof part === 'object' &&
+              'text' in part &&
+              typeof part.text === 'string'
+            ) {
               parts.push(part.text)
             }
           }

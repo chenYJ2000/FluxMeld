@@ -16,9 +16,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
 
     const getSystemTheme = (): 'light' | 'dark' => {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light'
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
 
     if (theme === 'system') {
@@ -32,7 +30,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     if (theme !== 'system') return
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       const root = window.document.documentElement
       root.setAttribute('data-theme', e.matches ? 'dark' : 'light')

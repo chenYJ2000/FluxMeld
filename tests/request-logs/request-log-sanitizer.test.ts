@@ -55,36 +55,40 @@ test('sanitizeRequestLogEntry redacts and truncates persisted fields', () => {
 })
 
 test('sanitizeRequestLogEntry preserves structural bounded-repair telemetry', () => {
-  const sanitized = sanitizeRequestLogEntry(createEntry({
-    repair_attempted: true,
-    repair_attempts: 1,
-    repair_result: 'failed',
-    first_validation_error: '/take_profit_ladder must be array',
-    final_validation_error: '/take_profit_ladder must be array',
-    first_field_types: [{
-      json_pointer: '/take_profit_ladder',
-      expected: 'array',
-      actual_type: 'string',
-      keyword: 'type',
-    }],
-  }), createConfig())
+  const sanitized = sanitizeRequestLogEntry(
+    createEntry({
+      repair_attempted: true,
+      repair_attempts: 1,
+      repair_result: 'failed',
+      first_validation_error: '/take_profit_ladder must be array',
+      final_validation_error: '/take_profit_ladder must be array',
+      first_field_types: [
+        {
+          json_pointer: '/take_profit_ladder',
+          expected: 'array',
+          actual_type: 'string',
+          keyword: 'type',
+        },
+      ],
+    }),
+    createConfig(),
+  )
 
   assert.equal(sanitized.repair_attempted, true)
   assert.equal(sanitized.repair_attempts, 1)
   assert.equal(sanitized.repair_result, 'failed')
-  assert.deepEqual(sanitized.first_field_types, [{
-    json_pointer: '/take_profit_ladder',
-    expected: 'array',
-    actual_type: 'string',
-    keyword: 'type',
-  }])
+  assert.deepEqual(sanitized.first_field_types, [
+    {
+      json_pointer: '/take_profit_ladder',
+      expected: 'array',
+      actual_type: 'string',
+      keyword: 'type',
+    },
+  ])
 })
 
 test('sanitizeRequestLogEntry drops request and response bodies when disabled', () => {
-  const sanitized = sanitizeRequestLogEntry(
-    createEntry(),
-    createConfig({ includeBodies: false }),
-  )
+  const sanitized = sanitizeRequestLogEntry(createEntry(), createConfig({ includeBodies: false }))
 
   assert.equal(sanitized.requestBody, undefined)
   assert.equal(sanitized.responseBody, undefined)

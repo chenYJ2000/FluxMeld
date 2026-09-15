@@ -30,7 +30,8 @@ const FAKE_HEADERS: Record<string, string> = {
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   Priority: 'u=1, i',
 }
 
@@ -146,7 +147,9 @@ export class KimiAdapter {
       return { accessToken: this.token, userId }
     }
 
-    console.log('[Kimi] Non-JWT token detected (opaque v10 session token), sending via kimi-auth cookie')
+    console.log(
+      '[Kimi] Non-JWT token detected (opaque v10 session token), sending via kimi-auth cookie',
+    )
     accessTokenMap.set(this.token, {
       accessToken: this.token,
       refreshToken: this.token,
@@ -156,25 +159,31 @@ export class KimiAdapter {
     return { accessToken: this.token, userId: '' }
   }
 
-  private messagesPrepare(messages: KimiMessage[], toolsPrompt?: string, isMultiTurn: boolean = false): string {
+  private messagesPrepare(
+    messages: KimiMessage[],
+    toolsPrompt?: string,
+    isMultiTurn: boolean = false,
+  ): string {
     const toolProfile = getProviderToolProfile('kimi')
     // Process messages including tool calls and tool responses
-    const processedMessages = messages.map(msg => {
+    const processedMessages = messages.map((msg) => {
       // Handle tool calls in assistant message
       if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
         return {
           ...msg,
-          content: toolProfile.formatAssistantToolCalls(msg.tool_calls.map(tc => ({
-            id: tc.id,
-            name: tc.function.name,
-            arguments: tc.function.arguments,
-          }))),
+          content: toolProfile.formatAssistantToolCalls(
+            msg.tool_calls.map((tc) => ({
+              id: tc.id,
+              name: tc.function.name,
+              arguments: tc.function.arguments,
+            })),
+          ),
         }
       }
       // Handle tool response message
       if (msg.role === 'tool' && msg.tool_call_id) {
-        return { 
-          ...msg, 
+        return {
+          ...msg,
           role: 'user' as const,
           content: toolProfile.formatToolResult({
             toolCallId: msg.tool_call_id,
@@ -187,7 +196,7 @@ export class KimiAdapter {
 
     // Extract system message first
     let systemContent = ''
-    const otherMessages = processedMessages.filter(msg => {
+    const otherMessages = processedMessages.filter((msg) => {
       if (msg.role === 'system') {
         const text = typeof msg.content === 'string' ? msg.content : ''
         systemContent = text
@@ -213,22 +222,23 @@ export class KimiAdapter {
           break
         }
       }
-      
+
       if (lastUserIdx !== -1) {
         const lastUserMsg = otherMessages[lastUserIdx]
         const text = typeof lastUserMsg.content === 'string' ? lastUserMsg.content : ''
         content += `user:${this.wrapUrlsToTags(text)}\n`
-        
+
         // Include any tool results after the last user message
         for (let i = lastUserIdx + 1; i < otherMessages.length; i++) {
           if (otherMessages[i].role === 'user') {
-            const toolText = typeof otherMessages[i].content === 'string' ? otherMessages[i].content : ''
+            const toolText =
+              typeof otherMessages[i].content === 'string' ? otherMessages[i].content : ''
             content += `user:${toolText}\n`
           }
         }
-        
+
         if (toolsPrompt) {
-          content = content.trim() + "\n\n" + toolsPrompt
+          content = content.trim() + '\n\n' + toolsPrompt
         }
         return content
       }
@@ -241,8 +251,11 @@ export class KimiAdapter {
       }, '')
     } else {
       const latestMessage = otherMessages[otherMessages.length - 1]
-      const hasFileOrImage = Array.isArray(latestMessage.content) &&
-        latestMessage.content.some((v: any) => typeof v === 'object' && ['file', 'image_url'].includes(v.type))
+      const hasFileOrImage =
+        Array.isArray(latestMessage.content) &&
+        latestMessage.content.some(
+          (v: any) => typeof v === 'object' && ['file', 'image_url'].includes(v.type),
+        )
 
       if (hasFileOrImage) {
         otherMessages.splice(otherMessages.length - 1, 0, {
@@ -264,7 +277,7 @@ export class KimiAdapter {
 
     // Inject tools prompt at the VERY END of the content to maximize attention
     if (toolsPrompt) {
-      content = content.trim() + "\n\n" + toolsPrompt
+      content = content.trim() + '\n\n' + toolsPrompt
     }
 
     return content
@@ -273,11 +286,13 @@ export class KimiAdapter {
   private wrapUrlsToTags(content: string): string {
     return content.replace(
       /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)/gi,
-      url => `<url id="" type="url" status="" title="" wc="">${url}</url>`
+      (url) => `<url id="" type="url" status="" title="" wc="">${url}</url>`,
     )
   }
 
-  async chatCompletion(request: ChatCompletionRequest): Promise<{ response: AxiosResponse; conversationId: string }> {
+  async chatCompletion(
+    request: ChatCompletionRequest,
+  ): Promise<{ response: AxiosResponse; conversationId: string }> {
     const { accessToken } = await this.acquireToken()
 
     const messages = [...request.messages]
@@ -322,9 +337,9 @@ export class KimiAdapter {
       } else if (modelLower.includes('standard') || modelLower.includes('fast')) {
         reasoningEffort = 'low'
       } else if (
-        modelLower.includes('advanced')
-        || modelLower.includes('think')
-        || modelLower.includes('r1')
+        modelLower.includes('advanced') ||
+        modelLower.includes('think') ||
+        modelLower.includes('r1')
       ) {
         reasoningEffort = 'high'
       }
@@ -342,12 +357,13 @@ export class KimiAdapter {
     })
     const frameBuffer = encodeKimiGrpcFrame(payload)
 
+    console.log('[Kimi] Request mode:', payload.scenario, payload.options.reasoning_effort)
     console.log(
-      '[Kimi] Request mode:',
-      payload.scenario,
-      payload.options.reasoning_effort,
+      '[Kimi] Request body length:',
+      frameBuffer.length,
+      'JSON length:',
+      frameBuffer.length - 5,
     )
-    console.log('[Kimi] Request body length:', frameBuffer.length, 'JSON length:', frameBuffer.length - 5)
 
     const response = await axios.post(
       `${KIMI_API_BASE}/apiv2/kimi.gateway.chat.v1.ChatService/Chat`,
@@ -361,7 +377,7 @@ export class KimiAdapter {
         timeout: 1800000,
         validateStatus: () => true,
         responseType: 'stream',
-      }
+      },
     )
 
     console.log('[Kimi] Completion response status:', response.status)
@@ -381,7 +397,7 @@ export class KimiAdapter {
   async deleteConversation(conversationId: string): Promise<boolean> {
     try {
       const { accessToken } = await this.acquireToken()
-      
+
       const response = await axios.post(
         `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/DeleteChat`,
         { chat_id: conversationId },
@@ -393,7 +409,7 @@ export class KimiAdapter {
           },
           timeout: 1800000,
           validateStatus: () => true,
-        }
+        },
       )
 
       console.log('[Kimi] Chat deleted:', conversationId, 'Status:', response.status)
@@ -404,7 +420,9 @@ export class KimiAdapter {
     }
   }
 
-  private async listChats(pageToken?: string): Promise<{ chatIds: string[]; nextPageToken: string }> {
+  private async listChats(
+    pageToken?: string,
+  ): Promise<{ chatIds: string[]; nextPageToken: string }> {
     const { accessToken } = await this.acquireToken()
     const response = await axios.post(
       `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/ListChats`,
@@ -421,13 +439,13 @@ export class KimiAdapter {
         },
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     const data = checkResult(response, this.token)
     const chats = Array.isArray(data?.chats) ? data.chats : []
     const chatIds = chats
-      .map((chat: any) => typeof chat?.id === 'string' ? chat.id : '')
+      .map((chat: any) => (typeof chat?.id === 'string' ? chat.id : ''))
       .filter(Boolean)
 
     return {
@@ -453,7 +471,7 @@ export class KimiAdapter {
         },
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     checkResult(response, this.token)
@@ -523,21 +541,20 @@ function createKimiApiError(value: unknown): KimiApiError {
     return new KimiApiError(`Kimi API Error: ${value}`, status)
   }
 
-  const error = value && typeof value === 'object'
-    ? value as Record<string, any>
-    : {}
+  const error = value && typeof value === 'object' ? (value as Record<string, any>) : {}
   const code = typeof error.code === 'string' ? error.code : 'upstream_error'
   const details = Array.isArray(error.details) ? error.details : []
-  const localizedMessage = details.find((detail: any) =>
-    typeof detail?.debug?.localizedMessage?.message === 'string'
+  const localizedMessage = details.find(
+    (detail: any) => typeof detail?.debug?.localizedMessage?.message === 'string',
   )?.debug?.localizedMessage?.message
-  const status = code === 'resource_exhausted'
-    ? 429
-    : code === 'unauthenticated'
-      ? 401
-      : code === 'permission_denied'
-        ? 403
-        : 502
+  const status =
+    code === 'resource_exhausted'
+      ? 429
+      : code === 'unauthenticated'
+        ? 401
+        : code === 'permission_denied'
+          ? 403
+          : 502
   const message = localizedMessage || `Kimi upstream error: ${code}`
   return new KimiApiError(message, status)
 }
@@ -554,12 +571,19 @@ export class KimiStreamHandler {
   private currentPhase: 'thinking' | 'answer' | undefined = undefined
   private reasoningBuffer: string = ''
 
-  constructor(model: string, conversationId: string, enableThinking: boolean = false, toolCallingPlan?: ToolCallingPlan) {
+  constructor(
+    model: string,
+    conversationId: string,
+    enableThinking: boolean = false,
+    toolCallingPlan?: ToolCallingPlan,
+  ) {
     this.model = model
     this.conversationId = conversationId
     this.enableThinking = enableThinking
     this.toolCallingPlan = toolCallingPlan
-    this.toolStreamParser = toolCallingPlan?.shouldParseResponse ? new ToolStreamParser(toolCallingPlan) : undefined
+    this.toolStreamParser = toolCallingPlan?.shouldParseResponse
+      ? new ToolStreamParser(toolCallingPlan)
+      : undefined
   }
 
   getConversationId(): string | null {
@@ -569,7 +593,11 @@ export class KimiStreamHandler {
       return this.realChatId
     }
     // Only return conversationId if it's a valid ID (not empty and not a temporary ID)
-    if (this.conversationId && this.conversationId.length > 0 && !this.conversationId.startsWith('kimi-')) {
+    if (
+      this.conversationId &&
+      this.conversationId.length > 0 &&
+      !this.conversationId.startsWith('kimi-')
+    ) {
       return this.conversationId
     }
     return null
@@ -587,17 +615,17 @@ export class KimiStreamHandler {
     if (!data.block?.multiStage?.stages || !Array.isArray(data.block.multiStage.stages)) {
       return undefined
     }
-    
+
     const stages = data.block.multiStage.stages
     if (stages.length === 0) {
       return undefined
     }
-    
+
     const firstStage = stages[0]
     if (firstStage?.name === STAGE_NAME_THINKING) {
       return firstStage.status === 'completed' ? 'answer' : 'thinking'
     }
-    
+
     return undefined
   }
 
@@ -622,12 +650,23 @@ export class KimiStreamHandler {
   async handleStream(stream: any): Promise<PassThrough> {
     const transStream = new PassThrough()
     const created = unixTimestamp()
-    let buffer = Buffer.alloc(0)
+    let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0)
     let sentRole = false
 
     stream.on('data', (chunk: Buffer) => {
       buffer = Buffer.concat([buffer, chunk])
-      this.processBuffer(buffer, transStream, created, (remaining) => { buffer = remaining }, () => sentRole, (v) => { sentRole = v })
+      this.processBuffer(
+        buffer,
+        transStream,
+        created,
+        (remaining) => {
+          buffer = remaining
+        },
+        () => sentRole,
+        (v) => {
+          sentRole = v
+        },
+      )
     })
 
     stream.once('error', (err: Error) => {
@@ -636,7 +675,12 @@ export class KimiStreamHandler {
     })
 
     stream.once('close', () => {
-      console.log('[Kimi] Stream closed, realChatId:', this.realChatId, 'lastMessageId:', this.lastMessageId)
+      console.log(
+        '[Kimi] Stream closed, realChatId:',
+        this.realChatId,
+        'lastMessageId:',
+        this.lastMessageId,
+      )
       if (!transStream.closed) transStream.end('data: [DONE]\n\n')
     })
 
@@ -644,12 +688,12 @@ export class KimiStreamHandler {
   }
 
   private processBuffer(
-    buffer: Buffer,
+    buffer: Buffer<ArrayBufferLike>,
     transStream: PassThrough,
     created: number,
-    setBuffer: (remaining: Buffer) => void,
+    setBuffer: (remaining: Buffer<ArrayBufferLike>) => void,
     getSentRole: () => boolean,
-    setSentRole: (v: boolean) => void
+    setSentRole: (v: boolean) => void,
   ) {
     let offset = 0
 
@@ -668,30 +712,34 @@ export class KimiStreamHandler {
         const text = payload.toString('utf8')
         if (text.trim()) {
           const data = JSON.parse(text)
-          
+
           // Check for error response
           if (data.error) {
             const apiError = createKimiApiError(data.error)
             console.error('[Kimi] API Error:', apiError.message)
             this.hasError = true
-            transStream.write(`data: ${JSON.stringify({
-              id: this.conversationId,
-              model: this.model,
-              object: 'chat.completion.chunk',
-              choices: [{ index: 0, delta: { content: apiError.message }, finish_reason: null }],
-              created,
-            })}\n\n`)
-            transStream.write(`data: ${JSON.stringify({
-              id: this.conversationId,
-              model: this.model,
-              object: 'chat.completion.chunk',
-              choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
-              created,
-            })}\n\n`)
+            transStream.write(
+              `data: ${JSON.stringify({
+                id: this.conversationId,
+                model: this.model,
+                object: 'chat.completion.chunk',
+                choices: [{ index: 0, delta: { content: apiError.message }, finish_reason: null }],
+                created,
+              })}\n\n`,
+            )
+            transStream.write(
+              `data: ${JSON.stringify({
+                id: this.conversationId,
+                model: this.model,
+                object: 'chat.completion.chunk',
+                choices: [{ index: 0, delta: {}, finish_reason: 'stop' }],
+                created,
+              })}\n\n`,
+            )
             transStream.end('data: [DONE]\n\n')
             return
           }
-          
+
           this.handleMessage(data, transStream, created, getSentRole, setSentRole)
         }
       } catch (e) {
@@ -709,7 +757,7 @@ export class KimiStreamHandler {
     transStream: PassThrough,
     created: number,
     getSentRole: () => boolean,
-    setSentRole: (v: boolean) => void
+    setSentRole: (v: boolean) => void,
   ) {
     if (data.heartbeat) return
 
@@ -735,71 +783,83 @@ export class KimiStreamHandler {
       this.currentPhase = 'answer'
     }
 
-    if ((data.op === 'set' || data.op === 'append')) {
+    if (data.op === 'set' || data.op === 'append') {
       const mask = data.mask
-      
+
       if (this.isThinkingMask(mask)) {
         const thinkContent = this.extractThinkContent(data)
         if (thinkContent) {
           if (!getSentRole()) {
-            transStream.write(`data: ${JSON.stringify({
+            transStream.write(
+              `data: ${JSON.stringify({
+                id: this.getConversationId(),
+                model: this.model,
+                object: 'chat.completion.chunk',
+                choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+                created,
+              })}\n\n`,
+            )
+            setSentRole(true)
+          }
+
+          this.reasoningBuffer += thinkContent
+          transStream.write(
+            `data: ${JSON.stringify({
               id: this.getConversationId(),
               model: this.model,
               object: 'chat.completion.chunk',
-              choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+              choices: [
+                { index: 0, delta: { reasoning_content: thinkContent }, finish_reason: null },
+              ],
               created,
-            })}\n\n`)
-            setSentRole(true)
-          }
-          
-          this.reasoningBuffer += thinkContent
-          transStream.write(`data: ${JSON.stringify({
-            id: this.getConversationId(),
-            model: this.model,
-            object: 'chat.completion.chunk',
-            choices: [{ index: 0, delta: { reasoning_content: thinkContent }, finish_reason: null }],
-            created,
-          })}\n\n`)
+            })}\n\n`,
+          )
         }
       } else if (this.isAnswerMask(mask)) {
         const textContent = this.extractTextContent(data)
         if (textContent) {
           if (!getSentRole()) {
-            transStream.write(`data: ${JSON.stringify({
+            transStream.write(
+              `data: ${JSON.stringify({
+                id: this.getConversationId(),
+                model: this.model,
+                object: 'chat.completion.chunk',
+                choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+                created,
+              })}\n\n`,
+            )
+            setSentRole(true)
+          }
+
+          this.sendChunk(transStream, textContent, created)
+        }
+      } else if (data.block?.text?.content) {
+        const content = data.block.text.content
+
+        if (!getSentRole()) {
+          transStream.write(
+            `data: ${JSON.stringify({
               id: this.getConversationId(),
               model: this.model,
               object: 'chat.completion.chunk',
               choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
               created,
-            })}\n\n`)
-            setSentRole(true)
-          }
-          
-          this.sendChunk(transStream, textContent, created)
-        }
-      } else if (data.block?.text?.content) {
-        const content = data.block.text.content
-        
-        if (!getSentRole()) {
-          transStream.write(`data: ${JSON.stringify({
-            id: this.getConversationId(),
-            model: this.model,
-            object: 'chat.completion.chunk',
-            choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
-            created,
-          })}\n\n`)
+            })}\n\n`,
+          )
           setSentRole(true)
         }
-        
+
         if (this.currentPhase === 'thinking') {
           this.reasoningBuffer += content
-          transStream.write(`data: ${JSON.stringify({
-            id: this.getConversationId(),
-            model: this.model,
-            object: 'chat.completion.chunk',
-            choices: [{ index: 0, delta: { reasoning_content: content }, finish_reason: null }],
-            created,
-          })}\n\n`)
+          transStream.write(
+            `data: ${JSON.stringify({
+              id: this.getConversationId(),
+              model: this.model,
+              object: 'chat.completion.chunk',
+              choices: [{ index: 0, delta: { reasoning_content: content }, finish_reason: null }],
+              created,
+            })}\n\n`,
+          )
         } else {
           this.sendChunk(transStream, content, created)
         }
@@ -814,13 +874,21 @@ export class KimiStreamHandler {
         transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
       }
 
-      transStream.write(`data: ${JSON.stringify({
-        id: this.getConversationId(),
-        model: this.model,
-        object: 'chat.completion.chunk',
-        choices: [{ index: 0, delta: {}, finish_reason: this.toolStreamParser?.hasEmittedToolCall() ? 'tool_calls' : 'stop' }],
-        created,
-      })}\n\n`)
+      transStream.write(
+        `data: ${JSON.stringify({
+          id: this.getConversationId(),
+          model: this.model,
+          object: 'chat.completion.chunk',
+          choices: [
+            {
+              index: 0,
+              delta: {},
+              finish_reason: this.toolStreamParser?.hasEmittedToolCall() ? 'tool_calls' : 'stop',
+            },
+          ],
+          created,
+        })}\n\n`,
+      )
       transStream.end('data: [DONE]\n\n')
     }
   }
@@ -833,17 +901,25 @@ export class KimiStreamHandler {
     const outputChunks = this.toolStreamParser?.push(content, baseChunk, false) ?? []
 
     // Check if we emitted tool calls first
-    const hasToolCalls = outputChunks.some(c => c.choices?.[0]?.delta?.tool_calls)
+    const hasToolCalls = outputChunks.some((c) => c.choices?.[0]?.delta?.tool_calls)
 
     for (const outChunk of outputChunks) {
       transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
     }
 
-    if (!this.toolStreamParser || (!this.toolStreamParser.isBuffering() && !this.toolStreamParser.hasEmittedToolCall() && !hasToolCalls && outputChunks.length === 0)) {
-      transStream.write(`data: ${JSON.stringify({
-        ...baseChunk,
-        choices: [{ index: 0, delta: { content }, finish_reason: null }],
-      })}\n\n`)
+    if (
+      !this.toolStreamParser ||
+      (!this.toolStreamParser.isBuffering() &&
+        !this.toolStreamParser.hasEmittedToolCall() &&
+        !hasToolCalls &&
+        outputChunks.length === 0)
+    ) {
+      transStream.write(
+        `data: ${JSON.stringify({
+          ...baseChunk,
+          choices: [{ index: 0, delta: { content }, finish_reason: null }],
+        })}\n\n`,
+      )
     }
   }
 
@@ -881,12 +957,18 @@ export class KimiStreamHandler {
 
               if (data.chat?.id && !this.realChatId) {
                 this.realChatId = data.chat.id
-                console.log('[Kimi] Non-stream: Extracted real chat_id from chat.id:', this.realChatId)
+                console.log(
+                  '[Kimi] Non-stream: Extracted real chat_id from chat.id:',
+                  this.realChatId,
+                )
               }
 
               if (data.message?.id && data.message?.role === 'assistant' && !this.lastMessageId) {
                 this.lastMessageId = data.message.id
-                console.log('[Kimi] Non-stream: Extracted assistant message id:', this.lastMessageId)
+                console.log(
+                  '[Kimi] Non-stream: Extracted assistant message id:',
+                  this.lastMessageId,
+                )
               }
 
               const multiStagePhase = this.detectMultiStage(data)
@@ -901,9 +983,9 @@ export class KimiStreamHandler {
                 currentPhase = 'answer'
               }
 
-              if ((data.op === 'set' || data.op === 'append')) {
+              if (data.op === 'set' || data.op === 'append') {
                 const mask = data.mask
-                
+
                 if (this.isThinkingMask(mask)) {
                   const thinkContent = this.extractThinkContent(data)
                   if (thinkContent) {
@@ -925,7 +1007,8 @@ export class KimiStreamHandler {
               }
 
               if (data.done === true) {
-                const { content: cleanContent, toolCalls } = this.toolCallingPlan?.shouldParseResponse
+                const { content: cleanContent, toolCalls } = this.toolCallingPlan
+                  ?.shouldParseResponse
                   ? { content, toolCalls: [] }
                   : parseToolCallsFromText(content, 'kimi')
 
@@ -947,11 +1030,13 @@ export class KimiStreamHandler {
                   model: this.model,
                   object: 'chat.completion',
                   created,
-                  choices: [{
-                    index: 0,
-                    message,
-                    finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
-                  }],
+                  choices: [
+                    {
+                      index: 0,
+                      message,
+                      finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
+                    },
+                  ],
                 })
               }
             }
@@ -989,11 +1074,13 @@ export class KimiStreamHandler {
           model: this.model,
           object: 'chat.completion',
           created,
-          choices: [{
-            index: 0,
-            message,
-            finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
-          }],
+          choices: [
+            {
+              index: 0,
+              message,
+              finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
+            },
+          ],
         })
       })
     })

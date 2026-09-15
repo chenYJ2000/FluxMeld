@@ -1,6 +1,7 @@
-import { Tray, Menu, nativeImage, BrowserWindow, app, MenuItem } from 'electron'
+import { Tray, Menu, nativeImage, BrowserWindow, app, type NativeImage } from 'electron'
 import { join } from 'path'
 import { getProxyStatus } from './ipc/handlers'
+import { markAppQuitting } from './lib/appLifecycle'
 
 let tray: Tray | null = null
 let isProxyRunning = false
@@ -12,9 +13,9 @@ function getIconPath(): string {
   return join(__dirname, '../../build/icon.png')
 }
 
-function loadAppIcon(): nativeImage {
+function loadAppIcon(): NativeImage {
   const iconPath = getIconPath()
-  
+
   try {
     let icon = nativeImage.createFromPath(iconPath)
     if (!icon.isEmpty()) {
@@ -26,21 +27,21 @@ function loadAppIcon(): nativeImage {
   } catch (error) {
     console.error('Failed to load app icon:', error)
   }
-  
+
   return createFallbackIcon()
 }
 
-function createFallbackIcon(): nativeImage {
+function createFallbackIcon(): NativeImage {
   const size = 22
   const canvas = Buffer.alloc(size * size * 4)
-  
+
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const index = (y * size + x) * 4
       const centerX = size / 2
       const centerY = size / 2
       const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2)
-      
+
       if (distance < size / 2 - 1) {
         canvas[index] = 59
         canvas[index + 1] = 130
@@ -51,13 +52,13 @@ function createFallbackIcon(): nativeImage {
       }
     }
   }
-  
+
   return nativeImage.createFromBuffer(canvas, { width: size, height: size })
 }
 
-function createRunningIcon(): nativeImage {
+function createRunningIcon(): NativeImage {
   const iconPath = getIconPath()
-  
+
   try {
     let icon = nativeImage.createFromPath(iconPath)
     if (!icon.isEmpty()) {
@@ -69,21 +70,21 @@ function createRunningIcon(): nativeImage {
   } catch (error) {
     console.error('Failed to load app icon:', error)
   }
-  
+
   return createFallbackRunningIcon()
 }
 
-function createFallbackRunningIcon(): nativeImage {
+function createFallbackRunningIcon(): NativeImage {
   const size = 22
   const canvas = Buffer.alloc(size * size * 4)
-  
+
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const index = (y * size + x) * 4
       const centerX = size / 2
       const centerY = size / 2
       const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2)
-      
+
       if (distance < size / 2 - 1) {
         canvas[index] = 34
         canvas[index + 1] = 197
@@ -94,7 +95,7 @@ function createFallbackRunningIcon(): nativeImage {
       }
     }
   }
-  
+
   return nativeImage.createFromBuffer(canvas, { width: size, height: size })
 }
 
@@ -164,7 +165,7 @@ function buildContextMenu(mainWindow: BrowserWindow | null): Menu {
     {
       label: 'Exit',
       click: () => {
-        (app as any).isQuitting = true
+        markAppQuitting()
         app.quit()
       },
     },

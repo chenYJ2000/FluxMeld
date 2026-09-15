@@ -51,11 +51,13 @@ export class ProxyServer {
       await next()
     })
 
-    this.app.use(bodyParser({
-      jsonLimit: '50mb',
-      formLimit: '50mb',
-      textLimit: '50mb',
-    }))
+    this.app.use(
+      bodyParser({
+        jsonLimit: '50mb',
+        formLimit: '50mb',
+        textLimit: '50mb',
+      }),
+    )
 
     // API Key validation middleware
     this.app.use(async (ctx, next) => {
@@ -67,13 +69,13 @@ export class ProxyServer {
       }
 
       const config = storeManager.getConfig()
-      
+
       if (config.enableApiKey && config.apiKeys && config.apiKeys.length > 0) {
         const authHeader = ctx.get('Authorization') || ''
-        const providedKey = authHeader.startsWith('Bearer ') 
-          ? authHeader.slice(7) 
+        const providedKey = authHeader.startsWith('Bearer ')
+          ? authHeader.slice(7)
           : (ctx.query.api_key as string) || ctx.get('X-API-Key')
-        
+
         if (!providedKey) {
           ctx.status = 401
           ctx.body = {
@@ -85,11 +87,9 @@ export class ProxyServer {
           }
           return
         }
-        
-        const validKey = config.apiKeys.find(
-          k => k.key === providedKey && k.enabled
-        )
-        
+
+        const validKey = config.apiKeys.find((k) => k.key === providedKey && k.enabled)
+
         if (!validKey) {
           ctx.status = 401
           ctx.body = {
@@ -101,20 +101,20 @@ export class ProxyServer {
           }
           return
         }
-        
+
         // Update usage statistics
-        const updatedKeys = config.apiKeys.map(k => 
-          k.id === validKey.id 
-            ? { 
-                ...k, 
-                lastUsedAt: Date.now(), 
-                usageCount: k.usageCount + 1 
+        const updatedKeys = config.apiKeys.map((k) =>
+          k.id === validKey.id
+            ? {
+                ...k,
+                lastUsedAt: Date.now(),
+                usageCount: k.usageCount + 1,
               }
-            : k
+            : k,
         )
         storeManager.updateConfig({ apiKeys: updatedKeys })
       }
-      
+
       await next()
     })
 
@@ -234,7 +234,7 @@ export class ProxyServer {
 
     this.port = port || proxyStatusManager.getPort()
     this.host = host || proxyStatusManager.getHost()
-    
+
     sessionManager.initialize()
 
     return new Promise((resolve) => {
@@ -244,7 +244,10 @@ export class ProxyServer {
           proxyStatusManager.setPort(this.port)
           proxyStatusManager.setHost(this.host)
 
-          storeManager.addLog('info', `Proxy server started successfully, listening on ${this.host}:${this.port}`)
+          storeManager.addLog(
+            'info',
+            `Proxy server started successfully, listening on ${this.host}:${this.port}`,
+          )
 
           resolve(true)
         })
@@ -263,7 +266,10 @@ export class ProxyServer {
           this.server = null
         })
       } catch (error) {
-        storeManager.addLog('error', `Failed to start server: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        storeManager.addLog(
+          'error',
+          `Failed to start server: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
         resolve(false)
       }
     })
@@ -276,7 +282,7 @@ export class ProxyServer {
     if (!this.server) {
       return false
     }
-    
+
     sessionManager.destroy()
 
     return new Promise((resolve) => {

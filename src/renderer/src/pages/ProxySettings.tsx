@@ -19,7 +19,7 @@ export function ProxySettings() {
   useEffect(() => {
     if (hasLoadedRef.current) return
     hasLoadedRef.current = true
-    
+
     fetchAppConfig()
     fetchProxyStatus()
     fetchProxyStatistics()
@@ -42,15 +42,24 @@ export function ProxySettings() {
             <Settings className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline truncate">{t('proxy.basicConfig')}</span>
           </TabsTrigger>
-          <TabsTrigger value="loadbalance" className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0">
+          <TabsTrigger
+            value="loadbalance"
+            className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0"
+          >
             <Scale className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline truncate">{t('proxy.loadBalancing')}</span>
           </TabsTrigger>
-          <TabsTrigger value="advanced" className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0">
+          <TabsTrigger
+            value="advanced"
+            className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0"
+          >
             <Settings2 className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline truncate">{t('proxy.advancedConfig')}</span>
           </TabsTrigger>
-          <TabsTrigger value="outbound" className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0">
+          <TabsTrigger
+            value="outbound"
+            className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0"
+          >
             <Router className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline truncate">{t('proxy.outboundProxy')}</span>
           </TabsTrigger>

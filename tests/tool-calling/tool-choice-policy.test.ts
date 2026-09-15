@@ -14,7 +14,10 @@ test('auto allows every declared tool', () => {
   const policy = normalizeToolChoicePolicy('auto', tools)
 
   assert.equal(policy.mode, 'auto')
-  assert.deepEqual([...policy.allowedToolNames].sort(), ['default_api:list_dir', 'default_api:read_file'])
+  assert.deepEqual([...policy.allowedToolNames].sort(), [
+    'default_api:list_dir',
+    'default_api:read_file',
+  ])
 })
 
 test('none disables tool calling', () => {
@@ -28,7 +31,8 @@ test('required requires a non-empty declared tool list', () => {
   assert.equal(normalizeToolChoicePolicy('required', tools).mode, 'required')
   assert.throws(
     () => normalizeToolChoicePolicy('required', []),
-    (error) => error instanceof ToolChoicePolicyError && error.code === 'tool_choice_required_without_tools',
+    (error) =>
+      error instanceof ToolChoicePolicyError && error.code === 'tool_choice_required_without_tools',
   )
 })
 
@@ -46,7 +50,8 @@ test('forced function choice requires name to exist in declared tools', () => {
 test('unsupported choices produce a structured error', () => {
   assert.throws(
     () => normalizeToolChoicePolicy({ type: 'function', function: { name: 'missing' } }, tools),
-    (error) => error instanceof ToolChoicePolicyError && error.code === 'tool_choice_forced_tool_not_found',
+    (error) =>
+      error instanceof ToolChoicePolicyError && error.code === 'tool_choice_forced_tool_not_found',
   )
   assert.throws(
     () => normalizeToolChoicePolicy('unexpected' as never, tools),

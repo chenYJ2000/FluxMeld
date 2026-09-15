@@ -1,7 +1,7 @@
 /**
  * Prompt Signature Detection Module
  * Re-exports from unified signatures module
- * 
+ *
  * This module provides backward compatibility for existing imports
  */
 
@@ -30,7 +30,7 @@ export { detectClientFromContent, hasGeneralToolPromptSignature, isKnownClient }
  */
 export function detectClientPromptType(messages: ChatMessage[]): DetectionResult {
   const allContent = extractAllContent(messages)
-  
+
   if (!allContent) {
     return {
       clientType: 'unknown',

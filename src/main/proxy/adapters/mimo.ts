@@ -177,7 +177,7 @@ function stripCitations(text: string): string {
 
 function stripCitationsWithBuffer(text: string, buffer: { value: string }): string {
   const combined = buffer.value + text
-  
+
   let cleaned = combined
     .replace(/从\(citation:\d+\)中[：:]\s*/g, '')
     .replace(/-?\s*citation:\d+[：:]\s*/g, '')
@@ -185,7 +185,7 @@ function stripCitationsWithBuffer(text: string, buffer: { value: string }): stri
     .replace(/citation:\d+(?:,\s*citation:\d+)*/g, '')
     .replace(/\(citation:\d+\)/g, '')
     .replace(/\[\d+\]/g, '')
-  
+
   const lastCitationStart = cleaned.lastIndexOf(CITATION_START)
   if (lastCitationStart !== -1) {
     const afterCitation = cleaned.slice(lastCitationStart)
@@ -198,7 +198,7 @@ function stripCitationsWithBuffer(text: string, buffer: { value: string }): stri
   } else {
     buffer.value = ''
   }
-  
+
   return cleaned.replace(/\s+/g, ' ').trim()
 }
 
@@ -258,7 +258,9 @@ function extractTextContent(content: ChatMessage['content']): string {
   }
   if (Array.isArray(content)) {
     return content
-      .filter((part) => typeof part === 'object' && part !== null && part.type === 'text' && part.text)
+      .filter(
+        (part) => typeof part === 'object' && part !== null && part.type === 'text' && part.text,
+      )
       .map((part) => part.text)
       .join('\n')
   }
@@ -273,11 +275,13 @@ export function buildMimoQuery(messages: MimoMessage[]): string {
     if (message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0) {
       entries.push({
         role: 'Assistant',
-        content: toolProfile.formatAssistantToolCalls(message.tool_calls.map((toolCall) => ({
-          id: toolCall.id,
-          name: toolCall.function.name,
-          arguments: toolCall.function.arguments,
-        }))),
+        content: toolProfile.formatAssistantToolCalls(
+          message.tool_calls.map((toolCall) => ({
+            id: toolCall.id,
+            name: toolCall.function.name,
+            arguments: toolCall.function.arguments,
+          })),
+        ),
       })
       continue
     }
@@ -298,11 +302,8 @@ export function buildMimoQuery(messages: MimoMessage[]): string {
       continue
     }
 
-    const role = message.role === 'system'
-      ? 'System'
-      : message.role === 'assistant'
-        ? 'Assistant'
-        : 'User'
+    const role =
+      message.role === 'system' ? 'System' : message.role === 'assistant' ? 'Assistant' : 'User'
 
     entries.push({ role, content })
   }
@@ -340,7 +341,11 @@ export class MimoAdapter {
     return `${MIMO_API_BASE}${path}?xiaomichatbot_ph=${encodeURIComponent(phToken)}`
   }
 
-  private buildHeaders(serviceToken: string, userId: string, phToken: string): Record<string, string> {
+  private buildHeaders(
+    serviceToken: string,
+    userId: string,
+    phToken: string,
+  ): Record<string, string> {
     return {
       'Content-Type': 'application/json',
       Cookie: `serviceToken=${serviceToken}; userId=${userId}; xiaomichatbot_ph=${phToken}`,
@@ -374,16 +379,22 @@ export class MimoAdapter {
         headers: this.buildHeaders(serviceToken, userId, phToken),
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     const { code, msg, message } = response.data || {}
     if (response.status !== 200 || code !== 0) {
-      throw new Error(`Mimo failed to save conversation: ${msg || message || `HTTP ${response.status}`}`)
+      throw new Error(
+        `Mimo failed to save conversation: ${msg || message || `HTTP ${response.status}`}`,
+      )
     }
   }
 
-  async generateConversationTitle(conversationId: string, query: string, answer: string): Promise<boolean> {
+  async generateConversationTitle(
+    conversationId: string,
+    query: string,
+    answer: string,
+  ): Promise<boolean> {
     const content = `${query} ${answer}`.trim()
     if (!conversationId || !content) {
       return false
@@ -401,7 +412,7 @@ export class MimoAdapter {
           headers: this.buildHeaders(serviceToken, userId, phToken),
           timeout: 1800000,
           validateStatus: () => true,
-        }
+        },
       )
 
       const { code } = response.data || {}
@@ -424,7 +435,9 @@ export class MimoAdapter {
     const { serviceToken, userId, phToken } = this.getCredentials()
 
     if (!serviceToken || !userId || !phToken) {
-      throw new Error('Mimo credentials not configured. Please add service_token, user_id, and ph_token in account settings.')
+      throw new Error(
+        'Mimo credentials not configured. Please add service_token, user_id, and ph_token in account settings.',
+      )
     }
 
     const conversationId = uuid(false)
@@ -464,7 +477,10 @@ export class MimoAdapter {
     return { response, conversationId, query }
   }
 
-  private async getConversationList(pageNum: number = 1, pageSize: number = 100): Promise<{
+  private async getConversationList(
+    pageNum: number = 1,
+    pageSize: number = 100,
+  ): Promise<{
     conversationIds: string[]
     hasMore: boolean
   }> {
@@ -493,7 +509,7 @@ export class MimoAdapter {
         },
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     console.log('[Mimo] Get conversation list response status:', response.status, 'page:', pageNum)
@@ -525,20 +541,16 @@ export class MimoAdapter {
 
     const url = `${MIMO_API_BASE}/open-apis/chat/conversation/delete?xiaomichatbot_ph=${encodeURIComponent(phToken)}`
 
-    const response = await axios.post(
-      url,
-      conversationIds,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          Cookie: `serviceToken=${serviceToken}; userId=${userId}; xiaomichatbot_ph=${phToken}`,
-          Origin: MIMO_API_BASE,
-          Referer: `${MIMO_API_BASE}/`,
-        },
-        timeout: 1800000,
-        validateStatus: () => true,
-      }
-    )
+    const response = await axios.post(url, conversationIds, {
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `serviceToken=${serviceToken}; userId=${userId}; xiaomichatbot_ph=${phToken}`,
+        Origin: MIMO_API_BASE,
+        Referer: `${MIMO_API_BASE}/`,
+      },
+      timeout: 1800000,
+      validateStatus: () => true,
+    })
 
     console.log('[Mimo] Delete conversations response status:', response.status)
 
@@ -610,12 +622,14 @@ export class MimoStreamHandler {
     model: string,
     conversationId: string,
     thinkingMode: 'passthrough' | 'strip' | 'separate' = 'strip',
-    toolCallingPlan?: ToolCallingPlan
+    toolCallingPlan?: ToolCallingPlan,
   ) {
     this.model = model
     this.conversationId = conversationId
     this.thinkingMode = thinkingMode
-    this.toolStreamParser = toolCallingPlan?.shouldParseResponse ? new ToolStreamParser(toolCallingPlan) : undefined
+    this.toolStreamParser = toolCallingPlan?.shouldParseResponse
+      ? new ToolStreamParser(toolCallingPlan)
+      : undefined
   }
 
   async *handleStream(stream: NodeJS.ReadableStream): AsyncGenerator<string> {
@@ -626,7 +640,7 @@ export class MimoStreamHandler {
 
     let buffer = ''
     let currentEvent = ''
-    
+
     // Track state and content
     let state: 'init' | 'thinking' | 'content' = 'init'
     let totalContent = ''
@@ -672,7 +686,7 @@ export class MimoStreamHandler {
                   // Look for think end tag
                   let thinkEndIdx = totalContent.indexOf(thinkEndTag1, lastProcessedIndex)
                   let actualEndTag = thinkEndTag1
-                  
+
                   if (thinkEndIdx === -1) {
                     thinkEndIdx = totalContent.indexOf(thinkEndTag2, lastProcessedIndex)
                     actualEndTag = thinkEndTag2
@@ -681,16 +695,21 @@ export class MimoStreamHandler {
                   if (thinkEndIdx !== -1) {
                     // Found the end of thinking
                     thinkEndTagFound = true
-                    
+
                     // Extract the thinking content between lastProcessedIndex and thinkEndIdx
                     const thinkContent = totalContent.slice(lastProcessedIndex, thinkEndIdx)
                     const cleanedThink = stripThinkTags(thinkContent)
-                    const cleanedThinkWithCitations = stripCitationsWithBuffer(cleanedThink, this.thinkingCitationBuffer)
-                    
+                    const cleanedThinkWithCitations = stripCitationsWithBuffer(
+                      cleanedThink,
+                      this.thinkingCitationBuffer,
+                    )
+
                     if (cleanedThinkWithCitations && this.thinkingMode === 'separate') {
-                      yield this.formatOpenAIChunk(id, created, { reasoning_content: cleanedThinkWithCitations })
+                      yield this.formatOpenAIChunk(id, created, {
+                        reasoning_content: cleanedThinkWithCitations,
+                      })
                     }
-                    
+
                     // Move past the end tag
                     lastProcessedIndex = thinkEndIdx + actualEndTag.length
                     state = 'content'
@@ -698,36 +717,48 @@ export class MimoStreamHandler {
                     // Still in thinking, process new content
                     const thinkContent = totalContent.slice(lastProcessedIndex)
                     const cleanedThink = stripThinkTags(thinkContent)
-                    const cleanedThinkWithCitations = stripCitationsWithBuffer(cleanedThink, this.thinkingCitationBuffer)
-                    
+                    const cleanedThinkWithCitations = stripCitationsWithBuffer(
+                      cleanedThink,
+                      this.thinkingCitationBuffer,
+                    )
+
                     if (cleanedThinkWithCitations && this.thinkingMode === 'separate') {
-                      yield this.formatOpenAIChunk(id, created, { reasoning_content: cleanedThinkWithCitations })
+                      yield this.formatOpenAIChunk(id, created, {
+                        reasoning_content: cleanedThinkWithCitations,
+                      })
                     }
-                    
+
                     lastProcessedIndex = totalContent.length
                   }
                 }
               }
-              
+
               if (state === 'content' && lastProcessedIndex < totalContent.length) {
                 // Process content after thinking
                 const contentPart = totalContent.slice(lastProcessedIndex)
                 const cleanedContent = stripCitationsWithBuffer(contentPart, this.citationBuffer)
-                
+
                 if (cleanedContent) {
                   if (this.toolStreamParser) {
-                    const chunks = this.toolStreamParser.push(cleanedContent, this.createBaseChunk(id, created))
+                    const chunks = this.toolStreamParser.push(
+                      cleanedContent,
+                      this.createBaseChunk(id, created),
+                    )
                     for (const chunk of chunks) {
                       yield `data: ${JSON.stringify(chunk)}\n\n`
                     }
-                    if (chunks.length > 0 || this.toolStreamParser.isBuffering() || this.toolStreamParser.hasEmittedToolCall()) {
+                    if (
+                      chunks.length > 0 ||
+                      this.toolStreamParser.isBuffering() ||
+                      this.toolStreamParser.hasEmittedToolCall()
+                    ) {
                       lastProcessedIndex = totalContent.length
                       continue
                     }
                   }
                   yield this.formatOpenAIChunk(id, created, { content: cleanedContent })
                 }
-                
+
                 lastProcessedIndex = totalContent.length
               }
             } else if (mimoChunk.type === 'usage' && mimoChunk.usage) {
@@ -747,7 +778,12 @@ export class MimoStreamHandler {
       yield `data: ${JSON.stringify(chunk)}\n\n`
     }
 
-    yield this.formatOpenAIChunk(id, created, {}, this.toolStreamParser?.hasEmittedToolCall() ? 'tool_calls' : 'stop')
+    yield this.formatOpenAIChunk(
+      id,
+      created,
+      {},
+      this.toolStreamParser?.hasEmittedToolCall() ? 'tool_calls' : 'stop',
+    )
 
     if (this.usage) {
       yield this.formatOpenAIUsageChunk(id, created, this.usage)
@@ -804,7 +840,7 @@ export class MimoStreamHandler {
       finalContent = extracted.content
       reasoningContent = extracted.thinking
     }
-    
+
     finalContent = stripCitations(finalContent)
     if (reasoningContent) {
       reasoningContent = stripCitations(reasoningContent)
@@ -859,7 +895,7 @@ export class MimoStreamHandler {
     id: string,
     created: number,
     delta: { role?: string; content?: string; reasoning_content?: string },
-    finishReason?: string
+    finishReason?: string,
   ): string {
     const chunk: any = {
       id,
@@ -889,7 +925,7 @@ export class MimoStreamHandler {
   private formatOpenAIToolCallChunk(
     id: string,
     created: number,
-    toolCalls: ParsedToolCall[]
+    toolCalls: ParsedToolCall[],
   ): string {
     const chunk: any = {
       id,

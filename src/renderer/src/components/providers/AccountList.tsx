@@ -9,26 +9,26 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Check, 
-  X, 
+import {
+  MoreVertical,
+  Edit,
+  Trash2,
+  Check,
+  X,
   Clock,
   User,
   RefreshCw,
   AlertCircle,
   Activity,
   Plus,
-  Trash
+  Trash,
 } from 'lucide-react'
 import {
   Dialog,
@@ -66,12 +66,15 @@ export function AccountList({
   const [showClearChatsDialog, setShowClearChatsDialog] = useState(false)
   const [selectedAccountForClear, setSelectedAccountForClear] = useState<Account | null>(null)
 
-  const statusConfig: Record<AccountStatus, { 
-    labelKey: string
-    color: string
-    bgColor: string
-    icon: typeof Check
-  }> = {
+  const statusConfig: Record<
+    AccountStatus,
+    {
+      labelKey: string
+      color: string
+      bgColor: string
+      icon: typeof Check
+    }
+  > = {
     active: {
       labelKey: 'providers.active',
       color: 'text-green-600',
@@ -99,11 +102,11 @@ export function AccountList({
   }
 
   const handleValidate = async (id: string) => {
-    setValidatingIds(prev => new Set(prev).add(id))
+    setValidatingIds((prev) => new Set(prev).add(id))
     try {
       await onValidateAccount(id)
     } finally {
-      setValidatingIds(prev => {
+      setValidatingIds((prev) => {
         const next = new Set(prev)
         next.delete(id)
         return next
@@ -118,7 +121,7 @@ export function AccountList({
 
   const confirmClearChats = async () => {
     if (!selectedAccountForClear) return
-    
+
     setClearingChatsId(selectedAccountForClear.id)
     try {
       const result = await window.electronAPI.accounts.clearChats(selectedAccountForClear.id)
@@ -136,7 +139,7 @@ export function AccountList({
     }
   }
 
-  const activeCount = accounts.filter(a => a.status === 'active').length
+  const activeCount = accounts.filter((a) => a.status === 'active').length
   const totalCount = accounts.length
 
   const formatDate = (timestamp?: number) => {
@@ -163,9 +166,7 @@ export function AccountList({
         <CardContent className="flex flex-col items-center justify-center py-12">
           <User className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
           <p className="text-lg font-medium text-muted-foreground">{t('common.noData')}</p>
-          <p className="text-sm text-muted-foreground mb-4">
-            {t('providers.clickToAddProvider')}
-          </p>
+          <p className="text-sm text-muted-foreground mb-4">{t('providers.clickToAddProvider')}</p>
           <Button onClick={onAddAccount}>
             <Plus className="mr-2 h-4 w-4" />
             {t('providers.addAccount')}
@@ -179,9 +180,13 @@ export function AccountList({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{t('providers.total')}: {totalCount}</span>
+          <span>
+            {t('providers.total')}: {totalCount}
+          </span>
           <span>•</span>
-          <span className="text-green-600">{activeCount} {t('providers.onlineCount')}</span>
+          <span className="text-green-600">
+            {activeCount} {t('providers.onlineCount')}
+          </span>
         </div>
         <Button size="sm" onClick={onAddAccount}>
           <Plus className="mr-2 h-4 w-4" />
@@ -197,41 +202,45 @@ export function AccountList({
             const isValidating = validatingIds.has(account.id)
 
             return (
-              <Card 
-                key={account.id} 
+              <Card
+                key={account.id}
                 className="hover:shadow-sm transition-shadow cursor-pointer"
                 onClick={() => onViewDetail(account)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className={cn(
-                        'h-10 w-10 rounded-full flex items-center justify-center',
-                        config.bgColor
-                      )}>
+                      <div
+                        className={cn(
+                          'h-10 w-10 rounded-full flex items-center justify-center',
+                          config.bgColor,
+                        )}
+                      >
                         <User className={cn('h-5 w-5', config.color)} />
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-medium truncate">{account.name}</span>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={cn('text-xs', config.color, config.bgColor)}
                           >
                             <StatusIcon className="mr-1 h-3 w-3" />
                             {t(config.labelKey)}
                           </Badge>
                         </div>
-                        
+
                         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
-                          {account.email && (
-                            <span className="truncate">{account.email}</span>
-                          )}
-                          <span>{t('dashboard.totalRequests')}: {account.requestCount || 0}</span>
-                          <span>{t('providers.usedToday')}: {formatUsage(account)}</span>
+                          {account.email && <span className="truncate">{account.email}</span>}
+                          <span>
+                            {t('dashboard.totalRequests')}: {account.requestCount || 0}
+                          </span>
+                          <span>
+                            {t('providers.usedToday')}: {formatUsage(account)}
+                          </span>
                         </div>
-                        
+
                         {account.status === 'error' && account.errorMessage && (
                           <p className="text-xs text-red-500 mt-1 truncate">
                             {account.errorMessage}
@@ -245,19 +254,15 @@ export function AccountList({
                         <div>{t('providers.lastCheck')}</div>
                         <div>{formatDate(account.lastUsed)}</div>
                       </div>
-                      
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
                               onViewDetail(account)
@@ -266,21 +271,22 @@ export function AccountList({
                             <Activity className="mr-2 h-4 w-4" />
                             {t('common.details')}
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
                               handleValidate(account.id)
                             }}
                             disabled={isValidating}
                           >
-                            <RefreshCw className={cn(
-                              'mr-2 h-4 w-4',
-                              isValidating && 'animate-spin'
-                            )} />
-                            {isValidating ? t('oauth.validating') : t('providers.validateCredentials')}
+                            <RefreshCw
+                              className={cn('mr-2 h-4 w-4', isValidating && 'animate-spin')}
+                            />
+                            {isValidating
+                              ? t('oauth.validating')
+                              : t('providers.validateCredentials')}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
                               onEditAccount(account)
@@ -290,10 +296,18 @@ export function AccountList({
                             {t('providers.editAccount')}
                           </DropdownMenuItem>
                           {/* Show Clear Chats for supported web providers */}
-                          {(providerId === 'kimi' || providerId === 'qwen' || providerId === 'qwen-ai' || providerId === 'minimax' || providerId === 'zai' || providerId === 'perplexity' || providerId === 'deepseek' || providerId === 'glm' || providerId === 'mimo') && (
+                          {(providerId === 'kimi' ||
+                            providerId === 'qwen' ||
+                            providerId === 'qwen-ai' ||
+                            providerId === 'minimax' ||
+                            providerId === 'zai' ||
+                            providerId === 'perplexity' ||
+                            providerId === 'deepseek' ||
+                            providerId === 'glm' ||
+                            providerId === 'mimo') && (
                             <>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleClearChats(account)
@@ -302,12 +316,14 @@ export function AccountList({
                                 className="text-amber-600"
                               >
                                 <Trash className="mr-2 h-4 w-4" />
-                                {clearingChatsId === account.id ? t('common.loading') : t('providers.clearChats')}
+                                {clearingChatsId === account.id
+                                  ? t('common.loading')
+                                  : t('providers.clearChats')}
                               </DropdownMenuItem>
                             </>
                           )}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation()
                               onDeleteAccount(account.id)
@@ -341,16 +357,16 @@ export function AccountList({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowClearChatsDialog(false)
-              setSelectedAccountForClear(null)
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowClearChatsDialog(false)
+                setSelectedAccountForClear(null)
+              }}
+            >
               {t('common.cancel')}
             </Button>
-            <Button 
-              onClick={confirmClearChats}
-              className="bg-amber-600 hover:bg-amber-700"
-            >
+            <Button onClick={confirmClearChats} className="bg-amber-600 hover:bg-amber-700">
               {t('common.confirm')}
             </Button>
           </DialogFooter>

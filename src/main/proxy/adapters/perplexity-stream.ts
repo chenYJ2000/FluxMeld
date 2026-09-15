@@ -1,11 +1,11 @@
 import { PassThrough } from 'stream'
 import { parseToolCallsFromText } from '../utils/toolParser'
-import { 
-  createToolCallState, 
-  processStreamContent, 
+import {
+  createToolCallState,
+  processStreamContent,
   flushToolCallBuffer,
   createBaseChunk,
-  ToolCallState 
+  ToolCallState,
 } from '../utils/streamToolHandler'
 import type { PerplexityAdapter } from './perplexity'
 
@@ -13,8 +13,7 @@ function filterCitations(content: string): string {
   // Filter out citation markers like [1], [perplexity+1], [perplexity-1], etc.
   // These appear in the middle of text and should be removed
   // Note: We preserve newlines and markdown formatting
-  return content
-    .replace(/\[(?:perplexity[+-])?\d+\]/g, '')
+  return content.replace(/\[(?:perplexity[+-])?\d+\]/g, '')
 }
 
 interface PerplexitySSEEvent {
@@ -64,12 +63,7 @@ export class PerplexityStreamHandler {
   private accumulatedReasoning: string = ''
   private sources: any[] = []
 
-  constructor(
-    model: string,
-    sessionId: string,
-    onEnd?: () => void,
-    adapter?: PerplexityAdapter
-  ) {
+  constructor(model: string, sessionId: string, onEnd?: () => void, adapter?: PerplexityAdapter) {
     this.model = model
     this.sessionId = sessionId
     this.created = Math.floor(Date.now() / 1000)
@@ -83,13 +77,22 @@ export class PerplexityStreamHandler {
   }
 
   private formatStreamError(errorMsg: string): string {
-    if (errorMsg.includes('ERR_CONNECTION_RESET') || errorMsg.includes('net::ERR_CONNECTION_RESET')) {
+    if (
+      errorMsg.includes('ERR_CONNECTION_RESET') ||
+      errorMsg.includes('net::ERR_CONNECTION_RESET')
+    ) {
       return 'Network connection reset during streaming. Please check your network connection and try again.'
     }
-    if (errorMsg.includes('ERR_CONNECTION_REFUSED') || errorMsg.includes('net::ERR_CONNECTION_REFUSED')) {
+    if (
+      errorMsg.includes('ERR_CONNECTION_REFUSED') ||
+      errorMsg.includes('net::ERR_CONNECTION_REFUSED')
+    ) {
       return 'Connection refused during streaming. The server may be temporarily unavailable.'
     }
-    if (errorMsg.includes('ERR_CONNECTION_TIMED_OUT') || errorMsg.includes('net::ERR_CONNECTION_TIMED_OUT')) {
+    if (
+      errorMsg.includes('ERR_CONNECTION_TIMED_OUT') ||
+      errorMsg.includes('net::ERR_CONNECTION_TIMED_OUT')
+    ) {
       return 'Connection timed out during streaming. Please check your network and try again.'
     }
     if (errorMsg.includes('ERR_SSL') || errorMsg.includes('SSL')) {
@@ -98,7 +101,7 @@ export class PerplexityStreamHandler {
     if (errorMsg.includes('ERR_NETWORK_CHANGED') || errorMsg.includes('net::ERR_NETWORK_CHANGED')) {
       return 'Network changed during streaming. Please try again.'
     }
-    
+
     return `Stream error: ${errorMsg}`
   }
 
@@ -110,16 +113,21 @@ export class PerplexityStreamHandler {
     }
   }
 
-  private createChunk(delta: { role?: string; content?: string; reasoning_content?: string; tool_calls?: any[] }, finishReason?: string): string {
+  private createChunk(
+    delta: { role?: string; content?: string; reasoning_content?: string; tool_calls?: any[] },
+    finishReason?: string,
+  ): string {
     return `data: ${JSON.stringify({
       id: this.sessionId,
       model: this.model,
       object: 'chat.completion.chunk',
-      choices: [{
-        index: 0,
-        delta,
-        finish_reason: finishReason || null,
-      }],
+      choices: [
+        {
+          index: 0,
+          delta,
+          finish_reason: finishReason || null,
+        },
+      ],
       created: this.created,
     })}\n\n`
   }
@@ -223,7 +231,7 @@ export class PerplexityStreamHandler {
 
     for (const patch of block.diff_block.patches) {
       const path = patch.path || ''
-      
+
       if (path === '/progress') continue
 
       let value = patch.value
@@ -269,7 +277,7 @@ export class PerplexityStreamHandler {
     this.accumulatedReasoning += content
 
     const delta: { role?: string; reasoning_content?: string } = {}
-    
+
     if (this.isFirstChunk) {
       delta.role = 'assistant'
       this.isFirstChunk = false
@@ -300,7 +308,7 @@ export class PerplexityStreamHandler {
       this.toolCallState,
       baseChunk,
       this.isFirstChunk,
-      'perplexity'
+      'perplexity',
     )
 
     for (const chunk of chunks) {
@@ -317,7 +325,7 @@ export class PerplexityStreamHandler {
     }
 
     const delta: { role?: string; content?: string } = {}
-    
+
     if (this.isFirstChunk) {
       delta.role = 'assistant'
       this.isFirstChunk = false
@@ -336,11 +344,11 @@ export class PerplexityStreamHandler {
 
     if (this.sources.length > 0) {
       const citations = this.sources
-        .filter(r => r.cite_index)
+        .filter((r) => r.cite_index)
         .sort((a, b) => a.cite_index - b.cite_index)
-        .map(r => `[${r.cite_index}]: [${r.title}](${r.url})`)
+        .map((r) => `[${r.cite_index}]: [${r.title}](${r.url})`)
         .join('\n')
-      
+
       if (citations) {
         transStream.write(this.createChunk({ content: `\n\n${citations}` }))
       }
@@ -351,7 +359,7 @@ export class PerplexityStreamHandler {
     transStream.write(this.createChunk({}, finishReason))
     transStream.write('data: [DONE]\n\n')
     transStream.end()
-    
+
     this.onEnd?.()
   }
 
@@ -386,16 +394,18 @@ export class PerplexityStreamHandler {
       stream.on('end', () => {
         // Filter citations from accumulated content
         const filteredAccumulatedContent = filterCitations(this.accumulatedContent)
-        const { content: cleanContent, toolCalls } = parseToolCallsFromText(filteredAccumulatedContent)
+        const { content: cleanContent, toolCalls } = parseToolCallsFromText(
+          filteredAccumulatedContent,
+        )
 
         const message: any = {
           role: 'assistant',
         }
-        
+
         if (this.accumulatedReasoning) {
           message.reasoning_content = filterCitations(this.accumulatedReasoning.trim())
         }
-        
+
         message.content = toolCalls.length > 0 ? null : cleanContent.trim()
 
         if (toolCalls.length > 0) {
@@ -406,11 +416,13 @@ export class PerplexityStreamHandler {
           id: this.sessionId,
           model: this.model,
           object: 'chat.completion',
-          choices: [{
-            index: 0,
-            message,
-            finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
-          }],
+          choices: [
+            {
+              index: 0,
+              message,
+              finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
+            },
+          ],
           created: this.created,
         })
       })
@@ -465,7 +477,7 @@ export class PerplexityStreamHandler {
 
     for (const patch of block.diff_block.patches) {
       const path = patch.path || ''
-      
+
       if (path === '/progress') continue
 
       let value = patch.value
@@ -501,7 +513,7 @@ export class PerplexityStreamHandler {
         } else if (this.accumulatedContent.endsWith(value)) {
           continue
         }
-        
+
         if (value) {
           this.accumulatedContent += value
         }

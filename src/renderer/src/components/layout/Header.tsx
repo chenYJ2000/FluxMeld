@@ -97,11 +97,13 @@ export function Header() {
           <Radio
             className={cn(
               'h-3.5 w-3.5',
-              proxyEnabled ? 'text-[var(--accent-primary)]' : 'text-[var(--text-dim)]'
+              proxyEnabled ? 'text-[var(--accent-primary)]' : 'text-[var(--text-dim)]',
             )}
           />
           <span className="command-endpoint-label">RELAY</span>
-          <span className="command-endpoint-value">{host}:{port}</span>
+          <span className="command-endpoint-value">
+            {host}:{port}
+          </span>
         </div>
 
         <button
@@ -130,10 +132,12 @@ export function Header() {
             className={cn(
               'command-proxy-indicator',
               proxyLoading && 'animate-pulse',
-              proxyEnabled && 'is-running'
+              proxyEnabled && 'is-running',
             )}
           />
-          <span>{proxyLoading ? '...' : proxyEnabled ? t('proxyStatus.stop') : t('proxyStatus.start')}</span>
+          <span>
+            {proxyLoading ? '...' : proxyEnabled ? t('proxyStatus.stop') : t('proxyStatus.start')}
+          </span>
           {proxyEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
         </button>
       </div>

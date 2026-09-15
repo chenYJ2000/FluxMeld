@@ -7,7 +7,13 @@ import { Label } from '@/components/ui/label'
 import { useSettingsStore, LogLevel } from '@/stores/settingsStore'
 import { useToast } from '@/hooks/use-toast'
 import { Database, Download, Upload, Trash2, RotateCcw, AlertTriangle } from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
@@ -45,9 +51,7 @@ export function DataManagement() {
     redactSensitiveData: true,
   }
 
-  const updateRequestLogConfig = async (
-    updates: Partial<typeof requestLogConfig>,
-  ) => {
+  const updateRequestLogConfig = async (updates: Partial<typeof requestLogConfig>) => {
     await updateConfig({
       requestLogConfig: {
         ...requestLogConfig,
@@ -142,11 +146,11 @@ export function DataManagement() {
     try {
       localStorage.clear()
       sessionStorage.clear()
-      
+
       if (window.electronAPI?.store?.clearAll) {
         await window.electronAPI.store.clearAll()
       }
-      
+
       toast({
         title: t('common.success'),
         description: t('settings.resetSuccess'),
@@ -224,7 +228,9 @@ export function DataManagement() {
             <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-4">
               <div className="space-y-1">
                 <Label htmlFor="request-log-enabled">{t('settings.requestLogEnabled')}</Label>
-                <p className="text-xs text-muted-foreground">{t('settings.requestLogEnabledHelp')}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.requestLogEnabledHelp')}
+                </p>
               </div>
               <Switch
                 id="request-log-enabled"
@@ -238,7 +244,9 @@ export function DataManagement() {
             {requestLogConfig.enabled ? (
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div className="space-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3">
-                  <Label htmlFor="request-log-max-entries">{t('settings.requestLogMaxEntries')}</Label>
+                  <Label htmlFor="request-log-max-entries">
+                    {t('settings.requestLogMaxEntries')}
+                  </Label>
                   <Input
                     id="request-log-max-entries"
                     type="number"
@@ -249,13 +257,19 @@ export function DataManagement() {
                       void updateRequestLogConfig({ maxEntries: parseInt(e.target.value, 10) || 0 })
                     }}
                   />
-                  <p className="text-xs text-muted-foreground">{t('settings.requestLogMaxEntriesHelp')}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('settings.requestLogMaxEntriesHelp')}
+                  </p>
                 </div>
 
                 <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3">
                   <div className="space-y-1 pr-3">
-                    <Label htmlFor="request-log-bodies">{t('settings.requestLogIncludeBodies')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('settings.requestLogIncludeBodiesHelp')}</p>
+                    <Label htmlFor="request-log-bodies">
+                      {t('settings.requestLogIncludeBodies')}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('settings.requestLogIncludeBodiesHelp')}
+                    </p>
                   </div>
                   <Switch
                     id="request-log-bodies"
@@ -263,7 +277,9 @@ export function DataManagement() {
                     onCheckedChange={(checked) => {
                       void updateRequestLogConfig({
                         includeBodies: checked,
-                        maxBodyChars: checked ? Math.max(requestLogConfig.maxBodyChars, 8000) : requestLogConfig.maxBodyChars,
+                        maxBodyChars: checked
+                          ? Math.max(requestLogConfig.maxBodyChars, 8000)
+                          : requestLogConfig.maxBodyChars,
                       })
                     }}
                   />
@@ -271,8 +287,12 @@ export function DataManagement() {
 
                 <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3">
                   <div className="space-y-1 pr-3">
-                    <Label htmlFor="request-log-redact">{t('settings.requestLogRedactSensitive')}</Label>
-                    <p className="text-xs text-muted-foreground">{t('settings.requestLogRedactSensitiveHelp')}</p>
+                    <Label htmlFor="request-log-redact">
+                      {t('settings.requestLogRedactSensitive')}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      {t('settings.requestLogRedactSensitiveHelp')}
+                    </p>
                   </div>
                   <Switch
                     id="request-log-redact"
@@ -285,7 +305,9 @@ export function DataManagement() {
 
                 {requestLogConfig.includeBodies ? (
                   <div className="space-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3 md:col-span-2 xl:col-span-3">
-                    <Label htmlFor="request-log-max-body">{t('settings.requestLogMaxBodyChars')}</Label>
+                    <Label htmlFor="request-log-max-body">
+                      {t('settings.requestLogMaxBodyChars')}
+                    </Label>
                     <Input
                       id="request-log-max-body"
                       type="number"
@@ -293,10 +315,14 @@ export function DataManagement() {
                       max={1000000}
                       value={requestLogConfig.maxBodyChars}
                       onChange={(e) => {
-                        void updateRequestLogConfig({ maxBodyChars: parseInt(e.target.value, 10) || 0 })
+                        void updateRequestLogConfig({
+                          maxBodyChars: parseInt(e.target.value, 10) || 0,
+                        })
                       }}
                     />
-                    <p className="text-xs text-muted-foreground">{t('settings.requestLogMaxBodyCharsHelp')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('settings.requestLogMaxBodyCharsHelp')}
+                    </p>
                   </div>
                 ) : null}
               </div>
@@ -334,11 +360,7 @@ export function DataManagement() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 disabled={isImporting}
               />
-              <Button
-                variant="outline"
-                disabled={isImporting}
-                className="flex items-center gap-2"
-              >
+              <Button variant="outline" disabled={isImporting} className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
                 {isImporting ? t('settings.importing') : t('settings.importConfig')}
               </Button>
@@ -376,19 +398,13 @@ export function DataManagement() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>{t('settings.confirmReset')}</DialogTitle>
-                  <DialogDescription>
-                    {t('settings.confirmResetDesc')}
-                  </DialogDescription>
+                  <DialogDescription>{t('settings.confirmResetDesc')}</DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => {}}>
                     {t('common.cancel')}
                   </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={handleResetApp}
-                    disabled={isResetting}
-                  >
+                  <Button variant="destructive" onClick={handleResetApp} disabled={isResetting}>
                     {isResetting ? t('settings.resetting') : t('settings.confirmReset')}
                   </Button>
                 </DialogFooter>

@@ -61,6 +61,7 @@ export class ProviderManager {
     name: string
     authType: AuthType
     apiEndpoint: string
+    chatPath?: string
     headers?: Record<string, string>
     description?: string
     icon?: string
@@ -77,29 +78,25 @@ export class ProviderManager {
     id?: string
   }): Provider {
     const existing = storeManager.getProviders()
-    
+
     // Check if provider with same ID already exists (built-in provider)
     if (data.id) {
-      const existingById = existing.find(p => p.id === data.id)
+      const existingById = existing.find((p) => p.id === data.id)
       if (existingById) {
         return existingById
       }
     }
-    
+
     // Check if provider with same name already exists
-    const nameExists = existing.some(
-      (p) => p.name.toLowerCase() === data.name.toLowerCase()
-    )
-    
+    const nameExists = existing.some((p) => p.name.toLowerCase() === data.name.toLowerCase())
+
     if (nameExists) {
-      const existingByName = existing.find(
-        (p) => p.name.toLowerCase() === data.name.toLowerCase()
-      )
+      const existingByName = existing.find((p) => p.name.toLowerCase() === data.name.toLowerCase())
       if (existingByName) {
         return existingByName
       }
     }
-    
+
     const now = Date.now()
     const provider: Provider = {
       id: data.id || storeManager.generateId(),
@@ -117,13 +114,13 @@ export class ProviderManager {
       supportedModels: data.supportedModels,
       credentialFields: data.credentialFields,
     }
-    
+
     storeManager.addProvider(provider)
-    
+
     storeManager.addLog('info', `Create provider: ${provider.name}`, {
       providerId: provider.id,
     })
-    
+
     return provider
   }
 
@@ -135,31 +132,31 @@ export class ProviderManager {
    */
   static update(
     id: string,
-    updates: Partial<Omit<Provider, 'id' | 'type' | 'createdAt'>>
+    updates: Partial<Omit<Provider, 'id' | 'type' | 'createdAt'>>,
   ): Provider | null {
     const existing = storeManager.getProviderById(id)
-    
+
     if (!existing) {
       throw new Error(`Provider not found: ${id}`)
     }
-    
+
     if (existing.type === 'builtin') {
       const restricted = ['name', 'authType', 'apiEndpoint']
       const hasRestricted = restricted.some((key) => key in updates)
-      
+
       if (hasRestricted) {
         throw new Error('Built-in providers cannot modify core configuration')
       }
     }
-    
+
     const updated = storeManager.updateProvider(id, updates)
-    
+
     if (updated) {
       storeManager.addLog('info', `Update provider: ${existing.name}`, {
         providerId: id,
       })
     }
-    
+
     return updated
   }
 
@@ -170,26 +167,26 @@ export class ProviderManager {
    */
   static delete(id: string): boolean {
     const provider = storeManager.getProviderById(id)
-    
+
     if (!provider) {
       return false
     }
-    
+
     // Delete all accounts associated with the provider
     const accounts = storeManager.getAccountsByProviderId(id)
     for (const account of accounts) {
       storeManager.deleteAccount(account.id)
     }
-    
+
     const result = storeManager.deleteProvider(id)
-    
+
     if (result) {
       storeManager.addLog('info', `Delete provider: ${provider.name}`, {
         providerId: id,
         deletedAccounts: accounts.length,
       })
     }
-    
+
     return result
   }
 
@@ -242,17 +239,17 @@ export class ProviderManager {
   static resetBuiltinProviders(): void {
     const providers = storeManager.getProviders()
     const customProviders = providers.filter((p) => p.type === 'custom')
-    
+
     const now = Date.now()
     const defaultBuiltin: Provider[] = BUILTIN_PROVIDERS.map((p) => ({
       ...p,
       createdAt: now,
       updatedAt: now,
     }))
-    
+
     const allProviders = [...defaultBuiltin, ...customProviders]
     storeManager.getStore()?.set('providers', allProviders)
-    
+
     storeManager.addLog('info', 'Reset built-in provider configuration')
   }
 
@@ -272,17 +269,17 @@ export class ProviderManager {
    */
   static addSupportedModel(id: string, model: string): Provider | null {
     const provider = storeManager.getProviderById(id)
-    
+
     if (!provider) {
       return null
     }
-    
+
     const models = provider.supportedModels || []
-    
+
     if (models.includes(model)) {
       return provider
     }
-    
+
     return this.update(id, {
       supportedModels: [...models, model],
     })
@@ -295,14 +292,14 @@ export class ProviderManager {
    */
   static removeSupportedModel(id: string, model: string): Provider | null {
     const provider = storeManager.getProviderById(id)
-    
+
     if (!provider) {
       return null
     }
-    
+
     const models = provider.supportedModels || []
     const filtered = models.filter((m) => m !== model)
-    
+
     return this.update(id, { supportedModels: filtered })
   }
 
@@ -317,7 +314,7 @@ export class ProviderManager {
     disabled: number
   } {
     const providers = storeManager.getProviders()
-    
+
     return {
       total: providers.length,
       builtin: providers.filter((p) => p.type === 'builtin').length,
@@ -335,12 +332,12 @@ export class ProviderManager {
   static batchUpdateStatus(ids: string[], enabled: boolean): void {
     for (const id of ids) {
       const provider = storeManager.getProviderById(id)
-      
+
       if (provider) {
         storeManager.updateProvider(id, { enabled })
       }
     }
-    
+
     storeManager.addLog('info', `Batch update provider status: ${ids.length} providers`, {
       data: { ids, enabled },
     })

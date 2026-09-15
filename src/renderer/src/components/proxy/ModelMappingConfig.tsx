@@ -5,7 +5,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Combobox, type ComboboxOption } from '@/components/ui/combobox'
 import {
   Dialog,
@@ -27,7 +33,18 @@ import { useProxyStore } from '@/stores/proxyStore'
 import { useNavigationStore } from '@/stores/navigationStore'
 import { useToast } from '@/hooks/use-toast'
 import type { ModelMapping, Provider, Account } from '@/types/electron'
-import { ArrowRight, Plus, Pencil, Trash2, Search, Sparkles, Save, RotateCcw, AlertTriangle, Lock } from 'lucide-react'
+import {
+  ArrowRight,
+  Plus,
+  Pencil,
+  Trash2,
+  Search,
+  Sparkles,
+  Save,
+  RotateCcw,
+  AlertTriangle,
+  Lock,
+} from 'lucide-react'
 
 interface ModelMappingConfigProps {
   onConfigChange?: () => void
@@ -95,15 +112,10 @@ const DEFAULT_MODEL_MAPPING_KEYS = new Set(Object.keys(DEFAULT_MODEL_MAPPINGS))
 
 export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) {
   const { t } = useTranslation()
-  const {
-    modelMappings,
-    setModelMappings,
-    saveAppConfig,
-    isLoading,
-  } = useProxyStore()
+  const { modelMappings, setModelMappings, saveAppConfig, isLoading } = useProxyStore()
   const { registerBlocker, unregisterBlocker } = useNavigationStore()
   const { toast } = useToast()
-  
+
   const [mappings, setMappings] = useState<ModelMapping[]>([])
   const [originalMappings, setOriginalMappings] = useState<ModelMapping[]>([])
   const [providers, setProviders] = useState<Provider[]>([])
@@ -114,7 +126,7 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
   const [editingMapping, setEditingMapping] = useState<ModelMapping | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
   const isInitializedRef = useRef(false)
-  
+
   const [formData, setFormData] = useState<MappingFormData>({
     requestModel: '',
     actualModel: '',
@@ -168,7 +180,7 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
   const fetchProviders = async () => {
     try {
       const data = await window.electronAPI.providers.getAll()
-      setProviders(data.filter(p => p.enabled))
+      setProviders(data.filter((p) => p.enabled))
     } catch (error) {
       console.error('Failed to fetch providers:', error)
     }
@@ -177,15 +189,16 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
   const fetchAccounts = async () => {
     try {
       const data = await window.electronAPI.accounts.getAll()
-      setAccounts(data.filter(a => a.status === 'active'))
+      setAccounts(data.filter((a) => a.status === 'active'))
     } catch (error) {
       console.error('Failed to fetch accounts:', error)
     }
   }
 
-  const filteredMappings = mappings.filter(m =>
-    m.requestModel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.actualModel.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredMappings = mappings.filter(
+    (m) =>
+      m.requestModel.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.actualModel.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const handleOpenDialog = (mapping?: ModelMapping) => {
@@ -237,17 +250,23 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
     const mapping: ModelMapping = {
       requestModel: formData.requestModel.trim(),
       actualModel: formData.actualModel.trim(),
-      preferredProviderId: formData.preferredProviderId === AUTO_SELECT_VALUE ? undefined : formData.preferredProviderId || undefined,
-      preferredAccountId: formData.preferredAccountId === AUTO_SELECT_VALUE ? undefined : formData.preferredAccountId || undefined,
+      preferredProviderId:
+        formData.preferredProviderId === AUTO_SELECT_VALUE
+          ? undefined
+          : formData.preferredProviderId || undefined,
+      preferredAccountId:
+        formData.preferredAccountId === AUTO_SELECT_VALUE
+          ? undefined
+          : formData.preferredAccountId || undefined,
     }
 
     if (editingMapping) {
-      const updatedMappings = mappings.map(m =>
-        m.requestModel === editingMapping.requestModel ? mapping : m
+      const updatedMappings = mappings.map((m) =>
+        m.requestModel === editingMapping.requestModel ? mapping : m,
       )
       setMappings(updatedMappings)
     } else {
-      if (mappings.some(m => m.requestModel === mapping.requestModel)) {
+      if (mappings.some((m) => m.requestModel === mapping.requestModel)) {
         toast({
           title: t('proxy.validationFailed'),
           description: t('proxy.mappingExists'),
@@ -261,10 +280,12 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
     setHasChanges(true)
     onConfigChange?.()
     handleCloseDialog()
-    
+
     toast({
       title: editingMapping ? t('providers.updateSuccess') : t('providers.addSuccess'),
-      description: t(editingMapping ? 'proxy.mappingUpdatedPending' : 'proxy.mappingAddedPending', { model: mapping.requestModel }),
+      description: t(editingMapping ? 'proxy.mappingUpdatedPending' : 'proxy.mappingAddedPending', {
+        model: mapping.requestModel,
+      }),
     })
   }
 
@@ -273,11 +294,11 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
       return
     }
 
-    const updatedMappings = mappings.filter(m => m.requestModel !== requestModel)
+    const updatedMappings = mappings.filter((m) => m.requestModel !== requestModel)
     setMappings(updatedMappings)
     setHasChanges(true)
     onConfigChange?.()
-    
+
     toast({
       title: t('providers.deleteSuccess'),
       description: t('proxy.mappingDeletedPending', { model: requestModel }),
@@ -344,10 +365,11 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
     }
   }
 
-  const selectedProviderId = formData.preferredProviderId === AUTO_SELECT_VALUE ? '' : formData.preferredProviderId
+  const selectedProviderId =
+    formData.preferredProviderId === AUTO_SELECT_VALUE ? '' : formData.preferredProviderId
 
   const filteredAccounts = selectedProviderId
-    ? accounts.filter(a => a.providerId === selectedProviderId)
+    ? accounts.filter((a) => a.providerId === selectedProviderId)
     : []
 
   const isWildcard = formData.requestModel.includes('*')
@@ -355,8 +377,8 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
   const modelOptions: ComboboxOption[] = useMemo(() => {
     const options: ComboboxOption[] = []
 
-    providers.forEach(provider => {
-      provider.supportedModels?.forEach(model => {
+    providers.forEach((provider) => {
+      provider.supportedModels?.forEach((model) => {
         options.push({
           value: createModelOptionValue(provider.id, model),
           label: model,
@@ -368,22 +390,21 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
     return options.sort((a, b) =>
       a.label === b.label
         ? (a.group || '').localeCompare(b.group || '')
-        : a.label.localeCompare(b.label)
+        : a.label.localeCompare(b.label),
     )
   }, [providers])
 
-  const selectedModelOptionValue = selectedProviderId && formData.actualModel
-    ? createModelOptionValue(selectedProviderId, formData.actualModel)
-    : ''
+  const selectedModelOptionValue =
+    selectedProviderId && formData.actualModel
+      ? createModelOptionValue(selectedProviderId, formData.actualModel)
+      : ''
 
   const modelMatchedProviders = useMemo(() => {
     if (!formData.actualModel.trim()) {
       return providers
     }
 
-    return providers.filter(provider =>
-      provider.supportedModels?.includes(formData.actualModel)
-    )
+    return providers.filter((provider) => provider.supportedModels?.includes(formData.actualModel))
   }, [formData.actualModel, providers])
 
   const providerOptions = formData.actualModel.trim() ? modelMatchedProviders : providers
@@ -392,12 +413,12 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
     if (
       !formData.preferredProviderId ||
       formData.preferredProviderId === AUTO_SELECT_VALUE ||
-      providerOptions.some(provider => provider.id === formData.preferredProviderId)
+      providerOptions.some((provider) => provider.id === formData.preferredProviderId)
     ) {
       return
     }
 
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       preferredProviderId: '',
       preferredAccountId: '',
@@ -409,25 +430,26 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
     const selectedModel = selectedOption?.model || value
     const selectedProviderId = selectedOption?.providerId || ''
     const nextProviders = selectedModel.trim()
-      ? providers.filter(provider => provider.supportedModels?.includes(selectedModel))
+      ? providers.filter((provider) => provider.supportedModels?.includes(selectedModel))
       : providers
     const shouldSelectProvider =
-      selectedProviderId && nextProviders.some(provider => provider.id === selectedProviderId)
+      selectedProviderId && nextProviders.some((provider) => provider.id === selectedProviderId)
 
-    setFormData(prev => {
+    setFormData((prev) => {
       if (shouldSelectProvider) {
         return {
           ...prev,
           actualModel: selectedModel,
           preferredProviderId: selectedProviderId,
-          preferredAccountId: prev.preferredProviderId === selectedProviderId ? prev.preferredAccountId : '',
+          preferredAccountId:
+            prev.preferredProviderId === selectedProviderId ? prev.preferredAccountId : '',
         }
       }
 
       const canKeepProvider =
         !prev.preferredProviderId ||
         prev.preferredProviderId === AUTO_SELECT_VALUE ||
-        nextProviders.some(provider => provider.id === prev.preferredProviderId)
+        nextProviders.some((provider) => provider.id === prev.preferredProviderId)
 
       return {
         ...prev,
@@ -447,7 +469,10 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
             <CardTitle>{t('proxy.modelMappingConfig')}</CardTitle>
           </div>
           {hasChanges && (
-            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/50 gap-1">
+            <Badge
+              variant="outline"
+              className="bg-amber-500/10 text-amber-600 border-amber-500/50 gap-1"
+            >
               <AlertTriangle className="h-3 w-3" />
               {t('proxy.unsaved')}
             </Badge>
@@ -461,15 +486,12 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm">
                 <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <span className="text-amber-700 dark:text-amber-400 font-medium">{t('proxy.unsavedChangesHint')}</span>
+                <span className="text-amber-700 dark:text-amber-400 font-medium">
+                  {t('proxy.unsavedChangesHint')}
+                </span>
               </div>
               <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleReset}
-                  disabled={isLoading}
-                >
+                <Button variant="outline" size="sm" onClick={handleReset} disabled={isLoading}>
                   <RotateCcw className="h-4 w-4 mr-2" />
                   {t('common.reset')}
                 </Button>
@@ -517,7 +539,9 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                   <TableHead>{t('proxy.requestModel')}</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                   <TableHead>{t('proxy.actualModel')}</TableHead>
-                  <TableHead className="w-[110px] whitespace-nowrap">{t('proxy.mappingSource')}</TableHead>
+                  <TableHead className="w-[110px] whitespace-nowrap">
+                    {t('proxy.mappingSource')}
+                  </TableHead>
                   <TableHead>{t('proxy.preferredProvider')}</TableHead>
                   <TableHead>{t('proxy.preferredAccount')}</TableHead>
                   <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
@@ -525,18 +549,16 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
               </TableHeader>
               <TableBody>
                 {filteredMappings.map((mapping) => {
-                  const provider = providers.find(p => p.id === mapping.preferredProviderId)
-                  const account = accounts.find(a => a.id === mapping.preferredAccountId)
+                  const provider = providers.find((p) => p.id === mapping.preferredProviderId)
+                  const account = accounts.find((a) => a.id === mapping.preferredAccountId)
                   const isWildcardMapping = mapping.requestModel.includes('*')
                   const isBuiltInMapping = DEFAULT_MODEL_MAPPING_KEYS.has(mapping.requestModel)
-                  
+
                   return (
                     <TableRow key={mapping.requestModel}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {isWildcardMapping && (
-                            <Sparkles className="h-4 w-4 text-amber-500" />
-                          )}
+                          {isWildcardMapping && <Sparkles className="h-4 w-4 text-amber-500" />}
                           <code className="text-sm">{mapping.requestModel}</code>
                         </div>
                       </TableCell>
@@ -553,7 +575,9 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                             {t('proxy.builtInMapping')}
                           </Badge>
                         ) : (
-                          <span className="text-muted-foreground text-sm whitespace-nowrap">{t('proxy.customMapping')}</span>
+                          <span className="text-muted-foreground text-sm whitespace-nowrap">
+                            {t('proxy.customMapping')}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -578,7 +602,11 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                             onClick={() => handleOpenDialog(mapping)}
                             disabled={isBuiltInMapping}
                             className="h-8 w-8"
-                            title={isBuiltInMapping ? t('proxy.builtInMappingReadonly') : t('common.edit')}
+                            title={
+                              isBuiltInMapping
+                                ? t('proxy.builtInMappingReadonly')
+                                : t('common.edit')
+                            }
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -588,7 +616,11 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                             onClick={() => handleDeleteMapping(mapping.requestModel)}
                             disabled={isBuiltInMapping}
                             className="h-8 w-8 text-destructive hover:text-destructive"
-                            title={isBuiltInMapping ? t('proxy.builtInMappingReadonly') : t('common.delete')}
+                            title={
+                              isBuiltInMapping
+                                ? t('proxy.builtInMappingReadonly')
+                                : t('common.delete')
+                            }
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -611,16 +643,16 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
           <Sparkles className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
           <div className="space-y-1">
             <p className="text-sm font-medium">{t('proxy.wildcardMapping')}</p>
-            <p className="text-xs text-muted-foreground">
-              {t('proxy.wildcardMappingDesc')}
-            </p>
+            <p className="text-xs text-muted-foreground">{t('proxy.wildcardMappingDesc')}</p>
             <div className="flex flex-wrap gap-2 mt-2">
               {WILDCARD_EXAMPLES.map((example) => (
                 <code
                   key={example.pattern}
                   className="text-xs bg-background px-2 py-1 rounded cursor-pointer hover:bg-background/80"
                   title={example.description}
-                  onClick={() => setFormData(prev => ({ ...prev, requestModel: example.pattern }))}
+                  onClick={() =>
+                    setFormData((prev) => ({ ...prev, requestModel: example.pattern }))
+                  }
                 >
                   {example.pattern}
                 </code>
@@ -636,11 +668,9 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
             <DialogTitle>
               {editingMapping ? t('proxy.editMapping') : t('proxy.addMapping')}
             </DialogTitle>
-            <DialogDescription>
-              {t('proxy.addMappingDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('proxy.addMappingDesc')}</DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="requestModel">
@@ -655,14 +685,12 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                 id="requestModel"
                 placeholder={t('proxy.requestModelPlaceholder')}
                 value={formData.requestModel}
-                onChange={(e) => setFormData(prev => ({ ...prev, requestModel: e.target.value }))}
+                onChange={(e) => setFormData((prev) => ({ ...prev, requestModel: e.target.value }))}
                 disabled={!!editingMapping}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('proxy.requestModelHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('proxy.requestModelHelp')}</p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="actualModel">{t('proxy.actualModel')}</Label>
               <Combobox
@@ -672,20 +700,20 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                 placeholder={t('proxy.selectModel')}
                 emptyText={t('proxy.noModelFound')}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('proxy.actualModelHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('proxy.actualModelHelp')}</p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="provider">{t('proxy.preferredProviderOptional')}</Label>
               <Select
                 value={formData.preferredProviderId}
-                onValueChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  preferredProviderId: value,
-                  preferredAccountId: '',
-                }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    preferredProviderId: value,
+                    preferredAccountId: '',
+                  }))
+                }
               >
                 <SelectTrigger id="provider">
                   <SelectValue placeholder={t('proxy.autoSelect')} />
@@ -700,16 +728,22 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="account">{t('proxy.preferredAccountOptional')}</Label>
               <Select
                 value={formData.preferredAccountId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, preferredAccountId: value }))}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, preferredAccountId: value }))
+                }
                 disabled={!selectedProviderId}
               >
                 <SelectTrigger id="account">
-                  <SelectValue placeholder={selectedProviderId ? t('proxy.autoSelect') : t('proxy.selectProviderFirst')} />
+                  <SelectValue
+                    placeholder={
+                      selectedProviderId ? t('proxy.autoSelect') : t('proxy.selectProviderFirst')
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value={AUTO_SELECT_VALUE}>{t('proxy.autoSelect')}</SelectItem>
@@ -722,7 +756,7 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseDialog}>
               {t('common.cancel')}
@@ -738,9 +772,7 @@ export function ModelMappingConfig({ onConfigChange }: ModelMappingConfigProps) 
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('proxy.restoreDefaults')}</DialogTitle>
-            <DialogDescription>
-              {t('proxy.confirmRestoreDefaults')}
-            </DialogDescription>
+            <DialogDescription>{t('proxy.confirmRestoreDefaults')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRestoreDialogOpen(false)}>

@@ -29,7 +29,8 @@ const FAKE_HEADERS = {
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36',
   source: 'web',
 }
 
@@ -46,10 +47,10 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
 
   async loginWithToken(providerId: string, token: string): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating Token...')
-    
+
     try {
       const validation = await this.validateToken({ token })
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -58,9 +59,9 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
           error: validation.error || 'Token validation failed',
         }
       }
-      
+
       this.emitProgress('success', 'Token validation successful')
-      
+
       return {
         success: true,
         providerId,
@@ -85,40 +86,40 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
 
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
     const token = credentials.token
-    
+
     if (!token) {
       return {
         valid: false,
         error: 'Token cannot be empty',
       }
     }
-    
+
     if (token.startsWith('eyJ') && token.split('.').length === 3) {
       try {
         const parts = token.split('.')
         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
-        
+
         if (payload.email && payload.email.includes('@guest.com')) {
           return {
             valid: false,
             error: 'Guest account not allowed, please login with a real account',
           }
         }
-        
+
         if (payload && (payload.sub || payload.id || payload.user_id || payload.uid)) {
           const userId = payload.sub || payload.id || payload.user_id || payload.uid
-          
+
           try {
             const userInfo = await this.getUserInfo(token)
             console.log('[QwenAi OAuth] User info:', userInfo)
-            
+
             if (userInfo && userInfo.is_guest === true) {
               return {
                 valid: false,
                 error: 'Guest account not allowed, please login with a real account',
               }
             }
-            
+
             return {
               valid: true,
               tokenType: 'access',
@@ -131,7 +132,7 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
           } catch (apiError) {
             console.log(
               '[QwenAi OAuth] API validation failed, using JWT payload only:',
-              apiError instanceof Error ? apiError.message : 'Unknown error'
+              apiError instanceof Error ? apiError.message : 'Unknown error',
             )
             return {
               valid: true,
@@ -151,7 +152,7 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
         }
       }
     }
-    
+
     return {
       valid: false,
       error: 'Token is invalid',
@@ -168,11 +169,11 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
         timeout: 15000,
         validateStatus: () => true,
       })
-      
+
       if (response.status !== 200 || !response.data?.success) {
         return null
       }
-      
+
       return response.data.data
     } catch {
       return null

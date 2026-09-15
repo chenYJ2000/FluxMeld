@@ -43,9 +43,8 @@ export class ProxyStatusManager {
   getStatistics(): ProxyStatistics {
     this.cleanupOldTimestamps()
     this.statistics.requestsPerMinute = this.requestTimestamps.length
-    this.statistics.avgLatency = this.statistics.totalRequests > 0
-      ? this.latencySum / this.statistics.totalRequests
-      : 0
+    this.statistics.avgLatency =
+      this.statistics.totalRequests > 0 ? this.latencySum / this.statistics.totalRequests : 0
     return { ...this.statistics }
   }
 
@@ -102,7 +101,8 @@ export class ProxyStatusManager {
     this.statistics.modelUsage[model] = (this.statistics.modelUsage[model] || 0) + 1
 
     if (providerId) {
-      this.statistics.providerUsage[providerId] = (this.statistics.providerUsage[providerId] || 0) + 1
+      this.statistics.providerUsage[providerId] =
+        (this.statistics.providerUsage[providerId] || 0) + 1
     }
 
     if (accountId) {
@@ -135,7 +135,7 @@ export class ProxyStatusManager {
    */
   private cleanupOldTimestamps(): void {
     const oneMinuteAgo = Date.now() - 60000
-    this.requestTimestamps = this.requestTimestamps.filter(ts => ts > oneMinuteAgo)
+    this.requestTimestamps = this.requestTimestamps.filter((ts) => ts > oneMinuteAgo)
   }
 
   /**

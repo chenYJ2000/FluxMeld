@@ -18,7 +18,7 @@ export class AppError extends Error {
   constructor(
     public code: ErrorCode,
     message: string,
-    public details?: any
+    public details?: any,
   ) {
     super(message)
     this.name = 'AppError'
@@ -48,7 +48,10 @@ export class AuthFailedError extends AppError {
 
 export class RateLimitError extends AppError {
   constructor(providerId: string, retryAfter?: number, details?: any) {
-    super(ErrorCode.RATE_LIMIT, `Rate limit exceeded for provider ${providerId}`, { retryAfter, ...details })
+    super(ErrorCode.RATE_LIMIT, `Rate limit exceeded for provider ${providerId}`, {
+      retryAfter,
+      ...details,
+    })
   }
 }
 
@@ -108,7 +111,11 @@ export function createErrorFromAxiosError(error: any, providerId?: string): AppE
 
     if (status === 429) {
       const retryAfter = error.response.headers['retry-after']
-      return new RateLimitError(providerId || 'unknown', retryAfter ? parseInt(retryAfter) : undefined, data)
+      return new RateLimitError(
+        providerId || 'unknown',
+        retryAfter ? parseInt(retryAfter) : undefined,
+        data,
+      )
     }
 
     if (status >= 500) {

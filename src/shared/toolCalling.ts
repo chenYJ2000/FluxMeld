@@ -1,5 +1,6 @@
 export type ToolCallingModeSetting = 'off' | 'auto' | 'force'
-export type ToolClientAdapterId = 'standard-openai-tools' | 'cherry-studio-mcp' | 'opencode' | string
+export type ToolClientAdapterId =
+  'standard-openai-tools' | 'cherry-studio-mcp' | 'opencode' | string
 export type ToolSmokeCategory =
   | 'pass'
   | 'no_tools_received'
@@ -77,11 +78,41 @@ export const P0_TOOL_CLIENT_ADAPTERS: ToolClientAdapterMeta[] = [
 ]
 
 export const P0_TOOL_PROVIDER_SUPPORT: ToolProviderSupportMeta[] = [
-  { providerId: 'deepseek', label: 'DEEPSEEK', managed: true, protocolId: 'managed_xml', status: 'supported' },
-  { providerId: 'kimi', label: 'KIMI', managed: true, protocolId: 'managed_xml', status: 'supported' },
-  { providerId: 'glm', label: 'GLM', managed: true, protocolId: 'managed_xml', status: 'supported' },
-  { providerId: 'qwen', label: 'QWEN', managed: true, protocolId: 'managed_xml', status: 'supported' },
-  { providerId: 'mimo', label: 'MIMO', managed: true, protocolId: 'managed_xml', status: 'supported' },
+  {
+    providerId: 'deepseek',
+    label: 'DEEPSEEK',
+    managed: true,
+    protocolId: 'managed_xml',
+    status: 'supported',
+  },
+  {
+    providerId: 'kimi',
+    label: 'KIMI',
+    managed: true,
+    protocolId: 'managed_xml',
+    status: 'supported',
+  },
+  {
+    providerId: 'glm',
+    label: 'GLM',
+    managed: true,
+    protocolId: 'managed_xml',
+    status: 'supported',
+  },
+  {
+    providerId: 'qwen',
+    label: 'QWEN',
+    managed: true,
+    protocolId: 'managed_xml',
+    status: 'supported',
+  },
+  {
+    providerId: 'mimo',
+    label: 'MIMO',
+    managed: true,
+    protocolId: 'managed_xml',
+    status: 'supported',
+  },
 ]
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -107,20 +138,19 @@ export function normalizeToolCallingConfig(value: unknown): ToolCallingConfig {
       enabled,
       mode: legacy.mode === 'never' ? 'off' : legacy.mode === 'always' ? 'force' : 'auto',
       clientAdapterId: 'standard-openai-tools',
-      diagnosticsEnabled: Boolean(legacy.customPromptTemplate) || legacy.enableToolCallParsing === false,
+      diagnosticsEnabled:
+        Boolean(legacy.customPromptTemplate) || legacy.enableToolCallParsing === false,
       advanced: {
         promptPreviewEnabled: false,
-        customPromptTemplate: typeof legacy.customPromptTemplate === 'string'
-          ? legacy.customPromptTemplate
-          : undefined,
+        customPromptTemplate:
+          typeof legacy.customPromptTemplate === 'string' ? legacy.customPromptTemplate : undefined,
       },
     }
   }
 
   const advanced = isRecord(value.advanced) ? value.advanced : {}
-  const enabled = typeof value.enabled === 'boolean'
-    ? value.enabled
-    : DEFAULT_TOOL_CALLING_CONFIG.enabled
+  const enabled =
+    typeof value.enabled === 'boolean' ? value.enabled : DEFAULT_TOOL_CALLING_CONFIG.enabled
   const mode = isMode(value.mode) ? value.mode : DEFAULT_TOOL_CALLING_CONFIG.mode
 
   return {
@@ -129,16 +159,19 @@ export function normalizeToolCallingConfig(value: unknown): ToolCallingConfig {
     clientAdapterId: isClientAdapterId(value.clientAdapterId)
       ? value.clientAdapterId
       : DEFAULT_TOOL_CALLING_CONFIG.clientAdapterId,
-    diagnosticsEnabled: typeof value.diagnosticsEnabled === 'boolean'
-      ? value.diagnosticsEnabled
-      : DEFAULT_TOOL_CALLING_CONFIG.diagnosticsEnabled,
+    diagnosticsEnabled:
+      typeof value.diagnosticsEnabled === 'boolean'
+        ? value.diagnosticsEnabled
+        : DEFAULT_TOOL_CALLING_CONFIG.diagnosticsEnabled,
     advanced: {
-      promptPreviewEnabled: typeof advanced.promptPreviewEnabled === 'boolean'
-        ? advanced.promptPreviewEnabled
-        : DEFAULT_TOOL_CALLING_CONFIG.advanced.promptPreviewEnabled,
-      customPromptTemplate: typeof advanced.customPromptTemplate === 'string'
-        ? advanced.customPromptTemplate
-        : undefined,
+      promptPreviewEnabled:
+        typeof advanced.promptPreviewEnabled === 'boolean'
+          ? advanced.promptPreviewEnabled
+          : DEFAULT_TOOL_CALLING_CONFIG.advanced.promptPreviewEnabled,
+      customPromptTemplate:
+        typeof advanced.customPromptTemplate === 'string'
+          ? advanced.customPromptTemplate
+          : undefined,
     },
   }
 }

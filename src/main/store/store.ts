@@ -72,33 +72,34 @@ function sameStringArray(left: readonly string[], right: readonly string[]): boo
 function normalizeContextManagementConfig(value: unknown): ContextManagementConfig {
   const source = isRecord(value) ? value : {}
   const strategySource = isRecord(source.strategies) ? source.strategies : {}
-  const slidingWindowSource = isRecord(strategySource.slidingWindow) ? strategySource.slidingWindow : {}
+  const slidingWindowSource = isRecord(strategySource.slidingWindow)
+    ? strategySource.slidingWindow
+    : {}
   const tokenLimitSource = isRecord(strategySource.tokenLimit) ? strategySource.tokenLimit : {}
   const summarySource = isRecord(strategySource.summary) ? strategySource.summary : {}
   const defaults = DEFAULT_CONTEXT_MANAGEMENT_CONFIG
-  const positiveInteger = (candidate: unknown, fallback: number): number => (
+  const positiveInteger = (candidate: unknown, fallback: number): number =>
     typeof candidate === 'number' && Number.isFinite(candidate) && candidate > 0
       ? Math.floor(candidate)
       : fallback
-  )
-  const enabled = (candidate: unknown, fallback: boolean): boolean => (
+  const enabled = (candidate: unknown, fallback: boolean): boolean =>
     typeof candidate === 'boolean' ? candidate : fallback
-  )
   const requestedOrder = Array.isArray(source.executionOrder)
     ? source.executionOrder.filter((item): item is string => typeof item === 'string')
     : undefined
-  const validOrder = requestedOrder?.filter(
-    (strategy): strategy is ContextManagementConfig['executionOrder'][number] => (
-      (CONTEXT_STRATEGIES as readonly string[]).includes(strategy)
-    ),
-  ) ?? []
+  const validOrder =
+    requestedOrder?.filter(
+      (strategy): strategy is ContextManagementConfig['executionOrder'][number] =>
+        (CONTEXT_STRATEGIES as readonly string[]).includes(strategy),
+    ) ?? []
   const uniqueOrder = validOrder.filter((strategy, index) => validOrder.indexOf(strategy) === index)
-  const executionOrder: ContextManagementConfig['executionOrder'] = !requestedOrder || sameStringArray(uniqueOrder, LEGACY_CONTEXT_EXECUTION_ORDER)
-    ? [...defaults.executionOrder]
-    : [
-        ...uniqueOrder,
-        ...CONTEXT_STRATEGIES.filter((strategy) => !uniqueOrder.includes(strategy)),
-      ]
+  const executionOrder: ContextManagementConfig['executionOrder'] =
+    !requestedOrder || sameStringArray(uniqueOrder, LEGACY_CONTEXT_EXECUTION_ORDER)
+      ? [...defaults.executionOrder]
+      : [
+          ...uniqueOrder,
+          ...CONTEXT_STRATEGIES.filter((strategy) => !uniqueOrder.includes(strategy)),
+        ]
 
   return {
     enabled: enabled(source.enabled, defaults.enabled),
@@ -136,7 +137,7 @@ function normalizeContextManagementConfig(value: unknown): ContextManagementConf
  * Storage Manager Class
  * Responsible for data persistence and encryption
  */
-class StoreManager {
+export class StoreManager {
   private store: StoreType | null = null
   private isInitialized: boolean = false
   private mainWindow: BrowserWindow | null = null
@@ -196,7 +197,7 @@ class StoreManager {
     } catch (error) {
       console.error('[Store] Failed to initialize storage:', error)
       this.initializationError = error instanceof Error ? error : new Error(String(error))
-      
+
       // Try to recover by backing up corrupted data and reinitializing
       try {
         await this.recoverFromCorruptedData(storagePath)
@@ -226,10 +227,10 @@ class StoreManager {
   private async recoverFromCorruptedData(storagePath: string): Promise<void> {
     const { renameSync, existsSync } = await import('fs')
     const { join } = await import('path')
-    
+
     const dataPath = join(storagePath, 'data.json')
     const backupPath = join(storagePath, `data.corrupted.${Date.now()}.json`)
-    
+
     if (existsSync(dataPath)) {
       console.log('[Store] Backing up corrupted data file to:', backupPath)
       try {
@@ -347,14 +348,17 @@ class StoreManager {
       this.store?.set('config', config)
       return
     }
-    this.store?.set('config', this.normalizeConfig({
-      ...config,
-      modelMappings: {
-        ...createDefaultModelMappings(),
-        ...(config.modelMappings || {}),
-      },
-      defaultModelMappingsSeeded: true,
-    }))
+    this.store?.set(
+      'config',
+      this.normalizeConfig({
+        ...config,
+        modelMappings: {
+          ...createDefaultModelMappings(),
+          ...(config.modelMappings || {}),
+        },
+        defaultModelMappingsSeeded: true,
+      }),
+    )
   }
 
   /**
@@ -363,23 +367,23 @@ class StoreManager {
    */
   private async initializeDefaultProviders(): Promise<void> {
     const providers = this.store?.get('providers') || []
-    const builtinIds = BUILTIN_PROVIDERS.map(p => p.id)
-    
+    const builtinIds = BUILTIN_PROVIDERS.map((p) => p.id)
+
     const validProviders = providers.filter((p: Provider) => {
       if (p.type === 'builtin') {
         return builtinIds.includes(p.id)
       }
       return true
     })
-    
+
     const userModelOverrides: UserModelOverrides = {
       ...(this.store?.get('userModelOverrides') || {}),
     }
     let userModelOverridesChanged = false
-    
+
     const updatedProviders = validProviders.map((p: Provider) => {
       if (p.type === 'builtin') {
-        const builtinConfig = BUILTIN_PROVIDERS.find(bp => bp.id === p.id)
+        const builtinConfig = BUILTIN_PROVIDERS.find((bp) => bp.id === p.id)
         if (builtinConfig) {
           if (p.id === 'deepseek') {
             const sanitizedOverrides = sanitizeDeepSeekModelOverrides(userModelOverrides[p.id])
@@ -389,8 +393,8 @@ class StoreManager {
             }
           }
 
-          return { 
-            ...p, 
+          return {
+            ...p,
             apiEndpoint: builtinConfig.apiEndpoint,
             chatPath: builtinConfig.chatPath,
             supportedModels: builtinConfig.supportedModels,
@@ -403,7 +407,7 @@ class StoreManager {
       }
       return p
     })
-    
+
     if (userModelOverridesChanged) {
       this.store?.set('userModelOverrides', userModelOverrides)
     }
@@ -417,9 +421,9 @@ class StoreManager {
     this.ensureInitialized()
     const providers = this.store!.get('providers') || []
     const exists = providers.some((p: Provider) => p.id === providerId)
-    
+
     if (!exists) {
-      const builtinConfig = BUILTIN_PROVIDERS.find(bp => bp.id === providerId)
+      const builtinConfig = BUILTIN_PROVIDERS.find((bp) => bp.id === providerId)
       if (builtinConfig) {
         const now = Date.now()
         const newProvider: Provider = {
@@ -449,7 +453,7 @@ class StoreManager {
    */
   private ensureInitialized(): void {
     if (!this.isInitialized || !this.store) {
-      const errorMsg = this.initializationError 
+      const errorMsg = this.initializationError
         ? `Storage initialization failed: ${this.initializationError.message}`
         : 'Storage not initialized, please call initialize() first'
       throw new Error(errorMsg)
@@ -509,11 +513,11 @@ class StoreManager {
    */
   encryptCredentials(credentials: Record<string, string>): Record<string, string> {
     const encrypted: Record<string, string> = {}
-    
+
     for (const [key, value] of Object.entries(credentials)) {
       encrypted[key] = this.encryptData(value)
     }
-    
+
     return encrypted
   }
 
@@ -524,11 +528,11 @@ class StoreManager {
    */
   decryptCredentials(encryptedCredentials: Record<string, string>): Record<string, string> {
     const decrypted: Record<string, string> = {}
-    
+
     for (const [key, value] of Object.entries(encryptedCredentials)) {
       decrypted[key] = this.decryptData(value)
     }
-    
+
     return decrypted
   }
 
@@ -547,7 +551,7 @@ class StoreManager {
    */
   getProviderById(id: string): Provider | undefined {
     this.ensureInitialized()
-    const providers = this.store!.get('providers') as Provider[] || []
+    const providers = (this.store!.get('providers') as Provider[]) || []
     return providers.find((p: Provider) => p.id === id)
   }
 
@@ -556,7 +560,7 @@ class StoreManager {
    */
   addProvider(provider: Provider): void {
     this.ensureInitialized()
-    const providers = this.store!.get('providers') as Provider[] || []
+    const providers = (this.store!.get('providers') as Provider[]) || []
     providers.push(provider)
     this.store!.set('providers', providers)
   }
@@ -566,19 +570,19 @@ class StoreManager {
    */
   updateProvider(id: string, updates: Partial<Provider>): Provider | null {
     this.ensureInitialized()
-    const providers = this.store!.get('providers') as Provider[] || []
+    const providers = (this.store!.get('providers') as Provider[]) || []
     const index = providers.findIndex((p: Provider) => p.id === id)
-    
+
     if (index === -1) {
       return null
     }
-    
+
     providers[index] = {
       ...providers[index],
       ...updates,
       updatedAt: Date.now(),
     }
-    
+
     this.store!.set('providers', providers)
     return providers[index]
   }
@@ -588,20 +592,20 @@ class StoreManager {
    */
   deleteProvider(id: string): boolean {
     this.ensureInitialized()
-    const providers = this.store!.get('providers') as Provider[] || []
+    const providers = (this.store!.get('providers') as Provider[]) || []
     const index = providers.findIndex((p: Provider) => p.id === id)
-    
+
     if (index === -1) {
       return false
     }
-    
+
     providers.splice(index, 1)
     this.store!.set('providers', providers)
-    
-    const accounts = this.store!.get('accounts') as Account[] || []
+
+    const accounts = (this.store!.get('accounts') as Account[]) || []
     const filteredAccounts = accounts.filter((a: Account) => a.providerId !== id)
     this.store!.set('accounts', filteredAccounts)
-    
+
     return true
   }
 
@@ -624,7 +628,7 @@ class StoreManager {
   hasModelOverrides(providerId: string): boolean {
     const overrides = this.getModelOverrides(providerId)
     if (!overrides) return false
-    
+
     return (
       (overrides.addedModels && overrides.addedModels.length > 0) ||
       (overrides.excludedModels && overrides.excludedModels.length > 0)
@@ -639,15 +643,15 @@ class StoreManager {
    */
   getAccounts(includeCredentials: boolean = false): Account[] {
     this.ensureInitialized()
-    const accounts = this.store!.get('accounts') as Account[] || []
-    
+    const accounts = (this.store!.get('accounts') as Account[]) || []
+
     if (includeCredentials) {
       return accounts.map((account: Account) => ({
         ...account,
         credentials: this.decryptCredentials(account.credentials),
       }))
     }
-    
+
     return accounts
   }
 
@@ -657,16 +661,16 @@ class StoreManager {
    */
   getAccountById(id: string, includeCredentials: boolean = false): Account | undefined {
     this.ensureInitialized()
-    const accounts = this.store!.get('accounts') as Account[] || []
+    const accounts = (this.store!.get('accounts') as Account[]) || []
     const account = accounts.find((a: Account) => a.id === id)
-    
+
     if (account && includeCredentials) {
       return {
         ...account,
         credentials: this.decryptCredentials(account.credentials),
       }
     }
-    
+
     return account
   }
 
@@ -675,16 +679,16 @@ class StoreManager {
    */
   getAccountsByProviderId(providerId: string, includeCredentials: boolean = false): Account[] {
     this.ensureInitialized()
-    const accounts = this.store!.get('accounts') as Account[] || []
+    const accounts = (this.store!.get('accounts') as Account[]) || []
     const filtered = accounts.filter((a: Account) => a.providerId === providerId)
-    
+
     if (includeCredentials) {
       return filtered.map((account: Account) => ({
         ...account,
         credentials: this.decryptCredentials(account.credentials),
       }))
     }
-    
+
     return filtered
   }
 
@@ -695,12 +699,12 @@ class StoreManager {
   addAccount(account: Account): void {
     this.ensureInitialized()
     const accounts = this.store!.get('accounts') || []
-    
+
     const encryptedAccount: Account = {
       ...account,
       credentials: this.encryptCredentials(account.credentials),
     }
-    
+
     accounts.push(encryptedAccount)
     this.store!.set('accounts', accounts)
   }
@@ -710,41 +714,41 @@ class StoreManager {
    */
   updateAccount(id: string, updates: Partial<Account>): Account | null {
     this.ensureInitialized()
-    const accounts = this.store!.get('accounts') as Account[] || []
+    const accounts = (this.store!.get('accounts') as Account[]) || []
     const index = accounts.findIndex((a: Account) => a.id === id)
-    
+
     if (index === -1) {
       return null
     }
-    
+
     console.log('[Store] Update account:', {
       id,
       fields: Object.keys(updates),
       credentialsUpdated: Boolean(updates.credentials),
     })
-    
+
     const updatedAccount: Account = {
       ...accounts[index],
       ...updates,
       updatedAt: Date.now(),
     }
-    
+
     if (updates.credentials) {
       updatedAccount.credentials = this.encryptCredentials(updates.credentials)
       console.log('[Store] Updated encrypted credentials for account:', id)
     }
-    
+
     accounts[index] = updatedAccount
     this.store!.set('accounts', accounts)
-    
+
     // Verify save was successful
     const savedAccounts = this.store!.get('accounts') as Account[]
-    const savedAccount = savedAccounts.find(a => a.id === id)
+    const savedAccount = savedAccounts.find((a) => a.id === id)
     console.log('[Store] Verify after save:', {
       id,
       saved: Boolean(savedAccount),
     })
-    
+
     return {
       ...updatedAccount,
       credentials: updates.credentials || this.decryptCredentials(accounts[index].credentials),
@@ -756,13 +760,13 @@ class StoreManager {
    */
   deleteAccount(id: string): boolean {
     this.ensureInitialized()
-    const accounts = this.store!.get('accounts') as Account[] || []
+    const accounts = (this.store!.get('accounts') as Account[]) || []
     const index = accounts.findIndex((a: Account) => a.id === id)
-    
+
     if (index === -1) {
       return false
     }
-    
+
     accounts.splice(index, 1)
     this.store!.set('accounts', accounts)
     return true
@@ -773,16 +777,16 @@ class StoreManager {
    */
   getActiveAccounts(includeCredentials: boolean = false): Account[] {
     this.ensureInitialized()
-    const accounts = this.store!.get('accounts') as Account[] || []
+    const accounts = (this.store!.get('accounts') as Account[]) || []
     const active = accounts.filter((a: Account) => a.status === 'active')
-    
+
     if (includeCredentials) {
       return active.map((account: Account) => ({
         ...account,
         credentials: this.decryptCredentials(account.credentials),
       }))
     }
-    
+
     return active
   }
 
@@ -816,14 +820,16 @@ class StoreManager {
       ...currentConfig,
       ...updates,
     }
-    
+
     // Deep merge for nested objects
     if (updates.toolCallingConfig || updates.toolPromptConfig) {
       const incoming = updates.toolCallingConfig ?? updates.toolPromptConfig
-      const incomingRecord = incoming && typeof incoming === 'object' ? incoming as Record<string, unknown> : {}
-      const incomingAdvanced = incomingRecord.advanced && typeof incomingRecord.advanced === 'object'
-        ? incomingRecord.advanced as Record<string, unknown>
-        : {}
+      const incomingRecord =
+        incoming && typeof incoming === 'object' ? (incoming as Record<string, unknown>) : {}
+      const incomingAdvanced =
+        incomingRecord.advanced && typeof incomingRecord.advanced === 'object'
+          ? (incomingRecord.advanced as Record<string, unknown>)
+          : {}
 
       newConfig.toolCallingConfig = normalizeToolCallingConfig({
         ...currentConfig.toolCallingConfig,
@@ -835,7 +841,7 @@ class StoreManager {
       })
       newConfig.toolPromptConfig = undefined
     }
-    
+
     if (updates.sessionConfig && currentConfig.sessionConfig) {
       newConfig.sessionConfig = {
         ...currentConfig.sessionConfig,
@@ -893,7 +899,8 @@ class StoreManager {
       latency?: number
       isStream?: boolean
       error?: string
-    }
+      deletedAccounts?: number
+    },
   ): LogEntry {
     this.ensureInitialized()
     const entry: LogEntry = {
@@ -949,7 +956,9 @@ class StoreManager {
   /**
    * Get Log Trend
    */
-  getLogTrend(days: number = 7): { date: string; total: number; info: number; warn: number; error: number }[] {
+  getLogTrend(
+    days: number = 7,
+  ): { date: string; total: number; info: number; warn: number; error: number }[] {
     this.ensureInitialized()
     return this.getAppLogManager().getTrend(days)
   }
@@ -958,7 +967,10 @@ class StoreManager {
    * Get Log Trend for specific account
    * Only counts successful API requests (logs with requestId) to match requestCount
    */
-  getAccountLogTrend(accountId: string, days: number = 7): { date: string; total: number; info: number; warn: number; error: number }[] {
+  getAccountLogTrend(
+    accountId: string,
+    days: number = 7,
+  ): { date: string; total: number; info: number; warn: number; error: number }[] {
     this.ensureInitialized()
     return this.getAppLogManager().getAccountTrend(accountId, days)
   }
@@ -979,7 +991,7 @@ class StoreManager {
         const time = new Date(log.timestamp).toISOString()
         const level = log.level.toUpperCase().padEnd(5)
         let line = `[${time}] [${level}] ${log.message}`
-        
+
         if (log.providerId) {
           line += ` | Provider: ${log.providerId}`
         }
@@ -992,7 +1004,7 @@ class StoreManager {
         if (log.data) {
           line += ` | Data: ${JSON.stringify(log.data)}`
         }
-        
+
         return line
       })
       .join('\n')
@@ -1015,7 +1027,7 @@ class StoreManager {
     const config = this.getConfig()
     const logs = this.getCombinedLogs()
     const cutoff = Date.now() - config.logRetentionDays * 24 * 60 * 60 * 1000
-    
+
     const filtered = logs.filter((l: LogEntry) => l.timestamp >= cutoff)
     this.getAppLogManager().replaceLogs(filtered)
     this.store!.set('logs', [])
@@ -1043,7 +1055,10 @@ class StoreManager {
   /**
    * Get Request Logs
    */
-  getRequestLogs(limit?: number, filter?: { status?: 'success' | 'error'; providerId?: string }): RequestLogEntry[] {
+  getRequestLogs(
+    limit?: number,
+    filter?: { status?: 'success' | 'error'; providerId?: string },
+  ): RequestLogEntry[] {
     this.ensureInitialized()
     return this.getRequestLogManager().getRequestLogs(limit, filter)
   }
@@ -1068,7 +1083,14 @@ class StoreManager {
   /**
    * Get Request Log Statistics
    */
-  getRequestLogStats(): { total: number; success: number; error: number; todayTotal: number; todaySuccess: number; todayError: number } {
+  getRequestLogStats(): {
+    total: number
+    success: number
+    error: number
+    todayTotal: number
+    todaySuccess: number
+    todayError: number
+  } {
     this.ensureInitialized()
     return this.getRequestLogManager().getRequestLogStats()
   }
@@ -1076,7 +1098,9 @@ class StoreManager {
   /**
    * Get Request Log Trend
    */
-  getRequestLogTrend(days: number = 7): { date: string; total: number; success: number; error: number; avgLatency: number }[] {
+  getRequestLogTrend(
+    days: number = 7,
+  ): { date: string; total: number; success: number; error: number; avgLatency: number }[] {
     this.ensureInitialized()
     return this.getRequestLogManager().getRequestLogTrend(days)
   }
@@ -1114,12 +1138,12 @@ class StoreManager {
     latency: number,
     model?: string,
     providerId?: string,
-    accountId?: string
+    accountId?: string,
   ): PersistentStatistics {
     this.ensureInitialized()
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
     const today = new Date().toISOString().split('T')[0]
-    
+
     const newStats: PersistentStatistics = {
       ...stats,
       totalRequests: stats.totalRequests + 1,
@@ -1132,19 +1156,19 @@ class StoreManager {
       accountUsage: { ...stats.accountUsage },
       dailyStats: { ...stats.dailyStats },
     }
-    
+
     if (model) {
       newStats.modelUsage[model] = (newStats.modelUsage[model] || 0) + 1
     }
-    
+
     if (providerId) {
       newStats.providerUsage[providerId] = (newStats.providerUsage[providerId] || 0) + 1
     }
-    
+
     if (accountId) {
       newStats.accountUsage[accountId] = (newStats.accountUsage[accountId] || 0) + 1
     }
-    
+
     if (!newStats.dailyStats[today]) {
       newStats.dailyStats[today] = {
         date: today,
@@ -1156,7 +1180,7 @@ class StoreManager {
         providerUsage: {},
       }
     }
-    
+
     newStats.dailyStats[today].totalRequests++
     if (success) {
       newStats.dailyStats[today].successRequests++
@@ -1164,15 +1188,17 @@ class StoreManager {
     } else {
       newStats.dailyStats[today].failedRequests++
     }
-    
+
     if (model) {
-      newStats.dailyStats[today].modelUsage[model] = (newStats.dailyStats[today].modelUsage[model] || 0) + 1
+      newStats.dailyStats[today].modelUsage[model] =
+        (newStats.dailyStats[today].modelUsage[model] || 0) + 1
     }
-    
+
     if (providerId) {
-      newStats.dailyStats[today].providerUsage[providerId] = (newStats.dailyStats[today].providerUsage[providerId] || 0) + 1
+      newStats.dailyStats[today].providerUsage[providerId] =
+        (newStats.dailyStats[today].providerUsage[providerId] || 0) + 1
     }
-    
+
     this.store!.set('statistics', newStats)
     return newStats
   }
@@ -1184,15 +1210,17 @@ class StoreManager {
     this.ensureInitialized()
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
     const today = new Date().toISOString().split('T')[0]
-    return stats.dailyStats[today] || {
-      date: today,
-      totalRequests: 0,
-      successRequests: 0,
-      failedRequests: 0,
-      totalLatency: 0,
-      modelUsage: {},
-      providerUsage: {},
-    }
+    return (
+      stats.dailyStats[today] || {
+        date: today,
+        totalRequests: 0,
+        successRequests: 0,
+        failedRequests: 0,
+        totalLatency: 0,
+        modelUsage: {},
+        providerUsage: {},
+      }
+    )
   }
 
   /**
@@ -1203,14 +1231,14 @@ class StoreManager {
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
     const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
     const cutoffDate = new Date(cutoff).toISOString().split('T')[0]
-    
+
     const filteredDailyStats: Record<string, DailyStatistics> = {}
     for (const [date, dayStats] of Object.entries(stats.dailyStats)) {
       if (date >= cutoffDate) {
         filteredDailyStats[date] = dayStats as DailyStatistics
       }
     }
-    
+
     if (Object.keys(filteredDailyStats).length !== Object.keys(stats.dailyStats).length) {
       stats.dailyStats = filteredDailyStats
       this.store!.set('statistics', stats)
@@ -1248,7 +1276,7 @@ class StoreManager {
    * Get System Prompt By ID
    */
   getSystemPromptById(id: string): SystemPrompt | undefined {
-    return this.getSystemPrompts().find(p => p.id === id)
+    return this.getSystemPrompts().find((p) => p.id === id)
   }
 
   /**
@@ -1257,7 +1285,7 @@ class StoreManager {
   addSystemPrompt(prompt: Omit<SystemPrompt, 'id' | 'createdAt' | 'updatedAt'>): SystemPrompt {
     this.ensureInitialized()
     const prompts = this.store!.get('systemPrompts') || []
-    
+
     const newPrompt: SystemPrompt = {
       ...prompt,
       id: this.generateId(),
@@ -1265,10 +1293,10 @@ class StoreManager {
       createdAt: Date.now(),
       updatedAt: Date.now(),
     }
-    
+
     prompts.push(newPrompt)
     this.store!.set('systemPrompts', prompts)
-    
+
     return newPrompt
   }
 
@@ -1278,26 +1306,26 @@ class StoreManager {
    */
   updateSystemPrompt(id: string, updates: Partial<SystemPrompt>): SystemPrompt | null {
     this.ensureInitialized()
-    
+
     // Check if it's a built-in prompt
-    if (BUILTIN_PROMPTS.some(p => p.id === id)) {
+    if (BUILTIN_PROMPTS.some((p) => p.id === id)) {
       console.warn('Cannot update built-in prompt:', id)
       return null
     }
-    
+
     const prompts = this.store!.get('systemPrompts') || []
     const index = prompts.findIndex((p: SystemPrompt) => p.id === id)
-    
+
     if (index === -1) {
       return null
     }
-    
+
     prompts[index] = {
       ...prompts[index],
       ...updates,
       updatedAt: Date.now(),
     }
-    
+
     this.store!.set('systemPrompts', prompts)
     return prompts[index]
   }
@@ -1308,23 +1336,23 @@ class StoreManager {
    */
   deleteSystemPrompt(id: string): boolean {
     this.ensureInitialized()
-    
+
     // Check if it's a built-in prompt
-    if (BUILTIN_PROMPTS.some(p => p.id === id)) {
+    if (BUILTIN_PROMPTS.some((p) => p.id === id)) {
       console.warn('Cannot delete built-in prompt:', id)
       return false
     }
-    
+
     const prompts = this.store!.get('systemPrompts') || []
     const index = prompts.findIndex((p: SystemPrompt) => p.id === id)
-    
+
     if (index === -1) {
       return false
     }
-    
+
     prompts.splice(index, 1)
     this.store!.set('systemPrompts', prompts)
-    
+
     return true
   }
 
@@ -1332,7 +1360,7 @@ class StoreManager {
    * Get System Prompts By Type
    */
   getSystemPromptsByType(type: SystemPrompt['type']): SystemPrompt[] {
-    return this.getSystemPrompts().filter(p => p.type === type)
+    return this.getSystemPrompts().filter((p) => p.type === type)
   }
 
   // ==================== Session Operations ====================
@@ -1390,10 +1418,9 @@ class StoreManager {
     const config = this.getSessionConfig()
     const timeoutMs = config.sessionTimeout * 60 * 1000
     const now = Date.now()
-    
-    return sessions.filter((s: SessionRecord) => 
-      s.status === 'active' && 
-      (now - s.lastActiveAt) < timeoutMs
+
+    return sessions.filter(
+      (s: SessionRecord) => s.status === 'active' && now - s.lastActiveAt < timeoutMs,
     )
   }
 
@@ -1413,19 +1440,22 @@ class StoreManager {
     this.ensureInitialized()
     const sessions = this.store!.get('sessions') || []
     const index = sessions.findIndex((s: SessionRecord) => s.id === id)
-    
+
     if (index === -1) {
       return null
     }
-    
+
     const updatedSession = {
       ...sessions[index],
       ...updates,
     }
 
-    this.store!.set('sessions', sessions.map((session: SessionRecord, sessionIndex: number) => (
-      sessionIndex === index ? updatedSession : session
-    )))
+    this.store!.set(
+      'sessions',
+      sessions.map((session: SessionRecord, sessionIndex: number) =>
+        sessionIndex === index ? updatedSession : session,
+      ),
+    )
     return updatedSession
   }
 
@@ -1436,25 +1466,29 @@ class StoreManager {
     this.ensureInitialized()
     const sessions = this.store!.get('sessions') || []
     const index = sessions.findIndex((s: SessionRecord) => s.id === sessionId)
-    
+
     if (index === -1) {
       return null
     }
-    
+
     const config = this.getSessionConfig()
     const session = sessions[index]
-    const retainedMessages = session.messages.length >= config.maxMessagesPerSession
-      ? session.messages.slice(-config.maxMessagesPerSession + 1)
-      : session.messages
+    const retainedMessages =
+      session.messages.length >= config.maxMessagesPerSession
+        ? session.messages.slice(-config.maxMessagesPerSession + 1)
+        : session.messages
     const updatedSession: SessionRecord = {
       ...session,
       messages: [...retainedMessages, message],
       lastActiveAt: Date.now(),
     }
 
-    this.store!.set('sessions', sessions.map((item: SessionRecord, sessionIndex: number) => (
-      sessionIndex === index ? updatedSession : item
-    )))
+    this.store!.set(
+      'sessions',
+      sessions.map((item: SessionRecord, sessionIndex: number) =>
+        sessionIndex === index ? updatedSession : item,
+      ),
+    )
     return updatedSession
   }
 
@@ -1465,12 +1499,15 @@ class StoreManager {
     this.ensureInitialized()
     const sessions = this.store!.get('sessions') || []
     const index = sessions.findIndex((s: SessionRecord) => s.id === id)
-    
+
     if (index === -1) {
       return false
     }
-    
-    this.store!.set('sessions', sessions.filter((_: SessionRecord, sessionIndex: number) => sessionIndex !== index))
+
+    this.store!.set(
+      'sessions',
+      sessions.filter((_: SessionRecord, sessionIndex: number) => sessionIndex !== index),
+    )
     return true
   }
 
@@ -1494,9 +1531,9 @@ class StoreManager {
     const config = this.getSessionConfig()
     const timeoutMs = config.sessionTimeout * 60 * 1000
     const now = Date.now()
-    
+
     let removedCount = 0
-    
+
     // Always delete sessions that are already expired
     let remainingSessions = sessions.filter((s: SessionRecord) => {
       if (s.status === 'expired') {
@@ -1505,12 +1542,12 @@ class StoreManager {
       }
       return true
     })
-    
+
     // Handle timed-out active sessions based on config
     if (config.deleteAfterTimeout) {
       // Delete timed-out sessions from storage
       remainingSessions = remainingSessions.filter((s: SessionRecord) => {
-        if (s.status === 'active' && (now - s.lastActiveAt) >= timeoutMs) {
+        if (s.status === 'active' && now - s.lastActiveAt >= timeoutMs) {
           removedCount++
           return false
         }
@@ -1519,16 +1556,16 @@ class StoreManager {
     } else {
       // Mark timed-out sessions as expired (will be deleted on next clean)
       remainingSessions = remainingSessions.map((s: SessionRecord) => {
-        if (s.status === 'active' && (now - s.lastActiveAt) >= timeoutMs) {
+        if (s.status === 'active' && now - s.lastActiveAt >= timeoutMs) {
           removedCount++
           return { ...s, status: 'expired' as const }
         }
         return s
       })
     }
-    
+
     this.store!.set('sessions', remainingSessions)
-    
+
     return removedCount
   }
 
@@ -1581,10 +1618,12 @@ class StoreManager {
    */
   private getProviderModelOverrides(providerId: string): ProviderModelOverrides {
     const overrides = this.getUserModelOverrides()
-    return overrides[providerId] || {
-      addedModels: [],
-      excludedModels: [],
-    }
+    return (
+      overrides[providerId] || {
+        addedModels: [],
+        excludedModels: [],
+      }
+    )
   }
 
   /**
@@ -1593,7 +1632,7 @@ class StoreManager {
    */
   getEffectiveModels(providerId: string): EffectiveModel[] {
     this.ensureInitialized()
-    
+
     const provider = this.getProviderById(providerId)
     if (!provider) {
       return []
@@ -1605,7 +1644,7 @@ class StoreManager {
 
     const effectiveModels: EffectiveModel[] = []
 
-    defaultModels.forEach(displayName => {
+    defaultModels.forEach((displayName) => {
       if (!overrides.excludedModels.includes(displayName)) {
         const actualModelId = modelMappings[displayName] || displayName
         effectiveModels.push({
@@ -1616,7 +1655,7 @@ class StoreManager {
       }
     })
 
-    overrides.addedModels.forEach(customModel => {
+    overrides.addedModels.forEach((customModel) => {
       effectiveModels.push({
         displayName: customModel.displayName,
         actualModelId: customModel.actualModelId,
@@ -1632,9 +1671,9 @@ class StoreManager {
    */
   addCustomModel(providerId: string, model: CustomModel): EffectiveModel[] {
     this.ensureInitialized()
-    
+
     const overrides = this.getUserModelOverrides()
-    
+
     if (!overrides[providerId]) {
       overrides[providerId] = {
         addedModels: [],
@@ -1643,11 +1682,13 @@ class StoreManager {
     }
 
     const existingModel = overrides[providerId].addedModels.find(
-      m => m.displayName === model.displayName || m.actualModelId === model.actualModelId
+      (m) => m.displayName === model.displayName || m.actualModelId === model.actualModelId,
     )
-    
+
     if (existingModel) {
-      throw new Error(`Model with display name "${model.displayName}" or actual ID "${model.actualModelId}" already exists`)
+      throw new Error(
+        `Model with display name "${model.displayName}" or actual ID "${model.actualModelId}" already exists`,
+      )
     }
 
     overrides[providerId].addedModels.push(model)
@@ -1663,14 +1704,14 @@ class StoreManager {
    */
   removeModel(providerId: string, modelName: string): EffectiveModel[] {
     this.ensureInitialized()
-    
+
     const provider = this.getProviderById(providerId)
     if (!provider) {
       throw new Error('Provider not found')
     }
 
     const overrides = this.getUserModelOverrides()
-    
+
     if (!overrides[providerId]) {
       overrides[providerId] = {
         addedModels: [],
@@ -1687,7 +1728,7 @@ class StoreManager {
       }
     } else {
       overrides[providerId].addedModels = overrides[providerId].addedModels.filter(
-        m => m.displayName !== modelName
+        (m) => m.displayName !== modelName,
       )
     }
 
@@ -1702,17 +1743,17 @@ class StoreManager {
    */
   resetModels(providerId: string): EffectiveModel[] {
     this.ensureInitialized()
-    
+
     const overrides = this.getUserModelOverrides()
-    
+
     if (overrides[providerId]) {
       delete overrides[providerId]
       this.setUserModelOverrides(overrides)
     }
 
-    const builtinConfig = BUILTIN_PROVIDERS.find(provider => provider.id === providerId)
+    const builtinConfig = BUILTIN_PROVIDERS.find((provider) => provider.id === providerId)
     if (builtinConfig) {
-      const providers = (this.store!.get('providers') as Provider[] || []).map(provider => {
+      const providers = ((this.store!.get('providers') as Provider[]) || []).map((provider) => {
         if (provider.id !== providerId || provider.type !== 'builtin') {
           return provider
         }
@@ -1781,7 +1822,7 @@ class StoreManager {
     const sessions = this.store!.get('sessions') || []
     const statistics = this.store!.get('statistics') || DEFAULT_STATISTICS
     const userModelOverrides = this.store!.get('userModelOverrides') || DEFAULT_USER_MODEL_OVERRIDES
-    
+
     return {
       providers,
       accounts,

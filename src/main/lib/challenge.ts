@@ -11,7 +11,7 @@ export class DeepSeekHash {
   private encodeString(
     text: string,
     allocate: (size: number, align: number) => number,
-    reallocate?: (ptr: number, oldSize: number, newSize: number, align: number) => number
+    reallocate?: (ptr: number, oldSize: number, newSize: number, align: number) => number,
   ): number {
     if (!reallocate) {
       const encoded = this.cachedTextEncoder.encode(text)
@@ -37,15 +37,18 @@ export class DeepSeekHash {
       if (asciiLength > 0) {
         text = text.slice(asciiLength)
       }
-      
+
       ptr = reallocate(ptr, strLength, asciiLength + text.length * 3, 1) >>> 0
-      
+
       const result = this.cachedTextEncoder.encodeInto(
         text,
-        this.getCachedUint8Memory().subarray(ptr + asciiLength, ptr + asciiLength + text.length * 3)
+        this.getCachedUint8Memory().subarray(
+          ptr + asciiLength,
+          ptr + asciiLength + text.length * 3,
+        ),
       )
       asciiLength += result.written
-      
+
       ptr = reallocate(ptr, asciiLength + text.length * 3, asciiLength, 1) >>> 0
     }
 
@@ -65,7 +68,7 @@ export class DeepSeekHash {
     challenge: string,
     salt: string,
     difficulty: number,
-    expireAt: number
+    expireAt: number,
   ): number | undefined {
     if (algorithm !== 'DeepSeekHashV1') {
       throw new Error('Unsupported algorithm: ' + algorithm)
@@ -79,14 +82,14 @@ export class DeepSeekHash {
       const ptr0 = this.encodeString(
         challenge,
         this.wasmInstance.__wbindgen_export_0,
-        this.wasmInstance.__wbindgen_export_1
+        this.wasmInstance.__wbindgen_export_1,
       )
       const len0 = this.offset
 
       const ptr1 = this.encodeString(
         prefix,
         this.wasmInstance.__wbindgen_export_0,
-        this.wasmInstance.__wbindgen_export_1
+        this.wasmInstance.__wbindgen_export_1,
       )
       const len1 = this.offset
 
@@ -96,11 +99,9 @@ export class DeepSeekHash {
       const status = dataView.getInt32(retptr + 0, true)
       const value = dataView.getFloat64(retptr + 8, true)
 
-      if (status === 0)
-        return undefined
+      if (status === 0) return undefined
 
       return value
-
     } finally {
       this.wasmInstance.__wbindgen_add_to_stack_pointer(16)
     }

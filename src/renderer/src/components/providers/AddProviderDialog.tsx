@@ -14,7 +14,20 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Check, Plus, ArrowRight, Loader2, ExternalLink, AlertCircle, CheckCircle2, ArrowLeft, Info, Eye, EyeOff, Copy } from 'lucide-react'
+import {
+  Check,
+  Plus,
+  ArrowRight,
+  Loader2,
+  ExternalLink,
+  AlertCircle,
+  CheckCircle2,
+  ArrowLeft,
+  Info,
+  Eye,
+  EyeOff,
+  Copy,
+} from 'lucide-react'
 import type { BuiltinProviderConfig, ProviderVendor } from '@/types/electron'
 import { cn } from '@/lib/utils'
 import deepseekIcon from '@/assets/providers/deepseek.svg'
@@ -32,7 +45,10 @@ interface AddProviderDialogProps {
   builtinProviders: BuiltinProviderConfig[]
   onSelectBuiltin: (provider: BuiltinProviderConfig, credentials: Record<string, string>) => void
   onCreateCustom: () => void
-  onValidateToken?: (providerId: string, credentials: Record<string, string>) => Promise<{
+  onValidateToken?: (
+    providerId: string,
+    credentials: Record<string, string>,
+  ) => Promise<{
     valid: boolean
     error?: string
     userInfo?: {
@@ -56,30 +72,38 @@ const providerIcons: Record<string, string> = {
   zai: zaiIcon,
 }
 
-function mapOAuthCredentials(providerId: string | undefined, credentials: Record<string, string>): Record<string, string> {
-  console.log('[mapOAuthCredentials] Input providerId:', providerId, 'credentials:', JSON.stringify(credentials, null, 2))
-  
+function mapOAuthCredentials(
+  providerId: string | undefined,
+  credentials: Record<string, string>,
+): Record<string, string> {
+  console.log(
+    '[mapOAuthCredentials] Input providerId:',
+    providerId,
+    'credentials:',
+    JSON.stringify(credentials, null, 2),
+  )
+
   if (!providerId) {
     console.log('[mapOAuthCredentials] No providerId, returning as-is')
     return credentials
   }
 
   const credentialKeyMap: Record<string, string> = {
-    'glm': 'chatglm_refresh_token',
-    'deepseek': 'userToken',
-    'qwen': 'tongyi_sso_ticket',
+    glm: 'chatglm_refresh_token',
+    deepseek: 'userToken',
+    qwen: 'tongyi_sso_ticket',
     'qwen-ai': 'tongyi_sso_ticket',
-    'zai': 'tongyi_sso_ticket',
-    'perplexity': '__Secure-next-auth.session-token',
+    zai: 'tongyi_sso_ticket',
+    perplexity: '__Secure-next-auth.session-token',
   }
 
   const providerFieldNames: Record<string, string> = {
-    'glm': 'refresh_token',
-    'deepseek': 'token',
-    'qwen': 'ticket',
+    glm: 'refresh_token',
+    deepseek: 'token',
+    qwen: 'ticket',
     'qwen-ai': 'ticket',
-    'zai': 'ticket',
-    'perplexity': 'sessionToken',
+    zai: 'ticket',
+    perplexity: 'sessionToken',
   }
 
   const oauthKey = credentialKeyMap[providerId]
@@ -87,7 +111,12 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
     const fieldName = providerFieldNames[providerId]
     if (fieldName) {
       let tokenValue = credentials[oauthKey]
-      if (providerId === 'deepseek' && tokenValue && tokenValue.startsWith('{') && tokenValue.endsWith('}')) {
+      if (
+        providerId === 'deepseek' &&
+        tokenValue &&
+        tokenValue.startsWith('{') &&
+        tokenValue.endsWith('}')
+      ) {
         try {
           const parsed = JSON.parse(tokenValue)
           if (parsed.value) {
@@ -114,7 +143,7 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
   if (providerId === 'mimo') {
     console.log('[mapOAuthCredentials] Processing Mimo credentials')
     const result: Record<string, string> = {}
-    
+
     if (credentials['serviceToken']) {
       result['service_token'] = credentials['serviceToken']
       console.log('[mapOAuthCredentials] Mapped serviceToken -> service_token')
@@ -122,7 +151,7 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
       result['service_token'] = credentials['service_token']
       console.log('[mapOAuthCredentials] Using existing service_token')
     }
-    
+
     if (credentials['userId']) {
       result['user_id'] = credentials['userId']
       console.log('[mapOAuthCredentials] Mapped userId -> user_id')
@@ -130,7 +159,7 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
       result['user_id'] = credentials['user_id']
       console.log('[mapOAuthCredentials] Using existing user_id')
     }
-    
+
     if (credentials['xiaomichatbot_ph']) {
       result['ph_token'] = credentials['xiaomichatbot_ph']
       console.log('[mapOAuthCredentials] Mapped xiaomichatbot_ph -> ph_token')
@@ -138,7 +167,7 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
       result['ph_token'] = credentials['ph_token']
       console.log('[mapOAuthCredentials] Using existing ph_token')
     }
-    
+
     console.log('[mapOAuthCredentials] Mimo result:', JSON.stringify(result, null, 2))
     return result
   }
@@ -180,9 +209,9 @@ export function AddProviderDialog({
   const [copiedFields, setCopiedFields] = useState<Record<string, boolean>>({})
 
   const toggleFieldVisibility = (fieldName: string) => {
-    setVisibleFields(prev => ({
+    setVisibleFields((prev) => ({
       ...prev,
-      [fieldName]: !prev[fieldName]
+      [fieldName]: !prev[fieldName],
     }))
   }
 
@@ -190,9 +219,9 @@ export function AddProviderDialog({
     if (!value) return
     try {
       await navigator.clipboard.writeText(value)
-      setCopiedFields(prev => ({ ...prev, [fieldName]: true }))
+      setCopiedFields((prev) => ({ ...prev, [fieldName]: true }))
       setTimeout(() => {
-        setCopiedFields(prev => ({ ...prev, [fieldName]: false }))
+        setCopiedFields((prev) => ({ ...prev, [fieldName]: false }))
       }, 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
@@ -209,19 +238,24 @@ export function AddProviderDialog({
     return t(`${provider.id}.description`, { defaultValue: provider.description })
   }
 
-  const filteredProviders = providers.filter((provider) =>
-    getProviderName(provider).toLowerCase().includes(searchQuery.toLowerCase()) ||
-    getProviderDescription(provider)?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProviders = providers.filter(
+    (provider) =>
+      getProviderName(provider).toLowerCase().includes(searchQuery.toLowerCase()) ||
+      getProviderDescription(provider)?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
-  const selectedProviderData = selectedProvider 
-    ? providers.find((p) => p.id === selectedProvider) 
+  const selectedProviderData = selectedProvider
+    ? providers.find((p) => p.id === selectedProvider)
     : null
 
-  const supportsOAuth = selectedProviderData && ['deepseek', 'glm', 'kimi', 'mimo', 'minimax', 'qwen', 'qwen-ai', 'zai', 'perplexity'].includes(selectedProviderData.id)
+  const supportsOAuth =
+    selectedProviderData &&
+    ['deepseek', 'glm', 'kimi', 'mimo', 'minimax', 'qwen', 'qwen-ai', 'zai', 'perplexity'].includes(
+      selectedProviderData.id,
+    )
 
   const toggleModelExpansion = (providerId: string) => {
-    setExpandedModels(prev => {
+    setExpandedModels((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(providerId)) {
         newSet.delete(providerId)
@@ -248,7 +282,7 @@ export function AddProviderDialog({
   }, [open])
 
   const handleCredentialChange = (fieldName: string, value: string) => {
-    setCredentials(prev => ({
+    setCredentials((prev) => ({
       ...prev,
       [fieldName]: value,
     }))
@@ -259,13 +293,15 @@ export function AddProviderDialog({
     if (!selectedProviderData || !onValidateToken) return
 
     const credentialFields = selectedProviderData.credentialFields || []
-    const requiredFields = credentialFields.filter(f => f.required)
-    const missingFields = requiredFields.filter(f => !credentials[f.name])
-    
+    const requiredFields = credentialFields.filter((f) => f.required)
+    const missingFields = requiredFields.filter((f) => !credentials[f.name])
+
     if (missingFields.length > 0) {
       setValidationResult({
         valid: false,
-        error: t('providers.fillRequiredFields', { fields: missingFields.map(f => f.label).join(', ') }),
+        error: t('providers.fillRequiredFields', {
+          fields: missingFields.map((f) => f.label).join(', '),
+        }),
       })
       return
     }
@@ -290,13 +326,15 @@ export function AddProviderDialog({
     if (!selectedProviderData) return
 
     const credentialFields = selectedProviderData.credentialFields || []
-    const requiredFields = credentialFields.filter(f => f.required)
-    const missingFields = requiredFields.filter(f => !credentials[f.name])
-    
+    const requiredFields = credentialFields.filter((f) => f.required)
+    const missingFields = requiredFields.filter((f) => !credentials[f.name])
+
     if (missingFields.length > 0) {
       setValidationResult({
         valid: false,
-        error: t('providers.fillRequiredFields', { fields: missingFields.map(f => f.label).join(', ') }),
+        error: t('providers.fillRequiredFields', {
+          fields: missingFields.map((f) => f.label).join(', '),
+        }),
       })
       return
     }
@@ -323,59 +361,69 @@ export function AddProviderDialog({
 
   const handleOpenOAuthBrowser = async () => {
     if (!selectedProviderData) return
-    
+
     setIsOAuthLoading(true)
     setOAuthStatus(t('providers.openingLoginWindow'))
-    
+
     try {
       console.log('[AddProviderDialog] Starting OAuth login for:', selectedProviderData.id)
-      
+
       const result = await window.electronAPI?.oauth.startInAppLogin(
         selectedProviderData.id,
-        selectedProviderData.id as ProviderVendor
+        selectedProviderData.id as ProviderVendor,
       )
-      
+
       console.log('[AddProviderDialog] OAuth result:', JSON.stringify(result, null, 2))
-      
+
       if (result?.success && result.credentials) {
-        console.log('[AddProviderDialog] OAuth success, credentials:', JSON.stringify(result.credentials, null, 2))
-        
+        console.log(
+          '[AddProviderDialog] OAuth success, credentials:',
+          JSON.stringify(result.credentials, null, 2),
+        )
+
         const mappedCredentials = mapOAuthCredentials(selectedProviderData?.id, result.credentials)
-        console.log('[AddProviderDialog] Mapped credentials:', JSON.stringify(mappedCredentials, null, 2))
-        
+        console.log(
+          '[AddProviderDialog] Mapped credentials:',
+          JSON.stringify(mappedCredentials, null, 2),
+        )
+
         const hasAllRequiredFields = selectedProviderData.credentialFields
-          .filter(f => f.required)
-          .every(f => mappedCredentials[f.name])
-        
+          .filter((f) => f.required)
+          .every((f) => mappedCredentials[f.name])
+
         console.log('[AddProviderDialog] Has all required fields:', hasAllRequiredFields)
-        console.log('[AddProviderDialog] Required fields:', selectedProviderData.credentialFields.filter(f => f.required).map(f => f.name))
+        console.log(
+          '[AddProviderDialog] Required fields:',
+          selectedProviderData.credentialFields.filter((f) => f.required).map((f) => f.name),
+        )
         console.log('[AddProviderDialog] Mapped credentials keys:', Object.keys(mappedCredentials))
-        
+
         if (!hasAllRequiredFields) {
           console.error('[AddProviderDialog] Missing required fields!')
           const missing = selectedProviderData.credentialFields
-            .filter(f => f.required && !mappedCredentials[f.name])
-            .map(f => f.name)
+            .filter((f) => f.required && !mappedCredentials[f.name])
+            .map((f) => f.name)
           console.error('[AddProviderDialog] Missing:', missing)
         }
-        
+
         setCredentials(mappedCredentials)
         setOAuthStatus(t('providers.loginSuccess'))
-        
+
         setValidationResult({
           valid: true,
-          userInfo: result.accountInfo
+          userInfo: result.accountInfo,
         })
       } else {
         const errorMsg = result?.error || ''
         console.error('[AddProviderDialog] OAuth failed:', errorMsg)
-        const translatedError = errorMsg === 'Login window was closed' 
-          ? t('providers.loginWindowClosed')
-          : errorMsg === 'A login window is already open'
-            ? t('providers.loginWindowAlreadyOpen')
-            : errorMsg.includes('Guest account') 
-              ? t('providers.guestAccountNotAllowed')
-              : errorMsg || t('providers.loginFailed')
+        const translatedError =
+          errorMsg === 'Login window was closed'
+            ? t('providers.loginWindowClosed')
+            : errorMsg === 'A login window is already open'
+              ? t('providers.loginWindowAlreadyOpen')
+              : errorMsg.includes('Guest account')
+                ? t('providers.guestAccountNotAllowed')
+                : errorMsg || t('providers.loginFailed')
         setOAuthStatus(translatedError)
       }
     } catch (error) {
@@ -416,7 +464,10 @@ export function AddProviderDialog({
       <div className="space-y-4">
         {credentialFields.map((field) => {
           const getFieldTranslation = () => {
-            const translations: Record<string, Record<string, { label: string; placeholder: string; helpText: string }>> = {
+            const translations: Record<
+              string,
+              Record<string, { label: string; placeholder: string; helpText: string }>
+            > = {
               deepseek: {
                 token: {
                   label: t('deepseek.userToken'),
@@ -521,7 +572,9 @@ export function AddProviderDialog({
               <div className="flex items-center gap-2">
                 <Label htmlFor={field.name}>{translated.label}</Label>
                 {field.required && (
-                  <Badge variant="outline" className="text-xs">{t('providers.required')}</Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {t('providers.required')}
+                  </Badge>
                 )}
               </div>
               {field.type === 'textarea' ? (
@@ -628,7 +681,9 @@ export function AddProviderDialog({
         <TabsTrigger value="builtin">{t('providers.builtinProviders')}</TabsTrigger>
         <TabsTrigger value="custom" disabled className="gap-1">
           {t('providers.customProviders')}
-          <span className="text-[10px] text-muted-foreground">({t('providers.customProviderNotSupported')})</span>
+          <span className="text-[10px] text-muted-foreground">
+            ({t('providers.customProviderNotSupported')})
+          </span>
         </TabsTrigger>
       </TabsList>
 
@@ -649,15 +704,15 @@ export function AddProviderDialog({
                     'flex items-start justify-between p-3 rounded-lg border cursor-pointer transition-colors',
                     selectedProvider === provider.id
                       ? 'border-primary bg-primary/5'
-                      : 'hover:bg-muted/50'
+                      : 'hover:bg-muted/50',
                   )}
                   onClick={() => setSelectedProvider(provider.id)}
                 >
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
                       {providerIcons[provider.id] ? (
-                        <img 
-                          src={providerIcons[provider.id]} 
+                        <img
+                          src={providerIcons[provider.id]}
                           alt={provider.name}
                           className="h-8 w-8 object-contain"
                         />
@@ -698,15 +753,17 @@ export function AddProviderDialog({
                           </>
                         )}
                         {(provider.supportedModels?.length || 0) > 3 && (
-                          <Badge 
-                            variant="secondary" 
+                          <Badge
+                            variant="secondary"
                             className="text-xs cursor-pointer hover:bg-secondary/80"
                             onClick={(e) => {
                               e.stopPropagation()
                               toggleModelExpansion(provider.id)
                             }}
                           >
-                            {expandedModels.has(provider.id) ? t('providers.collapse') : `+${(provider.supportedModels?.length || 0) - 3}`}
+                            {expandedModels.has(provider.id)
+                              ? t('providers.collapse')
+                              : `+${(provider.supportedModels?.length || 0) - 3}`}
                           </Badge>
                         )}
                       </div>
@@ -747,8 +804,8 @@ export function AddProviderDialog({
       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
           {providerIcons[selectedProviderData?.id || ''] ? (
-            <img 
-              src={providerIcons[selectedProviderData?.id || '']} 
+            <img
+              src={providerIcons[selectedProviderData?.id || '']}
               alt={selectedProviderData?.name || ''}
               className="h-8 w-8 object-contain"
             />
@@ -757,7 +814,9 @@ export function AddProviderDialog({
           )}
         </div>
         <div>
-          <span className="font-medium">{selectedProviderData ? getProviderName(selectedProviderData) : ''}</span>
+          <span className="font-medium">
+            {selectedProviderData ? getProviderName(selectedProviderData) : ''}
+          </span>
           <p className="text-xs text-muted-foreground">
             {selectedProviderData ? getProviderDescription(selectedProviderData) : ''}
           </p>
@@ -766,7 +825,7 @@ export function AddProviderDialog({
 
       <div className="border-t pt-4">
         <h4 className="text-sm font-medium mb-3">{t('providers.credentials')}</h4>
-        
+
         {supportsOAuth ? (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-2">
@@ -784,14 +843,9 @@ export function AddProviderDialog({
                   <p className="text-sm text-muted-foreground mb-4">
                     {t('providers.clickToOpenOAuth')}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('providers.oauthAutoCapture')}
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t('providers.oauthAutoCapture')}</p>
                 </div>
-                <Button 
-                  onClick={handleOpenOAuthBrowser}
-                  disabled={isOAuthLoading}
-                >
+                <Button onClick={handleOpenOAuthBrowser} disabled={isOAuthLoading}>
                   {isOAuthLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -805,7 +859,9 @@ export function AddProviderDialog({
                   )}
                 </Button>
                 {oauthStatus && !isOAuthLoading && (
-                  <p className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}>
+                  <p
+                    className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}
+                  >
                     {oauthStatus}
                   </p>
                 )}
@@ -830,7 +886,8 @@ export function AddProviderDialog({
               <span className="font-medium">{t('providers.validationSuccess')}</span>
               {validationResult.userInfo.quota !== undefined && (
                 <span className="ml-2">
-                  {t('providers.quota')}: {validationResult.userInfo.used || 0} / {validationResult.userInfo.quota}
+                  {t('providers.quota')}: {validationResult.userInfo.used || 0} /{' '}
+                  {validationResult.userInfo.quota}
                 </span>
               )}
             </div>
@@ -848,10 +905,7 @@ export function AddProviderDialog({
             {step === 1 ? t('providers.addProvider') : t('providers.addAccount')}
           </DialogTitle>
           <DialogDescription>
-            {step === 1 
-              ? t('providers.selectProvider')
-              : t('providers.credentials')
-            }
+            {step === 1 ? t('providers.selectProvider') : t('providers.credentials')}
           </DialogDescription>
         </DialogHeader>
 
@@ -863,10 +917,7 @@ export function AddProviderDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('common.cancel')}
               </Button>
-              <Button
-                onClick={handleNextStep}
-                disabled={!selectedProvider}
-              >
+              <Button onClick={handleNextStep} disabled={!selectedProvider}>
                 {t('common.next')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -896,10 +947,7 @@ export function AddProviderDialog({
                   )}
                 </Button>
               )}
-              <Button
-                onClick={handleSubmit}
-                disabled={isValidating || isSubmitting}
-              >
+              <Button onClick={handleSubmit} disabled={isValidating || isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

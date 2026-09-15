@@ -7,47 +7,47 @@ import { getEffectiveRequestTimeout } from '../../src/main/proxy/requestTimeoutP
 const toolRequest = {
   model: 'Qwen3.6-Plus',
   messages: [{ role: 'user' as const, content: 'Read the project.' }],
-  tools: [{
-    type: 'function' as const,
-    function: {
-      name: 'read',
-      parameters: { type: 'object' },
+  tools: [
+    {
+      type: 'function' as const,
+      function: {
+        name: 'read',
+        parameters: { type: 'object' },
+      },
     },
-  }],
+  ],
 }
 
 test('OpenCode tool requests receive a three-minute minimum deadline', () => {
-  assert.equal(
-    getEffectiveRequestTimeout(toolRequest, 'opencode', 60_000),
-    180_000,
-  )
+  assert.equal(getEffectiveRequestTimeout(toolRequest, 'opencode', 60_000), 180_000)
 })
 
 test('a user-configured timeout above the OpenCode minimum is preserved', () => {
-  assert.equal(
-    getEffectiveRequestTimeout(toolRequest, 'opencode', 240_000),
-    240_000,
-  )
+  assert.equal(getEffectiveRequestTimeout(toolRequest, 'opencode', 240_000), 240_000)
 })
 
 test('a canonical OpenCode request gets the tool deadline even with the standard profile configured', () => {
   assert.equal(
-    getEffectiveRequestTimeout({
-      ...toolRequest,
-      messages: [{
-        role: 'system',
-        content: 'You are opencode, an interactive CLI tool that helps users with software engineering tasks.',
-      }],
-    }, 'standard-openai-tools', 60_000),
+    getEffectiveRequestTimeout(
+      {
+        ...toolRequest,
+        messages: [
+          {
+            role: 'system',
+            content:
+              'You are opencode, an interactive CLI tool that helps users with software engineering tasks.',
+          },
+        ],
+      },
+      'standard-openai-tools',
+      60_000,
+    ),
     180_000,
   )
 })
 
 test('other clients and requests without tools retain the configured deadline', () => {
-  assert.equal(
-    getEffectiveRequestTimeout(toolRequest, 'standard-openai-tools', 60_000),
-    60_000,
-  )
+  assert.equal(getEffectiveRequestTimeout(toolRequest, 'standard-openai-tools', 60_000), 60_000)
   assert.equal(
     getEffectiveRequestTimeout({ ...toolRequest, tools: [] }, 'opencode', 60_000),
     60_000,
@@ -60,12 +60,14 @@ test('session restoration happens before the route resolves the OpenCode deadlin
     'utf8',
   )
   const sessionRestoreIndex = routeSource.indexOf('sessionManager.prepareSessionMessages')
-  const timeoutResolutionIndex = routeSource.indexOf('const requestTimeoutMs = getEffectiveRequestTimeout')
+  const timeoutResolutionIndex = routeSource.indexOf(
+    'const requestTimeoutMs = getEffectiveRequestTimeout',
+  )
 
   assert.ok(sessionRestoreIndex >= 0)
   assert.ok(timeoutResolutionIndex > sessionRestoreIndex)
   assert.match(
     routeSource.slice(timeoutResolutionIndex),
-    /getEffectiveRequestTimeout\(\s*forwardRequest,/
+    /getEffectiveRequestTimeout\(\s*forwardRequest,/,
   )
 })

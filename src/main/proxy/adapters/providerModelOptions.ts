@@ -42,9 +42,7 @@ export class GLMRequestValidationError extends Error {
   }
 }
 
-export function resolveGLMChatMode(
-  value?: string | boolean | null,
-): GLMChatMode {
+export function resolveGLMChatMode(value?: string | boolean | null): GLMChatMode {
   // Match the current Qingyan web client: GLM-5.2 defaults to Standard.
   if (value === undefined || value === null) {
     return 'thinking'
@@ -55,15 +53,13 @@ export function resolveGLMChatMode(
   if (GLM_STANDARD_EFFORTS.has(normalized)) return 'thinking'
   if (GLM_DEEP_EFFORTS.has(normalized)) return 'deep_thinking'
 
-  throw new GLMRequestValidationError(
-    `Unsupported GLM reasoning_effort: ${String(value)}`,
-  )
+  throw new GLMRequestValidationError(`Unsupported GLM reasoning_effort: ${String(value)}`)
 }
 
 export interface DeepSeekChatOptionInput {
   model: string
   web_search?: boolean
-  reasoning_effort?: string
+  reasoning_effort?: string | boolean
 }
 
 export interface DeepSeekChatOptions {
@@ -74,20 +70,18 @@ export interface DeepSeekChatOptions {
 
 export function resolveDeepSeekChatOptions(
   request: DeepSeekChatOptionInput,
-  _prompt: string = ''
+  _prompt: string = '',
 ): DeepSeekChatOptions {
   const modelLower = request.model.toLowerCase()
   const isProModel = modelLower.includes('deepseek-v4-pro') || modelLower.includes('expert')
   const isSearchAlias = modelLower.includes('search')
-  const isThinkingAlias = modelLower.includes('think')
-    || modelLower.includes('r1')
-    || modelLower.includes('reasoner')
+  const isThinkingAlias =
+    modelLower.includes('think') || modelLower.includes('r1') || modelLower.includes('reasoner')
 
   return {
     modelType: isProModel ? 'expert' : 'default',
     searchEnabled: Boolean(request.web_search) || isSearchAlias,
-    thinkingEnabled: isReasoningEnabled(request.reasoning_effort)
-      || isThinkingAlias,
+    thinkingEnabled: isReasoningEnabled(request.reasoning_effort) || isThinkingAlias,
   }
 }
 
@@ -142,9 +136,7 @@ export class KimiRequestValidationError extends Error {
 export function resolveKimiScenario(model: string): KimiScenario {
   // K2.6 uses the K2D5 route in the Kimi web protocol, while K3 uses
   // the OK Computer route.
-  return model.toLowerCase().includes('k2')
-    ? 'SCENARIO_K2D5'
-    : 'SCENARIO_OK_COMPUTER'
+  return model.toLowerCase().includes('k2') ? 'SCENARIO_K2D5' : 'SCENARIO_OK_COMPUTER'
 }
 
 export function resolveKimiReasoningEffort(
@@ -170,9 +162,7 @@ export function resolveKimiReasoningEffort(
     return isK3 ? 'REASONING_EFFORT_MAX' : 'REASONING_EFFORT_LOW'
   }
 
-  throw new KimiRequestValidationError(
-    `Unsupported Kimi reasoning_effort: ${String(value)}`,
-  )
+  throw new KimiRequestValidationError(`Unsupported Kimi reasoning_effort: ${String(value)}`)
 }
 
 export function createKimiChatPayload(options: {
@@ -198,10 +188,12 @@ export function createKimiChatPayload(options: {
     message: {
       parent_id: '',
       role: 'user',
-      blocks: [{
-        message_id: '',
-        text: { content: options.content }
-      }],
+      blocks: [
+        {
+          message_id: '',
+          text: { content: options.content },
+        },
+      ],
       scenario,
     },
     options: {
@@ -210,7 +202,7 @@ export function createKimiChatPayload(options: {
       thinking: true,
       reasoning_effort: reasoningEffort,
       ...(isK3 ? { context_length: 'CONTEXT_LENGTH_L' } : {}),
-    }
+    },
   }
 }
 

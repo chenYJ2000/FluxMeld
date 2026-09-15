@@ -26,12 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Plus, X, HelpCircle } from 'lucide-react'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import type { AuthType, CredentialField } from '@/types/electron'
 
 interface CustomProviderFormProps {
@@ -58,13 +53,25 @@ export function CustomProviderForm({
   initialData,
 }: CustomProviderFormProps) {
   const { t } = useTranslation()
-  
+
   const authTypeOptions: { value: AuthType; labelKey: string; descKey: string }[] = [
     { value: 'token', labelKey: 'providers.authToken', descKey: 'providers.authTokenDesc' },
-    { value: 'userToken', labelKey: 'providers.authUserToken', descKey: 'providers.authUserTokenDesc' },
-    { value: 'refresh_token', labelKey: 'providers.authRefreshToken', descKey: 'providers.authRefreshTokenDesc' },
+    {
+      value: 'userToken',
+      labelKey: 'providers.authUserToken',
+      descKey: 'providers.authUserTokenDesc',
+    },
+    {
+      value: 'refresh_token',
+      labelKey: 'providers.authRefreshToken',
+      descKey: 'providers.authRefreshTokenDesc',
+    },
     { value: 'jwt', labelKey: 'providers.authJwt', descKey: 'providers.authJwtDesc' },
-    { value: 'realUserID_token', labelKey: 'providers.authUserIdToken', descKey: 'providers.authUserIdTokenDesc' },
+    {
+      value: 'realUserID_token',
+      labelKey: 'providers.authUserIdToken',
+      descKey: 'providers.authUserIdTokenDesc',
+    },
     { value: 'tongyi_sso_ticket', labelKey: 'providers.authSso', descKey: 'providers.authSsoDesc' },
     { value: 'cookie', labelKey: 'providers.authCookie', descKey: 'providers.authCookieDesc' },
     { value: 'oauth', labelKey: 'providers.authOAuth', descKey: 'providers.authOAuthDesc' },
@@ -72,14 +79,20 @@ export function CustomProviderForm({
 
   const defaultCredentialFields: Record<AuthType, CredentialField[]> = {
     token: [{ name: 'apiKey', label: 'API Key', type: 'password', required: true }],
-    userToken: [{ name: 'token', label: t('deepseek.userToken'), type: 'password', required: true }],
-    refresh_token: [{ name: 'refresh_token', label: t('glm.refreshToken'), type: 'password', required: true }],
+    userToken: [
+      { name: 'token', label: t('deepseek.userToken'), type: 'password', required: true },
+    ],
+    refresh_token: [
+      { name: 'refresh_token', label: t('glm.refreshToken'), type: 'password', required: true },
+    ],
     jwt: [{ name: 'token', label: 'JWT Token', type: 'password', required: true }],
     realUserID_token: [
       { name: 'realUserID', label: t('minimax.userId'), type: 'text', required: true },
       { name: 'token', label: t('minimax.jwtToken'), type: 'password', required: true },
     ],
-    tongyi_sso_ticket: [{ name: 'ticket', label: t('qwen.ssoTicket'), type: 'password', required: true }],
+    tongyi_sso_ticket: [
+      { name: 'ticket', label: t('qwen.ssoTicket'), type: 'password', required: true },
+    ],
     cookie: [{ name: 'cookie', label: 'Cookie', type: 'textarea', required: true }],
     oauth: [],
   }
@@ -178,9 +191,7 @@ export function CustomProviderForm({
           <DialogTitle>
             {initialData ? t('providers.editProvider') : t('providers.createCustomProvider')}
           </DialogTitle>
-          <DialogDescription>
-            {t('providers.createCustomProviderDesc')}
-          </DialogDescription>
+          <DialogDescription>{t('providers.createCustomProviderDesc')}</DialogDescription>
         </DialogHeader>
 
         <div className="h-[500px] overflow-y-auto pr-2">
@@ -196,9 +207,7 @@ export function CustomProviderForm({
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="e.g., My API Provider"
                 />
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name}</p>
-                )}
+                {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
 
               <div className="space-y-2">
@@ -214,9 +223,7 @@ export function CustomProviderForm({
                       <SelectItem key={option.value} value={option.value}>
                         <div className="flex flex-col">
                           <span>{t(option.labelKey)}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {t(option.descKey)}
-                          </span>
+                          <span className="text-xs text-muted-foreground">{t(option.descKey)}</span>
                         </div>
                       </SelectItem>
                     ))}

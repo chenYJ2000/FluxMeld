@@ -25,61 +25,50 @@ import { QwenAiAdapter } from './qwen-ai'
 import { ZaiAdapter } from './zai'
 import { ProviderType, AdapterConfig } from '../types'
 
+type AdapterFactory = (config: AdapterConfig) => BaseOAuthAdapter
+
+/**
+ * Provider -> adapter factory registry. Adding a provider is a single entry
+ * here rather than an edit to a switch statement.
+ */
+const ADAPTER_FACTORIES: Record<ProviderType, AdapterFactory> = {
+  deepseek: (config) => new DeepSeekAdapter(config),
+  glm: (config) => new GLMAdapter(config),
+  kimi: (config) => new KimiAdapter(config),
+  mimo: (config) => new MimoAdapter(config),
+  minimax: (config) => new MiniMaxAdapter(config),
+  perplexity: (config) => new PerplexityAdapter(config),
+  qwen: (config) => new QwenAdapter(config),
+  'qwen-ai': (config) => new QwenAiAdapter(config),
+  zai: (config) => new ZaiAdapter(config),
+}
+
+const SUPPORTED_AUTH_METHODS: Record<ProviderType, string[]> = {
+  deepseek: ['manual'],
+  glm: ['manual'],
+  kimi: ['manual'],
+  mimo: ['manual', 'cookie'],
+  minimax: ['manual'],
+  perplexity: ['manual', 'cookie'],
+  qwen: ['manual', 'cookie'],
+  'qwen-ai': ['manual'],
+  zai: ['manual'],
+}
+
 /**
  * Adapter factory function
  */
-export function createAdapter(
-  providerType: ProviderType,
-  config: AdapterConfig
-): BaseOAuthAdapter {
-  switch (providerType) {
-    case 'deepseek':
-      return new DeepSeekAdapter(config)
-    case 'glm':
-      return new GLMAdapter(config)
-    case 'kimi':
-      return new KimiAdapter(config)
-    case 'mimo':
-      return new MimoAdapter(config)
-    case 'minimax':
-      return new MiniMaxAdapter(config)
-    case 'perplexity':
-      return new PerplexityAdapter(config)
-    case 'qwen':
-      return new QwenAdapter(config)
-    case 'qwen-ai':
-      return new QwenAiAdapter(config)
-    case 'zai':
-      return new ZaiAdapter(config)
-    default:
-      throw new Error(`Unsupported provider type: ${providerType}`)
+export function createAdapter(providerType: ProviderType, config: AdapterConfig): BaseOAuthAdapter {
+  const factory = ADAPTER_FACTORIES[providerType]
+  if (!factory) {
+    throw new Error(`Unsupported provider type: ${providerType}`)
   }
+  return factory(config)
 }
 
 /**
  * Get supported authentication methods for provider
  */
 export function getSupportedAuthMethods(providerType: ProviderType): string[] {
-  switch (providerType) {
-    case 'deepseek':
-      return ['manual']
-    case 'glm':
-      return ['manual']
-    case 'kimi':
-      return ['manual']
-    case 'mimo':
-      return ['manual', 'cookie']
-    case 'minimax':
-      return ['manual']
-    case 'perplexity':
-      return ['manual', 'cookie']
-    case 'qwen':
-      return ['manual', 'cookie']
-    case 'qwen-ai':
-      return ['manual']
-    case 'zai':
-      return ['manual']
-    default:
-      return ['manual']
-  }
+  return SUPPORTED_AUTH_METHODS[providerType] ?? ['manual']
 }

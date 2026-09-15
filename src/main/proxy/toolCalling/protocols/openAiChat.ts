@@ -38,10 +38,7 @@ If no tool is needed, reply with normal text. Do not use XML, markdown fences, o
     ])
     if (detected.matched && detected.markerStart !== undefined) {
       const objectStart = buffer.lastIndexOf('{', detected.markerStart)
-      if (
-        objectStart !== -1
-        && /^\{\s*$/.test(buffer.slice(objectStart, detected.markerStart))
-      ) {
+      if (objectStart !== -1 && /^\{\s*$/.test(buffer.slice(objectStart, detected.markerStart))) {
         return { ...detected, markerStart: objectStart }
       }
       return detected
@@ -51,10 +48,7 @@ If no tool is needed, reply with normal text. Do not use XML, markdown fences, o
     // across stream chunks. This prevents "{\n  " from being emitted as
     // ordinary content before the tool_calls marker arrives.
     const objectStart = buffer.lastIndexOf('{')
-    if (
-      objectStart !== -1
-      && /^\{\s*(?:"[^"\r\n]*)?$/.test(buffer.slice(objectStart))
-    ) {
+    if (objectStart !== -1 && /^\{\s*(?:"[^"\r\n]*)?$/.test(buffer.slice(objectStart))) {
       return { matched: false, partial: true, markerStart: objectStart }
     }
     return detected
@@ -69,9 +63,7 @@ If no tool is needed, reply with normal text. Do not use XML, markdown fences, o
     const parsedEnvelope = parseJsonEnvelope(parseable)
 
     if (!parsedEnvelope) {
-      const malformedToolNames = hasMarker
-        ? extractAllowedNames(parseable, allowedNames)
-        : []
+      const malformedToolNames = hasMarker ? extractAllowedNames(parseable, allowedNames) : []
       return createParseResult({
         content,
         toolCalls,
@@ -89,28 +81,29 @@ If no tool is needed, reply with normal text. Do not use XML, markdown fences, o
     for (const candidate of candidates) {
       if (!candidate || typeof candidate !== 'object') continue
       const record = candidate as Record<string, any>
-      const fn = record.function && typeof record.function === 'object'
-        ? record.function
-        : record
+      const fn = record.function && typeof record.function === 'object' ? record.function : record
       const name = typeof fn.name === 'string' ? fn.name.trim() : ''
       if (!allowedNames.has(name)) {
         if (name) invalidToolNames.push(name)
         continue
       }
 
-      toolCalls.push(buildToolCall(
-        typeof record.id === 'string' ? record.id : `call_${toolCalls.length}`,
-        toolCalls.length,
-        name,
-        normalizeArguments(fn.arguments ?? fn.parameters ?? {}),
-        parsedEnvelope.raw,
-      ))
+      toolCalls.push(
+        buildToolCall(
+          typeof record.id === 'string' ? record.id : `call_${toolCalls.length}`,
+          toolCalls.length,
+          name,
+          normalizeArguments(fn.arguments ?? fn.parameters ?? {}),
+          parsedEnvelope.raw,
+        ),
+      )
     }
 
     const recognized = hasMarker || candidates.length > 0
-    const malformedToolNames = recognized && toolCalls.length === 0 && invalidToolNames.length === 0
-      ? extractAllowedNames(parsedEnvelope.raw, allowedNames)
-      : []
+    const malformedToolNames =
+      recognized && toolCalls.length === 0 && invalidToolNames.length === 0
+        ? extractAllowedNames(parsedEnvelope.raw, allowedNames)
+        : []
     return createParseResult({
       content: toolCalls.length > 0 ? '' : content,
       toolCalls,
@@ -118,9 +111,10 @@ If no tool is needed, reply with normal text. Do not use XML, markdown fences, o
       rawMatches: recognized ? [parsedEnvelope.raw] : [],
       invalidToolNames,
       malformedToolNames,
-      malformedReason: recognized && toolCalls.length === 0 && invalidToolNames.length === 0
-        ? 'openai_chat_has_no_parseable_tool_calls'
-        : undefined,
+      malformedReason:
+        recognized && toolCalls.length === 0 && invalidToolNames.length === 0
+          ? 'openai_chat_has_no_parseable_tool_calls'
+          : undefined,
     })
   },
 
@@ -144,16 +138,16 @@ function extractCandidates(value: unknown): unknown[] {
   if (!value || typeof value !== 'object') return []
   const record = value as Record<string, any>
   if (Array.isArray(record.tool_calls)) return record.tool_calls
-  if (record.function_call && typeof record.function_call === 'object') return [record.function_call]
-  if (
-    typeof record.name === 'string'
-    && Object.prototype.hasOwnProperty.call(record, 'arguments')
-  ) return [record]
+  if (record.function_call && typeof record.function_call === 'object')
+    return [record.function_call]
+  if (typeof record.name === 'string' && Object.prototype.hasOwnProperty.call(record, 'arguments'))
+    return [record]
 
-  const message = record.message
-    ?? (Array.isArray(record.choices) ? record.choices[0]?.message : undefined)
+  const message =
+    record.message ?? (Array.isArray(record.choices) ? record.choices[0]?.message : undefined)
   if (message && Array.isArray(message.tool_calls)) return message.tool_calls
-  if (message?.function_call && typeof message.function_call === 'object') return [message.function_call]
+  if (message?.function_call && typeof message.function_call === 'object')
+    return [message.function_call]
   return []
 }
 

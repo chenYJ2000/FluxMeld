@@ -10,31 +10,35 @@ export function mergeOriginalReasoningIntoRepairResponse(
   reasoningContent?: string,
 ): any {
   if (
-    typeof reasoningContent !== 'string'
-    || !reasoningContent.trim()
-    || !isReasoningEnabled(
+    typeof reasoningContent !== 'string' ||
+    !reasoningContent.trim() ||
+    !isReasoningEnabled(
       request.reasoning_effort ?? request.reasoningEffort ?? request.enable_thinking,
     )
-  ) return body
+  )
+    return body
 
   const choices = Array.isArray(body?.choices) ? body.choices : []
   const firstMessage = choices[0]?.message
-  if (!firstMessage || (
-    typeof firstMessage.reasoning_content === 'string'
-    && firstMessage.reasoning_content.trim()
-  )) return body
+  if (
+    !firstMessage ||
+    (typeof firstMessage.reasoning_content === 'string' && firstMessage.reasoning_content.trim())
+  )
+    return body
 
   return {
     ...body,
-    choices: choices.map((choice: any, index: number) => index === 0
-      ? {
-          ...choice,
-          message: {
-            ...choice.message,
-            reasoning_content: reasoningContent,
-          },
-        }
-      : choice),
+    choices: choices.map((choice: any, index: number) =>
+      index === 0
+        ? {
+            ...choice,
+            message: {
+              ...choice.message,
+              reasoning_content: reasoningContent,
+            },
+          }
+        : choice,
+    ),
   }
 }
 
@@ -44,29 +48,30 @@ export function shouldAttemptToolRepair(
   alreadyAttempted: boolean,
 ): boolean {
   const failure = result.toolCallingFailure
-  const isRequiredMissingCall = request.tool_choice === 'required'
-    && failure?.code === 'missing_required_call'
-  const isDetectedOpenCodeToolRefusal = failure?.code === 'missing_required_call'
-    && failure.diagnostics?.toolRefusalDetected === true
-    && Boolean(failure.toolName)
-  const isExplicitOpenCodeToolRequest = failure?.code === 'missing_required_call'
-    && failure.diagnostics?.clientAdapterId === 'opencode'
-    && failure.diagnostics?.toolChoiceMode === 'forced'
-    && Boolean(failure.toolName ?? failure.diagnostics.forcedToolName)
-  const isRepairableMalformedCall = (
-    failure?.code === 'invalid_arguments'
-    || failure?.code === 'upstream_incomplete_response'
-  ) && failure.repairable
+  const isRequiredMissingCall =
+    request.tool_choice === 'required' && failure?.code === 'missing_required_call'
+  const isDetectedOpenCodeToolRefusal =
+    failure?.code === 'missing_required_call' &&
+    failure.diagnostics?.toolRefusalDetected === true &&
+    Boolean(failure.toolName)
+  const isExplicitOpenCodeToolRequest =
+    failure?.code === 'missing_required_call' &&
+    failure.diagnostics?.clientAdapterId === 'opencode' &&
+    failure.diagnostics?.toolChoiceMode === 'forced' &&
+    Boolean(failure.toolName ?? failure.diagnostics.forcedToolName)
+  const isRepairableMalformedCall =
+    (failure?.code === 'invalid_arguments' || failure?.code === 'upstream_incomplete_response') &&
+    failure.repairable
 
-  return !alreadyAttempted
-    && !result.success
-    && Boolean(request.tools?.length)
-    && (
-      isRequiredMissingCall
-      || isDetectedOpenCodeToolRefusal
-      || isExplicitOpenCodeToolRequest
-      || isRepairableMalformedCall
-    )
+  return (
+    !alreadyAttempted &&
+    !result.success &&
+    Boolean(request.tools?.length) &&
+    (isRequiredMissingCall ||
+      isDetectedOpenCodeToolRefusal ||
+      isExplicitOpenCodeToolRequest ||
+      isRepairableMalformedCall)
+  )
 }
 
 export function createToolRepairRequest(
@@ -78,26 +83,30 @@ export function createToolRepairRequest(
     ? request.tools?.find((tool) => tool.function.name === failedToolName)
     : undefined
   const canForceTool = Boolean(failedToolName && failedTool)
-  const allowedRepairTools = failedTool
-    ? [failedTool]
-    : [...(request.tools ?? [])]
+  const allowedRepairTools = failedTool ? [failedTool] : [...(request.tools ?? [])]
   const reason = (result.error || 'arguments could not be parsed')
     .replace(/[\r\n\t]+/g, ' ')
     .slice(0, 1200)
-  const failureDescription = result.toolCallingFailure?.code === 'upstream_incomplete_response'
-    ? 'Your previous required tool call ended before its closing marker and was rejected.'
-    : result.toolCallingFailure?.code === 'missing_required_call'
-      ? 'Your previous response did not contain the required tool call and was rejected.'
-      : 'Your previous tool call was rejected by strict JSON Schema validation.'
+  const failureDescription =
+    result.toolCallingFailure?.code === 'upstream_incomplete_response'
+      ? 'Your previous required tool call ended before its closing marker and was rejected.'
+      : result.toolCallingFailure?.code === 'missing_required_call'
+        ? 'Your previous response did not contain the required tool call and was rejected.'
+        : 'Your previous tool call was rejected by strict JSON Schema validation.'
   const validationIssues = getValidationIssues(result)
-  const validationSection = validationIssues.length > 0
-    ? validationIssues.map((issue) => [
-        `JSON Pointer: ${JSON.stringify(issue.jsonPointer)}`,
-        `Expected: ${issue.expected}`,
-        `Actual type: ${issue.actualType}`,
-        `Validation rule: ${issue.message}`,
-      ].join('; ')).join('\n')
-    : `Validation error: ${reason}`
+  const validationSection =
+    validationIssues.length > 0
+      ? validationIssues
+          .map((issue) =>
+            [
+              `JSON Pointer: ${JSON.stringify(issue.jsonPointer)}`,
+              `Expected: ${issue.expected}`,
+              `Actual type: ${issue.actualType}`,
+              `Validation rule: ${issue.message}`,
+            ].join('; '),
+          )
+          .join('\n')
+      : `Validation error: ${reason}`
   const functionDefinitions = allowedRepairTools
     .map((tool) => JSON.stringify(tool.function))
     .join('\n')
@@ -118,20 +127,25 @@ export function createToolRepairRequest(
     'Do not invent values: derive every argument from the original conversation.',
   ].join('\n\n')
   const rejectedArguments = result.toolCallingFailure?.rejectedArguments
-  const rejectedCandidate = canForceTool && failedToolName && rejectedArguments
-    ? [{
-        role: 'assistant' as const,
-        content: null,
-        tool_calls: [{
-          id: 'call_fluxmeld_rejected',
-          type: 'function' as const,
-          function: {
-            name: failedToolName,
-            arguments: rejectedArguments,
+  const rejectedCandidate =
+    canForceTool && failedToolName && rejectedArguments
+      ? [
+          {
+            role: 'assistant' as const,
+            content: null,
+            tool_calls: [
+              {
+                id: 'call_fluxmeld_rejected',
+                type: 'function' as const,
+                function: {
+                  name: failedToolName,
+                  arguments: rejectedArguments,
+                },
+              },
+            ],
           },
-        }],
-      }]
-    : []
+        ]
+      : []
 
   return {
     ...request,
@@ -150,9 +164,11 @@ export function createToolRepairRequest(
     reasoningEffort: 'off',
     enable_thinking: false,
     thinking_budget: undefined,
-    ...(canForceTool && failedToolName ? {
-      tool_choice: { type: 'function', function: { name: failedToolName } },
-    } : {}),
+    ...(canForceTool && failedToolName
+      ? {
+          tool_choice: { type: 'function', function: { name: failedToolName } },
+        }
+      : {}),
   }
 }
 
@@ -167,9 +183,9 @@ export function enforceSingleToolRepairResult(
   if (!result.success) return result
 
   const choices = Array.isArray(result.body?.choices) ? result.body.choices : []
-  const toolCalls = choices.flatMap((choice: any) => (
-    Array.isArray(choice?.message?.tool_calls) ? choice.message.tool_calls : []
-  ))
+  const toolCalls = choices.flatMap((choice: any) =>
+    Array.isArray(choice?.message?.tool_calls) ? choice.message.tool_calls : [],
+  )
   const actualToolName = toolCalls[0]?.function?.name
   const hasExpectedCardinality = toolCalls.length === 1
   const hasExpectedName = !expectedToolName || actualToolName === expectedToolName
@@ -235,15 +251,17 @@ export function createToolRepairLogData(
 }
 
 function getValidationErrors(result: ForwardResult): string[] {
-  const explicit = result.toolCallingFailure?.validationErrors
-    ?? result.toolCallingFailure?.diagnostics?.schemaValidationErrors
+  const explicit =
+    result.toolCallingFailure?.validationErrors ??
+    result.toolCallingFailure?.diagnostics?.schemaValidationErrors
   if (explicit?.length) return [...explicit]
   return result.error ? [result.error] : []
 }
 
 function getValidationIssues(result: ForwardResult): ToolArgumentValidationIssue[] {
-  const explicit = result.toolCallingFailure?.validationIssues
-    ?? result.toolCallingFailure?.diagnostics?.schemaValidationIssues
+  const explicit =
+    result.toolCallingFailure?.validationIssues ??
+    result.toolCallingFailure?.diagnostics?.schemaValidationIssues
   return (explicit ?? []).map((issue) => ({ ...issue }))
 }
 

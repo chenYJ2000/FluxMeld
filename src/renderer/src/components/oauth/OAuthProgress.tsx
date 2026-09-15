@@ -16,14 +16,9 @@ export interface OAuthProgressProps {
   className?: string
 }
 
-export function OAuthProgress({
-  status,
-  message,
-  progress,
-  className,
-}: OAuthProgressProps) {
+export function OAuthProgress({ status, message, progress, className }: OAuthProgressProps) {
   const { t } = useTranslation()
-  
+
   const statusConfig = {
     idle: {
       icon: Circle,
@@ -88,16 +83,12 @@ export function OAuthProgress({
           </svg>
         )}
       </div>
-      
+
       <div className="text-center">
-        <p className={cn('text-sm font-medium', config.textClass)}>
-          {t(config.labelKey)}
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {message}
-        </p>
+        <p className={cn('text-sm font-medium', config.textClass)}>{t(config.labelKey)}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{message}</p>
       </div>
-      
+
       {status === 'pending' && (
         <div className="w-full max-w-xs">
           <div className="h-1.5 w-full rounded-full bg-muted">

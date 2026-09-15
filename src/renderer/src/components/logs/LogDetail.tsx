@@ -1,6 +1,12 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -43,7 +49,7 @@ export function LogDetail() {
         })
       }
     },
-    [toast, t]
+    [toast, t],
   )
 
   const handleCopyAll = useCallback(() => {
@@ -56,7 +62,8 @@ export function LogDetail() {
       selectedLog.providerId && `${t('logs.provider')}: ${selectedLog.providerId}`,
       selectedLog.accountId && `${t('logs.account')}: ${selectedLog.accountId}`,
       selectedLog.requestId && `${t('logs.requestId')}: ${selectedLog.requestId}`,
-      selectedLog.data && `${t('logs.additionalData')}: ${JSON.stringify(selectedLog.data, null, 2)}`,
+      selectedLog.data &&
+        `${t('logs.additionalData')}: ${JSON.stringify(selectedLog.data, null, 2)}`,
     ]
       .filter(Boolean)
       .join('\n')
@@ -86,9 +93,7 @@ export function LogDetail() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Badge
-                    className={cn('text-white', levelColors[selectedLog.level])}
-                  >
+                  <Badge className={cn('text-white', levelColors[selectedLog.level])}>
                     {selectedLog.level.toUpperCase()}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
@@ -197,9 +202,7 @@ export function LogDetail() {
                         variant="ghost"
                         size="sm"
                         className="mt-2"
-                        onClick={() =>
-                          handleCopy(JSON.stringify(selectedLog.data, null, 2))
-                        }
+                        onClick={() => handleCopy(JSON.stringify(selectedLog.data, null, 2))}
                       >
                         <Copy className="h-4 w-4 mr-1" />
                         {t('logs.copyData')}

@@ -4,12 +4,14 @@ import assert from 'node:assert/strict'
 import { buildToolCallingRuntimePlan } from '../../src/main/proxy/toolCalling/runtimePlan.ts'
 import type { NormalizedToolDefinition } from '../../src/main/proxy/toolCalling/types.ts'
 
-const tools: NormalizedToolDefinition[] = [{
-  name: 'weather-test:get_weather',
-  description: 'Get weather',
-  parameters: { type: 'object' },
-  source: 'mcp',
-}]
+const tools: NormalizedToolDefinition[] = [
+  {
+    name: 'weather-test:get_weather',
+    description: 'Get weather',
+    parameters: { type: 'object' },
+    source: 'mcp',
+  },
+]
 
 test('off mode disables managed processing', () => {
   const plan = buildToolCallingRuntimePlan({
@@ -121,23 +123,27 @@ test('tool_choice none disables prompt injection and parsing', () => {
 })
 
 test('forced missing tool name is rejected before provider call', () => {
-  assert.throws(() => buildToolCallingRuntimePlan({
-    requestId: 'r4',
-    providerId: 'qwen',
-    actualModel: 'qwen3-coder',
-    config: {
-      enabled: true,
-      mode: 'force',
-      clientAdapterId: 'standard-openai-tools',
-      diagnosticsEnabled: false,
-      advanced: { promptPreviewEnabled: false },
-    },
-    clientRequest: {
-      clientAdapterId: 'standard-openai-tools',
-      toolSource: 'openai',
-      tools,
-      toolChoice: { mode: 'forced', forcedName: 'missing_tool' },
-      diagnostics: { rawToolCount: 1, normalizedToolNames: ['weather-test:get_weather'] },
-    },
-  }), /Forced tool missing_tool is not declared/)
+  assert.throws(
+    () =>
+      buildToolCallingRuntimePlan({
+        requestId: 'r4',
+        providerId: 'qwen',
+        actualModel: 'qwen3-coder',
+        config: {
+          enabled: true,
+          mode: 'force',
+          clientAdapterId: 'standard-openai-tools',
+          diagnosticsEnabled: false,
+          advanced: { promptPreviewEnabled: false },
+        },
+        clientRequest: {
+          clientAdapterId: 'standard-openai-tools',
+          toolSource: 'openai',
+          tools,
+          toolChoice: { mode: 'forced', forcedName: 'missing_tool' },
+          diagnostics: { rawToolCount: 1, normalizedToolNames: ['weather-test:get_weather'] },
+        },
+      }),
+    /Forced tool missing_tool is not declared/,
+  )
 })

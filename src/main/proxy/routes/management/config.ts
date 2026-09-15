@@ -21,7 +21,7 @@ const SENSITIVE_KEYS = ['managementApiSecret', 'apiKeys', 'credentials']
 
 function maskSensitiveValue(value: unknown, key?: string): unknown {
   if (typeof value === 'string') {
-    if (key && SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k.toLowerCase()))) {
+    if (key && SENSITIVE_KEYS.some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
       return '***'
     }
     return value
@@ -50,7 +50,7 @@ function maskSensitiveObject(obj: Record<string, unknown>): Record<string, unkno
     if (key === 'key' || key === 'managementApiSecret' || key === 'credentials') {
       masked[key] = '***'
     } else if (key === 'apiKeys' && Array.isArray(value)) {
-      masked[key] = value.map(apiKey => ({
+      masked[key] = value.map((apiKey) => ({
         ...apiKey,
         key: '***',
       }))
@@ -74,7 +74,7 @@ function maskConfig(config: AppConfig): Record<string, unknown> {
   }
 
   if (Array.isArray(masked.apiKeys)) {
-    masked.apiKeys = masked.apiKeys.map(apiKey => ({
+    masked.apiKeys = masked.apiKeys.map((apiKey) => ({
       ...(apiKey as Record<string, unknown>),
       key: '***',
     }))

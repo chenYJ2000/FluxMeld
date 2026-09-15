@@ -61,7 +61,7 @@ function request(): ChatCompletionRequest {
   }
 }
 
-function argumentsFor(trace: typeof traces[number]) {
+function argumentsFor(trace: (typeof traces)[number]) {
   return {
     pair: trace.pair,
     reason: `Wait decision replay for trace ${trace.id}`,
@@ -75,9 +75,12 @@ function argumentsFor(trace: typeof traces[number]) {
 
 function outputVariant(index: number, args: ReturnType<typeof argumentsFor>): string {
   const json = JSON.stringify(args)
-  const parameters = Object.entries(args).map(([name, value]) => (
-    `<|FLUXMELD|parameter name="${name}"><![CDATA[${typeof value === 'string' ? value : JSON.stringify(value)}]]></|FLUXMELD|parameter>`
-  )).join('')
+  const parameters = Object.entries(args)
+    .map(
+      ([name, value]) =>
+        `<|FLUXMELD|parameter name="${name}"><![CDATA[${typeof value === 'string' ? value : JSON.stringify(value)}]]></|FLUXMELD|parameter>`,
+    )
+    .join('')
   const variants = [
     `<|FLUXMELD|tool_calls><|FLUXMELD|invoke name="signal_wait">${parameters}</|FLUXMELD|invoke></|FLUXMELD|tool_calls>`,
     `\`\`\`xml\n<|FLUXMELD|tool_calls><|FLUXMELD|invoke name="signal_wait"><|FLUXMELD|parameter name="arguments"><![CDATA[${json}]]></|FLUXMELD|parameter></|FLUXMELD|invoke></|FLUXMELD|tool_calls>\n\`\`\``,
@@ -85,11 +88,13 @@ function outputVariant(index: number, args: ReturnType<typeof argumentsFor>): st
     `<tool_calls><invoke name="signal_wait"><parameter name="pair">${args.pair}</parameter>${JSON.stringify({ ...args, pair: undefined }, (_key, value) => value)}</invoke></tool_calls>`,
     `[function_calls][call:signal_wait]${json}[/call][/function_calls]`,
     JSON.stringify({
-      tool_calls: [{
-        id: 'call_json',
-        type: 'function',
-        function: { name: 'signal_wait', arguments: args },
-      }],
+      tool_calls: [
+        {
+          id: 'call_json',
+          type: 'function',
+          function: { name: 'signal_wait', arguments: args },
+        },
+      ],
     }),
   ]
   return variants[index % variants.length]
@@ -97,7 +102,11 @@ function outputVariant(index: number, args: ReturnType<typeof argumentsFor>): st
 
 function streamArguments(content: string): string {
   const engine = new ToolCallingEngine()
-  const transformed = engine.transformRequest({ request: request(), provider, actualModel: 'qwen3.7-max' })
+  const transformed = engine.transformRequest({
+    request: request(),
+    provider,
+    actualModel: 'qwen3.7-max',
+  })
   const parser = new ToolStreamParser(transformed.plan)
   const baseChunk = {
     id: 'chatcmpl_trace',
@@ -122,7 +131,11 @@ for (const trace of traces) {
     for (let iteration = 0; iteration < 20; iteration += 1) {
       const content = outputVariant(iteration, expected)
       const engine = new ToolCallingEngine()
-      const transformed = engine.transformRequest({ request: request(), provider, actualModel: 'qwen3.7-max' })
+      const transformed = engine.transformRequest({
+        request: request(),
+        provider,
+        actualModel: 'qwen3.7-max',
+      })
       const result: any = {
         choices: [{ message: { role: 'assistant', content }, finish_reason: 'stop' }],
       }

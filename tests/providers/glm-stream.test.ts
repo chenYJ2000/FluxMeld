@@ -19,21 +19,25 @@ function sse(events: unknown[]): Readable {
 
 test('GLM non-stream resolves only after an explicit finish event', async () => {
   const handler = new GLMStreamHandler('glm-5.2')
-  const response = await handler.handleNonStream(sse([
-    {
-      status: 'streaming',
-      conversation_id: 'conversation-1',
-      parts: [{
-        logic_id: 'answer-1',
-        status: 'finish',
-        content: [
-          { type: 'think', think: 'reasoning' },
-          { type: 'text', text: 'answer' },
+  const response = await handler.handleNonStream(
+    sse([
+      {
+        status: 'streaming',
+        conversation_id: 'conversation-1',
+        parts: [
+          {
+            logic_id: 'answer-1',
+            status: 'finish',
+            content: [
+              { type: 'think', think: 'reasoning' },
+              { type: 'text', text: 'answer' },
+            ],
+          },
         ],
-      }],
-    },
-    { status: 'finish', conversation_id: 'conversation-1' },
-  ]))
+      },
+      { status: 'finish', conversation_id: 'conversation-1' },
+    ]),
+  )
 
   assert.equal(response.id, 'conversation-1')
   assert.equal(response.choices[0].message.content, 'answer')
@@ -44,15 +48,18 @@ test('GLM intervene frames are failures, never successful cached responses', asy
   const handler = new GLMStreamHandler('glm-5.2')
 
   await assert.rejects(
-    handler.handleNonStream(sse([{
-      status: 'intervene',
-      last_error: { intervene_text: 'request rejected' },
-    }])),
-    (error: unknown) => (
-      error instanceof GLMUpstreamResponseError
-      && error.status === 502
-      && /request rejected/.test(error.message)
+    handler.handleNonStream(
+      sse([
+        {
+          status: 'intervene',
+          last_error: { intervene_text: 'request rejected' },
+        },
+      ]),
     ),
+    (error: unknown) =>
+      error instanceof GLMUpstreamResponseError &&
+      error.status === 502 &&
+      /request rejected/.test(error.message),
   )
 })
 
@@ -75,12 +82,11 @@ test('GLM non-stream hard timeout rejects and destroys an upstream that never se
       timeoutMs: 15,
       requestId: 'chatcmpl-timeout-test',
     }),
-    (error: unknown) => (
-      error instanceof RequestTimeoutError
-      && error.status === 504
-      && error.code === 'request_timeout'
-      && error.requestId === 'chatcmpl-timeout-test'
-    ),
+    (error: unknown) =>
+      error instanceof RequestTimeoutError &&
+      error.status === 504 &&
+      error.code === 'request_timeout' &&
+      error.requestId === 'chatcmpl-timeout-test',
   )
   assert.equal(upstream.destroyed, true)
 })

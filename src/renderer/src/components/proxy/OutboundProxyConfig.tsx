@@ -6,7 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { Router, CheckCircle2, XCircle, RefreshCw, Loader2, Save } from 'lucide-react'
 
@@ -203,9 +209,7 @@ export function OutboundProxyConfig({ onConfigChange }: OutboundProxyConfigProps
         <div className="flex items-center justify-between space-x-2">
           <div className="space-y-0.5">
             <Label>{t('proxy.outboundEnabled')}</Label>
-            <p className="text-sm text-muted-foreground">
-              {t('proxy.outboundEnabledDesc')}
-            </p>
+            <p className="text-sm text-muted-foreground">{t('proxy.outboundEnabledDesc')}</p>
           </div>
           <Switch
             checked={enabled}
@@ -241,7 +245,12 @@ export function OutboundProxyConfig({ onConfigChange }: OutboundProxyConfigProps
             />
             <p className="text-xs text-muted-foreground">{t('proxy.outboundControllerHelp')}</p>
           </div>
-          <Button variant="outline" size="sm" onClick={handleSaveController} disabled={savingController}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSaveController}
+            disabled={savingController}
+          >
             {savingController ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
             ) : (
@@ -324,9 +333,7 @@ export function OutboundProxyConfig({ onConfigChange }: OutboundProxyConfigProps
               ))}
             </SelectContent>
           </Select>
-          <p className="text-xs text-muted-foreground">
-            {t('proxy.outboundNodeDesc')}
-          </p>
+          <p className="text-xs text-muted-foreground">{t('proxy.outboundNodeDesc')}</p>
         </div>
       </CardContent>
     </Card>

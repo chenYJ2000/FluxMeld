@@ -1,9 +1,15 @@
 import type { ChatCompletionRequest, ChatCompletionTool } from '../../types.ts'
 import type { NormalizedToolDefinition } from '../types.ts'
-import type { NormalizedClientToolRequest, NormalizedToolChoice, ToolClientAdapter } from './types.ts'
+import type {
+  NormalizedClientToolRequest,
+  NormalizedToolChoice,
+  ToolClientAdapter,
+} from './types.ts'
 
-const DECLARED_TOOL_REFUSAL = /\btool\s+[`"'“”]?([A-Za-z0-9_:-]+)[`"'“”]?\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\b/gi
-const REFUSAL_PREAMBLE = /^(?:\s*Tool\s+[A-Za-z0-9_:-]+\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\.?\s*)+/i
+const DECLARED_TOOL_REFUSAL =
+  /\btool\s+[`"'“”]?([A-Za-z0-9_:-]+)[`"'“”]?\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\b/gi
+const REFUSAL_PREAMBLE =
+  /^(?:\s*Tool\s+[A-Za-z0-9_:-]+\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\.?\s*)+/i
 
 export function normalizeOpenAiTools(
   tools: ChatCompletionTool[] | undefined,

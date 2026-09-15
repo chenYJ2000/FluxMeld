@@ -7,4 +7,9 @@ export * from './types'
 export * from './adapters'
 export * from './tokenExtractionConfig'
 export { OAuthManager, oauthManager } from './manager'
-export { InAppLoginManager, inAppLoginManager, InAppLoginResult, InAppLoginOptions } from './inAppLogin'
+export {
+  InAppLoginManager,
+  inAppLoginManager,
+  InAppLoginResult,
+  InAppLoginOptions,
+} from './inAppLogin'

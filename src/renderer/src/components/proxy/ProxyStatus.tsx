@@ -36,18 +36,18 @@ export function ProxyStatus({ onStatusChange }: ProxyStatusProps) {
     isLoading,
   } = useProxyStore()
   const { toast } = useToast()
-  
+
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     fetchProxyStatus()
     fetchProxyStatistics()
-    
+
     const statusInterval = setInterval(() => {
       fetchProxyStatus()
       fetchProxyStatistics()
     }, 5000)
-    
+
     return () => {
       clearInterval(statusInterval)
     }
@@ -178,12 +178,7 @@ export function ProxyStatus({ onStatusChange }: ProxyStatusProps) {
                   </>
                 )}
               </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-              >
+              <Button variant="ghost" size="icon" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
@@ -199,9 +194,7 @@ export function ProxyStatus({ onStatusChange }: ProxyStatusProps) {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">{t('dashboard.runtime')}</p>
               <p className="text-2xl font-bold">
-                {isRunning && proxyStatus?.uptime
-                  ? formatUptime(proxyStatus.uptime)
-                  : '-'}
+                {isRunning && proxyStatus?.uptime ? formatUptime(proxyStatus.uptime) : '-'}
               </p>
             </div>
           </div>
@@ -238,11 +231,7 @@ export function ProxyStatus({ onStatusChange }: ProxyStatusProps) {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-5">
             {statsCards.map((stat, index) => (
-              <Card
-                key={index}
-                hover
-                className="bg-muted/30 border-0 shadow-none"
-              >
+              <Card key={index} hover className="bg-muted/30 border-0 shadow-none">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="h-8 w-8 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center">
@@ -257,77 +246,94 @@ export function ProxyStatus({ onStatusChange }: ProxyStatusProps) {
           </div>
 
           {(proxyStatistics?.modelUsage && Object.keys(proxyStatistics.modelUsage).length > 0) ||
-           (proxyStatistics?.providerUsage && Object.keys(proxyStatistics.providerUsage).length > 0) ? (
+          (proxyStatistics?.providerUsage &&
+            Object.keys(proxyStatistics.providerUsage).length > 0) ? (
             <div className="mt-6 grid gap-6 md:grid-cols-2">
-              {proxyStatistics?.modelUsage && Object.keys(proxyStatistics.modelUsage).length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Cpu className="h-4 w-4 text-primary" />
-                    <h4 className="text-sm font-medium">{t('providers.modelUsage')}</h4>
-                  </div>
-                  <div className="space-y-1.5">
-                    {(Object.entries(proxyStatistics.modelUsage) as [string, number][])
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 5)
-                      .map(([model, count]) => {
-                        const total = Object.values(proxyStatistics.modelUsage).reduce((a, b) => a + b, 0)
-                        const percentage = Math.round((count / total) * 100)
-                        return (
-                          <div 
-                            key={model} 
-                            className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                              <code className="text-xs truncate" title={model}>{model}</code>
+              {proxyStatistics?.modelUsage &&
+                Object.keys(proxyStatistics.modelUsage).length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Cpu className="h-4 w-4 text-primary" />
+                      <h4 className="text-sm font-medium">{t('providers.modelUsage')}</h4>
+                    </div>
+                    <div className="space-y-1.5">
+                      {(Object.entries(proxyStatistics.modelUsage) as [string, number][])
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 5)
+                        .map(([model, count]) => {
+                          const total = Object.values(proxyStatistics.modelUsage).reduce(
+                            (a, b) => a + b,
+                            0,
+                          )
+                          const percentage = Math.round((count / total) * 100)
+                          return (
+                            <div
+                              key={model}
+                              className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                <code className="text-xs truncate" title={model}>
+                                  {model}
+                                </code>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                                  {count}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground w-8 text-right">
+                                  {percentage}%
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                {count}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground w-8 text-right">{percentage}%</span>
-                            </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {proxyStatistics?.providerUsage && Object.keys(proxyStatistics.providerUsage).length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Server className="h-4 w-4 text-primary" />
-                    <h4 className="text-sm font-medium">{t('providers.providerDistribution')}</h4>
-                  </div>
-                  <div className="space-y-1.5">
-                    {(Object.entries(proxyStatistics.providerUsage) as [string, number][])
-                      .sort(([, a], [, b]) => b - a)
-                      .slice(0, 5)
-                      .map(([providerId, count]) => {
-                        const total = Object.values(proxyStatistics.providerUsage).reduce((a, b) => a + b, 0)
-                        const percentage = Math.round((count / total) * 100)
-                        return (
-                          <div 
-                            key={providerId} 
-                            className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                              <span className="text-sm truncate" title={providerId}>{providerId}</span>
+              {proxyStatistics?.providerUsage &&
+                Object.keys(proxyStatistics.providerUsage).length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Server className="h-4 w-4 text-primary" />
+                      <h4 className="text-sm font-medium">{t('providers.providerDistribution')}</h4>
+                    </div>
+                    <div className="space-y-1.5">
+                      {(Object.entries(proxyStatistics.providerUsage) as [string, number][])
+                        .sort(([, a], [, b]) => b - a)
+                        .slice(0, 5)
+                        .map(([providerId, count]) => {
+                          const total = Object.values(proxyStatistics.providerUsage).reduce(
+                            (a, b) => a + b,
+                            0,
+                          )
+                          const percentage = Math.round((count / total) * 100)
+                          return (
+                            <div
+                              key={providerId}
+                              className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                                <span className="text-sm truncate" title={providerId}>
+                                  {providerId}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                                  {count}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground w-8 text-right">
+                                  {percentage}%
+                                </span>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                                {count}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground w-8 text-right">{percentage}%</span>
-                            </div>
-                          </div>
-                        )
-                      })}
+                          )
+                        })}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           ) : null}
         </CardContent>

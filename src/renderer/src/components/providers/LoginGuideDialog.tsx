@@ -49,10 +49,13 @@ export function LoginGuideDialog({
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const providerGuides: Record<string, {
-    loginUrl: string
-    steps: string[]
-  }> = {
+  const providerGuides: Record<
+    string,
+    {
+      loginUrl: string
+      steps: string[]
+    }
+  > = {
     deepseek: {
       loginUrl: 'https://chat.deepseek.com',
       steps: [
@@ -158,7 +161,7 @@ export function LoginGuideDialog({
       setError(null)
     } else if (provider?.credentialFields) {
       const initialCredentials: Record<string, string> = {}
-      provider.credentialFields.forEach(field => {
+      provider.credentialFields.forEach((field) => {
         initialCredentials[field.name] = ''
       })
       setCredentials(initialCredentials)
@@ -179,7 +182,7 @@ export function LoginGuideDialog({
   const handlePaste = async (fieldName: string) => {
     try {
       const text = await navigator.clipboard.readText()
-      setCredentials(prev => ({ ...prev, [fieldName]: text }))
+      setCredentials((prev) => ({ ...prev, [fieldName]: text }))
       setError(null)
     } catch (err) {
       console.error('Paste failed:', err)
@@ -188,21 +191,21 @@ export function LoginGuideDialog({
   }
 
   const handleCredentialChange = (fieldName: string, value: string) => {
-    setCredentials(prev => ({ ...prev, [fieldName]: value }))
+    setCredentials((prev) => ({ ...prev, [fieldName]: value }))
     setError(null)
   }
 
   const handleConfirm = async () => {
     if (!provider) return
-    
+
     const allFilled = provider.credentialFields?.every(
-      field => !field.required || credentials[field.name]?.trim()
+      (field) => !field.required || credentials[field.name]?.trim(),
     )
     if (!allFilled) {
       setError(t('loginGuide.fillRequiredFields'))
       return
     }
-    
+
     setIsValidating(true)
     setError(null)
     try {
@@ -237,9 +240,7 @@ export function LoginGuideDialog({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button onClick={() => onOpenChange(false)}>
-              {t('loginGuide.done')}
-            </Button>
+            <Button onClick={() => onOpenChange(false)}>{t('loginGuide.done')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -253,8 +254,8 @@ export function LoginGuideDialog({
           <div className="flex items-center gap-3">
             <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden">
               {providerIcons[provider.id] ? (
-                <img 
-                  src={providerIcons[provider.id]} 
+                <img
+                  src={providerIcons[provider.id]}
                   alt={provider.name}
                   className="h-10 w-10 object-contain"
                 />
@@ -264,9 +265,7 @@ export function LoginGuideDialog({
             </div>
             <div>
               <DialogTitle>{t('loginGuide.getToken', { provider: getProviderName() })}</DialogTitle>
-              <DialogDescription>
-                {t('loginGuide.getTokenDesc')}
-              </DialogDescription>
+              <DialogDescription>{t('loginGuide.getTokenDesc')}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -288,11 +287,7 @@ export function LoginGuideDialog({
             </ScrollArea>
           </div>
 
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={handleOpenBrowser}
-          >
+          <Button variant="outline" className="w-full" onClick={handleOpenBrowser}>
             <ExternalLink className="mr-2 h-4 w-4" />
             {t('loginGuide.openWebsite', { provider: getProviderName() })}
           </Button>
@@ -340,10 +335,7 @@ export function LoginGuideDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t('common.cancel')}
           </Button>
-          <Button
-            onClick={handleConfirm}
-            disabled={isValidating}
-          >
+          <Button onClick={handleConfirm} disabled={isValidating}>
             {isValidating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -4,8 +4,10 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const SAFE_HEADER_ORDER = ['user-agent', 'x-title', 'accept-language']
-const SECRET_KEY_PATTERN = /authorization|api[-_]?key|access[-_]?key|token|secret|password|cookie|session/i
-const SECRET_VALUE_PATTERN = /bearer\s+[a-z0-9._~+/=-]+|sk[-_](?:(?:live|test|proj)[-_])?[a-z0-9_-]{16,}|eyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}|api[-_]?key|token|secret|password|cookie|session=/i
+const SECRET_KEY_PATTERN =
+  /authorization|api[-_]?key|access[-_]?key|token|secret|password|cookie|session/i
+const SECRET_VALUE_PATTERN =
+  /bearer\s+[a-z0-9._~+/=-]+|sk[-_](?:(?:live|test|proj)[-_])?[a-z0-9_-]{16,}|eyJ[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}\.[a-z0-9_-]{10,}|api[-_]?key|token|secret|password|cookie|session=/i
 
 function parseArgs(values) {
   const parsed = {}
@@ -152,7 +154,8 @@ function main() {
   const args = parseArgs(process.argv.slice(2))
   const clientProfile = args.client || process.env.FLUXMELD_CLIENT_PROFILE || 'custom-har'
   const harPath = args.har || process.env.FLUXMELD_HAR
-  const outPath = args.out || `backup/har/${slugifyClientProfile(clientProfile)}-tool-fixtures-${Date.now()}.json`
+  const outPath =
+    args.out || `backup/har/${slugifyClientProfile(clientProfile)}-tool-fixtures-${Date.now()}.json`
 
   if (!harPath) {
     throw new Error('--har or FLUXMELD_HAR is required')

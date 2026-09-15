@@ -124,9 +124,7 @@ export async function startWebServer(options: WebServerOptions): Promise<http.Se
   // to the proxy server untouched (otherwise POST/PUT bodies are consumed).
   const proxyMiddleware = async (ctx: Context, next: Next) => {
     if (
-      PROXY_PATH_PREFIXES.some(
-        (prefix) => ctx.path === prefix || ctx.path.startsWith(`${prefix}/`),
-      )
+      PROXY_PATH_PREFIXES.some((prefix) => ctx.path === prefix || ctx.path.startsWith(`${prefix}/`))
     ) {
       await proxyToProxyServer(options.proxyPort)(ctx)
       return

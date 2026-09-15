@@ -18,45 +18,54 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { 
-  ExternalLink, 
-  User, 
+import {
+  ExternalLink,
+  User,
   AlertCircle,
   Loader2,
   CheckCircle2,
   Eye,
   EyeOff,
   Copy,
-  Check
+  Check,
 } from 'lucide-react'
-import type { Provider, CredentialField, Account, BuiltinProviderConfig, ProviderVendor } from '@/types/electron'
+import type {
+  Provider,
+  CredentialField,
+  Account,
+  BuiltinProviderConfig,
+  ProviderVendor,
+} from '@/types/electron'
 
 /**
  * Map OAuth credentials to provider credential field names
  * OAuth returns credentials with keys like 'chatglm_refresh_token', but providers expect 'refresh_token'
  * DeepSeek stores token as JSON: {"value":"..."}
  */
-function mapOAuthCredentials(providerId: string | undefined, credentials: Record<string, string>): Record<string, string> {
+function mapOAuthCredentials(
+  providerId: string | undefined,
+  credentials: Record<string, string>,
+): Record<string, string> {
   if (!providerId) return credentials
 
   const credentialKeyMap: Record<string, string> = {
-    'glm': 'chatglm_refresh_token',
-    'deepseek': 'userToken',
-    'qwen': 'tongyi_sso_ticket',
+    glm: 'chatglm_refresh_token',
+    deepseek: 'userToken',
+    qwen: 'tongyi_sso_ticket',
     'qwen-ai': 'tongyi_sso_ticket',
-    'zai': 'tongyi_sso_ticket',
-    'perplexity': '__Secure-next-auth.session-token',
-    'mimo': 'serviceToken',
+    zai: 'tongyi_sso_ticket',
+    perplexity: '__Secure-next-auth.session-token',
+    mimo: 'serviceToken',
   }
 
   const providerFieldNames: Record<string, string> = {
-    'glm': 'refresh_token',
-    'deepseek': 'token',
-    'qwen': 'ticket',
+    glm: 'refresh_token',
+    deepseek: 'token',
+    qwen: 'ticket',
     'qwen-ai': 'ticket',
-    'zai': 'ticket',
-    'perplexity': 'sessionToken',
-    'mimo': 'service_token',
+    zai: 'ticket',
+    perplexity: 'sessionToken',
+    mimo: 'service_token',
   }
 
   const oauthKey = credentialKeyMap[providerId]
@@ -65,7 +74,12 @@ function mapOAuthCredentials(providerId: string | undefined, credentials: Record
     if (fieldName) {
       // Handle JSON-wrapped tokens (DeepSeek stores token as {"value":"..."})
       let tokenValue = credentials[oauthKey]
-      if (providerId === 'deepseek' && tokenValue && tokenValue.startsWith('{') && tokenValue.endsWith('}')) {
+      if (
+        providerId === 'deepseek' &&
+        tokenValue &&
+        tokenValue.startsWith('{') &&
+        tokenValue.endsWith('}')
+      ) {
         try {
           const parsed = JSON.parse(tokenValue)
           if (parsed.value) {
@@ -123,7 +137,10 @@ interface AddAccountDialogProps {
     credentials: Record<string, string>
     dailyLimit?: number
   }) => Promise<void>
-  onValidateToken: (providerId: string, credentials: Record<string, string>) => Promise<{
+  onValidateToken: (
+    providerId: string,
+    credentials: Record<string, string>,
+  ) => Promise<{
     valid: boolean
     error?: string
     userInfo?: {
@@ -168,8 +185,13 @@ export function AddAccountDialog({
 
   const isEditing = !!editingAccount
   const builtinProvider = provider as BuiltinProviderConfig | null
-  const credentialFields: CredentialField[] = builtinProvider?.credentialFields || getDefaultCredentialFields(provider?.authType, t)
-  const supportsOAuth = provider && ['deepseek', 'glm', 'kimi', 'mimo', 'minimax', 'qwen', 'qwen-ai', 'zai', 'perplexity'].includes(provider.id)
+  const credentialFields: CredentialField[] =
+    builtinProvider?.credentialFields || getDefaultCredentialFields(provider?.authType, t)
+  const supportsOAuth =
+    provider &&
+    ['deepseek', 'glm', 'kimi', 'mimo', 'minimax', 'qwen', 'qwen-ai', 'zai', 'perplexity'].includes(
+      provider.id,
+    )
 
   useEffect(() => {
     if (open) {
@@ -195,7 +217,7 @@ export function AddAccountDialog({
   }
 
   const handleCredentialChange = (fieldName: string, value: string) => {
-    setCredentials(prev => ({
+    setCredentials((prev) => ({
       ...prev,
       [fieldName]: value,
     }))
@@ -205,13 +227,15 @@ export function AddAccountDialog({
   const handleValidate = async () => {
     if (!provider) return
 
-    const requiredFields = credentialFields.filter(f => f.required)
-    const missingFields = requiredFields.filter(f => !credentials[f.name])
-    
+    const requiredFields = credentialFields.filter((f) => f.required)
+    const missingFields = requiredFields.filter((f) => !credentials[f.name])
+
     if (missingFields.length > 0) {
       setValidationResult({
         valid: false,
-        error: t('providers.fillRequiredFields', { fields: missingFields.map(f => f.label).join(', ') }),
+        error: t('providers.fillRequiredFields', {
+          fields: missingFields.map((f) => f.label).join(', '),
+        }),
       })
       return
     }
@@ -247,13 +271,15 @@ export function AddAccountDialog({
       return
     }
 
-    const requiredFields = credentialFields.filter(f => f.required)
-    const missingFields = requiredFields.filter(f => !credentials[f.name])
-    
+    const requiredFields = credentialFields.filter((f) => f.required)
+    const missingFields = requiredFields.filter((f) => !credentials[f.name])
+
     if (missingFields.length > 0) {
       setValidationResult({
         valid: false,
-        error: t('providers.fillRequiredFields', { fields: missingFields.map(f => f.label).join(', ') }),
+        error: t('providers.fillRequiredFields', {
+          fields: missingFields.map((f) => f.label).join(', '),
+        }),
       })
       return
     }
@@ -294,39 +320,40 @@ export function AddAccountDialog({
 
   const handleOpenOAuthBrowser = async () => {
     if (!provider) return
-    
+
     setIsOAuthLoading(true)
     setOAuthStatus(t('providers.openingLoginWindow'))
-    
+
     try {
       const result = await window.electronAPI?.oauth.startInAppLogin(
         provider.id,
-        provider.id as ProviderVendor
+        provider.id as ProviderVendor,
       )
-      
+
       if (result?.success && result.credentials) {
         // Map OAuth credentials to provider credential field names
         const mappedCredentials = mapOAuthCredentials(provider?.id, result.credentials)
         setCredentials(mappedCredentials)
         setOAuthStatus(t('providers.loginSuccess'))
-        
+
         if (result.accountInfo?.name) {
           setName(result.accountInfo.name)
         }
-        
+
         setValidationResult({
           valid: true,
-          userInfo: result.accountInfo
+          userInfo: result.accountInfo,
         })
       } else {
         const errorMsg = result?.error || ''
-        const translatedError = errorMsg === 'Login window was closed' 
-          ? t('providers.loginWindowClosed')
-          : errorMsg === 'A login window is already open'
-            ? t('providers.loginWindowAlreadyOpen')
-            : errorMsg.includes('Guest account') 
-              ? t('providers.guestAccountNotAllowed')
-              : errorMsg || t('providers.loginFailed')
+        const translatedError =
+          errorMsg === 'Login window was closed'
+            ? t('providers.loginWindowClosed')
+            : errorMsg === 'A login window is already open'
+              ? t('providers.loginWindowAlreadyOpen')
+              : errorMsg.includes('Guest account')
+                ? t('providers.guestAccountNotAllowed')
+                : errorMsg || t('providers.loginFailed')
         setOAuthStatus(translatedError)
       }
     } catch (error) {
@@ -402,10 +429,7 @@ export function AddAccountDialog({
                         {t('providers.oauthAutoCapture')}
                       </p>
                     </div>
-                    <Button 
-                      onClick={handleOpenOAuthBrowser}
-                      disabled={isOAuthLoading}
-                    >
+                    <Button onClick={handleOpenOAuthBrowser} disabled={isOAuthLoading}>
                       {isOAuthLoading ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -419,7 +443,9 @@ export function AddAccountDialog({
                       )}
                     </Button>
                     {oauthStatus && !isOAuthLoading && (
-                      <p className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}>
+                      <p
+                        className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}
+                      >
                         {oauthStatus}
                       </p>
                     )}
@@ -452,7 +478,8 @@ export function AddAccountDialog({
                   <span className="font-medium">{t('providers.validationSuccess')}</span>
                   {validationResult.userInfo.quota !== undefined && (
                     <span className="ml-2">
-                      {t('providers.quota')}: {validationResult.userInfo.used || 0} / {validationResult.userInfo.quota}
+                      {t('providers.quota')}: {validationResult.userInfo.used || 0} /{' '}
+                      {validationResult.userInfo.quota}
                     </span>
                   )}
                 </div>
@@ -461,11 +488,7 @@ export function AddAccountDialog({
           </div>
 
           <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               {t('common.cancel')}
             </Button>
             <Button
@@ -485,17 +508,16 @@ export function AddAccountDialog({
                 </>
               )}
             </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isSubmitting || isValidating}
-            >
+            <Button onClick={handleSubmit} disabled={isSubmitting || isValidating}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t('providers.saving')}
                 </>
+              ) : isEditing ? (
+                t('providers.saveChanges')
               ) : (
-                isEditing ? t('providers.saveChanges') : t('providers.addAccount')
+                t('providers.addAccount')
               )}
             </Button>
           </DialogFooter>
@@ -513,14 +535,20 @@ interface CredentialFieldsFormProps {
   providerId?: string
 }
 
-function CredentialFieldsForm({ fields, credentials, onChange, t, providerId }: CredentialFieldsFormProps) {
+function CredentialFieldsForm({
+  fields,
+  credentials,
+  onChange,
+  t,
+  providerId,
+}: CredentialFieldsFormProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({})
   const [copiedFields, setCopiedFields] = useState<Record<string, boolean>>({})
 
   const toggleFieldVisibility = (fieldName: string) => {
-    setVisibleFields(prev => ({
+    setVisibleFields((prev) => ({
       ...prev,
-      [fieldName]: !prev[fieldName]
+      [fieldName]: !prev[fieldName],
     }))
   }
 
@@ -528,9 +556,9 @@ function CredentialFieldsForm({ fields, credentials, onChange, t, providerId }: 
     if (!value) return
     try {
       await navigator.clipboard.writeText(value)
-      setCopiedFields(prev => ({ ...prev, [fieldName]: true }))
+      setCopiedFields((prev) => ({ ...prev, [fieldName]: true }))
       setTimeout(() => {
-        setCopiedFields(prev => ({ ...prev, [fieldName]: false }))
+        setCopiedFields((prev) => ({ ...prev, [fieldName]: false }))
       }, 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
@@ -538,9 +566,13 @@ function CredentialFieldsForm({ fields, credentials, onChange, t, providerId }: 
   }
 
   const getFieldTranslation = (field: CredentialField) => {
-    if (!providerId) return { label: field.label, placeholder: field.placeholder, helpText: field.helpText }
+    if (!providerId)
+      return { label: field.label, placeholder: field.placeholder, helpText: field.helpText }
 
-    const translations: Record<string, Record<string, { label: string; placeholder: string; helpText: string }>> = {
+    const translations: Record<
+      string,
+      Record<string, { label: string; placeholder: string; helpText: string }>
+    > = {
       deepseek: {
         token: {
           label: t('deepseek.userToken'),
@@ -642,13 +674,15 @@ function CredentialFieldsForm({ fields, credentials, onChange, t, providerId }: 
         const isVisible = visibleFields[field.name]
         const isCopied = copiedFields[field.name]
         const fieldValue = credentials[field.name] || ''
-        
+
         return (
           <div key={field.name} className="space-y-2">
             <div className="flex items-center gap-2">
               <Label htmlFor={field.name}>{translated.label}</Label>
               {field.required && (
-                <Badge variant="outline" className="text-xs">{t('providers.required')}</Badge>
+                <Badge variant="outline" className="text-xs">
+                  {t('providers.required')}
+                </Badge>
               )}
             </div>
             {field.type === 'textarea' ? (
@@ -749,7 +783,10 @@ function CredentialFieldsForm({ fields, credentials, onChange, t, providerId }: 
   )
 }
 
-function getDefaultCredentialFields(authType?: string, t?: (key: string) => string): CredentialField[] {
+function getDefaultCredentialFields(
+  authType?: string,
+  t?: (key: string) => string,
+): CredentialField[] {
   const fieldConfigs: Record<string, CredentialField[]> = {
     token: [
       {

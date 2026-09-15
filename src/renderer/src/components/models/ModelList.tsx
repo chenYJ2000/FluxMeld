@@ -22,7 +22,18 @@ import {
 import { useProvidersStore } from '@/stores/providersStore'
 import { useProxyStore } from '@/stores/proxyStore'
 import { useToast } from '@/hooks/use-toast'
-import { Search, Copy, CheckCircle2, XCircle, Cpu, Check, Square, Database, ChevronLeft, ChevronRight } from 'lucide-react'
+import {
+  Search,
+  Copy,
+  CheckCircle2,
+  XCircle,
+  Cpu,
+  Check,
+  Square,
+  Database,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Account, EffectiveModel } from '@/types/electron'
 import deepseekIcon from '@/assets/providers/deepseek.svg'
@@ -69,13 +80,10 @@ const PAGE_SIZE = 50
 
 const ModelRow = memo(({ model, isSelected, onSelect, t }: ModelRowProps) => {
   const providerIcon = providerIcons[model.providerId]
-  
+
   return (
-    <TableRow 
-      className={cn(
-        'cursor-pointer hover:bg-muted/50',
-        isSelected && 'bg-muted'
-      )}
+    <TableRow
+      className={cn('cursor-pointer hover:bg-muted/50', isSelected && 'bg-muted')}
       onClick={() => onSelect(model.id)}
     >
       <TableCell>
@@ -86,18 +94,12 @@ const ModelRow = memo(({ model, isSelected, onSelect, t }: ModelRowProps) => {
         )}
       </TableCell>
       <TableCell>
-        <code className="text-sm bg-muted px-2 py-1 rounded">
-          {model.name}
-        </code>
+        <code className="text-sm bg-muted px-2 py-1 rounded">{model.name}</code>
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           {providerIcon ? (
-            <img 
-              src={providerIcon} 
-              alt={model.providerName} 
-              className="h-4 w-4 object-contain"
-            />
+            <img src={providerIcon} alt={model.providerName} className="h-4 w-4 object-contain" />
           ) : (
             <Database className="h-4 w-4 text-muted-foreground" />
           )}
@@ -137,19 +139,19 @@ export function ModelList() {
   const { providers, accounts, modelsLastUpdated } = useProvidersStore()
   const { modelMappings } = useProxyStore()
   const { toast } = useToast()
-  
+
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProvider, setSelectedProvider] = useState<string>('all')
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set())
   const [selectAll, setSelectAll] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [effectiveModelsMap, setEffectiveModelsMap] = useState<Record<string, EffectiveModel[]>>({})
-  
+
   const loadEffectiveModels = useCallback(async () => {
     try {
-      const enabledProviders = providers.filter(p => p.enabled)
+      const enabledProviders = providers.filter((p) => p.enabled)
       const newMap: Record<string, EffectiveModel[]> = {}
-      
+
       for (const provider of enabledProviders) {
         try {
           const models = await window.electronAPI.providers.getEffectiveModels(provider.id)
@@ -159,22 +161,22 @@ export function ModelList() {
           newMap[provider.id] = []
         }
       }
-      
+
       setEffectiveModelsMap(newMap)
     } catch (error) {
       console.error('Failed to load effective models:', error)
     }
   }, [providers])
-  
+
   useEffect(() => {
     loadEffectiveModels()
   }, [loadEffectiveModels, modelsLastUpdated])
-  
+
   const modelList = useMemo(() => {
     const models: ModelInfo[] = []
-    const enabledProviders = providers.filter(p => p.enabled)
+    const enabledProviders = providers.filter((p) => p.enabled)
     const addedModelNames = new Set<string>()
-    
+
     const accountMap = new Map<string, Account[]>()
     for (const account of accounts) {
       if (!accountMap.has(account.providerId)) {
@@ -182,28 +184,28 @@ export function ModelList() {
       }
       accountMap.get(account.providerId)!.push(account)
     }
-    
+
     const activeProviderMap = new Map<string, boolean>()
     for (const provider of enabledProviders) {
       const providerAccounts = accountMap.get(provider.id) || []
-      const hasActiveAccounts = providerAccounts.some(a => a.status === 'active')
+      const hasActiveAccounts = providerAccounts.some((a) => a.status === 'active')
       activeProviderMap.set(provider.id, hasActiveAccounts)
     }
-    
+
     for (const provider of enabledProviders) {
       const effectiveModels = effectiveModelsMap[provider.id] || []
       if (effectiveModels.length === 0) {
         continue
       }
-      
+
       const providerAccounts = accountMap.get(provider.id) || []
       const hasActiveAccounts = activeProviderMap.get(provider.id) || false
-      
+
       for (const model of effectiveModels) {
         const modelId = `${provider.id}-${model.displayName}`
         const status = hasActiveAccounts ? 'available' : 'unavailable'
         addedModelNames.add(model.displayName)
-        
+
         models.push({
           id: modelId,
           name: model.displayName,
@@ -215,7 +217,7 @@ export function ModelList() {
         })
       }
     }
-    
+
     for (const mapping of modelMappings) {
       if (!addedModelNames.has(mapping.requestModel)) {
         models.push({
@@ -224,51 +226,50 @@ export function ModelList() {
           providerId: 'mapping',
           providerName: t('models.modelMapping') || 'Model Mapping',
           accountId: mapping.preferredAccountId,
-          accountName: mapping.preferredAccountId 
-            ? (accounts.find(a => a.id === mapping.preferredAccountId)?.name)
+          accountName: mapping.preferredAccountId
+            ? accounts.find((a) => a.id === mapping.preferredAccountId)?.name
             : undefined,
           status: 'available',
         })
       }
     }
-    
+
     return models
   }, [providers, accounts, modelMappings, effectiveModelsMap, t])
-  
+
   const filteredModels = useMemo(() => {
     let filtered = modelList
-    
+
     if (selectedProvider === 'mapping') {
-      filtered = filtered.filter(m => m.providerId === 'mapping' || m.id.startsWith('mapping-'))
+      filtered = filtered.filter((m) => m.providerId === 'mapping' || m.id.startsWith('mapping-'))
     } else if (selectedProvider !== 'all') {
-      filtered = filtered.filter(m => m.providerId === selectedProvider)
+      filtered = filtered.filter((m) => m.providerId === selectedProvider)
     }
-    
+
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(m =>
-        m.name.toLowerCase().includes(query) ||
-        m.providerName.toLowerCase().includes(query)
+      filtered = filtered.filter(
+        (m) => m.name.toLowerCase().includes(query) || m.providerName.toLowerCase().includes(query),
       )
     }
-    
+
     return filtered
   }, [modelList, selectedProvider, searchQuery])
-  
+
   const totalPages = useMemo(() => {
     return Math.ceil(filteredModels.length / PAGE_SIZE)
   }, [filteredModels.length])
-  
+
   const paginatedModels = useMemo(() => {
     const startIndex = (currentPage - 1) * PAGE_SIZE
     return filteredModels.slice(startIndex, startIndex + PAGE_SIZE)
   }, [filteredModels, currentPage])
-  
+
   const providerOptions = useMemo(() => {
-    const enabledProviders = providers.filter(p => p.enabled)
+    const enabledProviders = providers.filter((p) => p.enabled)
     const options = [
       { value: 'all', label: t('models.allProviders') },
-      ...enabledProviders.map(p => ({ value: p.id, label: p.name })),
+      ...enabledProviders.map((p) => ({ value: p.id, label: p.name })),
     ]
     // Add 'Model Mapping' option if there are model mappings
     if (modelMappings.length > 0) {
@@ -276,33 +277,36 @@ export function ModelList() {
     }
     return options
   }, [providers, modelMappings, t])
-  
+
   const handleSelectAll = useCallback(() => {
     const newSelectAll = !selectAll
     setSelectAll(newSelectAll)
     if (newSelectAll) {
-      setSelectedModels(new Set(paginatedModels.map(m => m.id)))
+      setSelectedModels(new Set(paginatedModels.map((m) => m.id)))
     } else {
       setSelectedModels(new Set())
     }
   }, [selectAll, paginatedModels])
-  
-  const handleSelectModel = useCallback((modelId: string) => {
-    const newSelected = new Set(selectedModels)
-    if (newSelected.has(modelId)) {
-      newSelected.delete(modelId)
-    } else {
-      newSelected.add(modelId)
-    }
-    setSelectedModels(newSelected)
-    setSelectAll(newSelected.size === paginatedModels.length)
-  }, [selectedModels, paginatedModels.length])
-  
+
+  const handleSelectModel = useCallback(
+    (modelId: string) => {
+      const newSelected = new Set(selectedModels)
+      if (newSelected.has(modelId)) {
+        newSelected.delete(modelId)
+      } else {
+        newSelected.add(modelId)
+      }
+      setSelectedModels(newSelected)
+      setSelectAll(newSelected.size === paginatedModels.length)
+    },
+    [selectedModels, paginatedModels.length],
+  )
+
   const handleCopySelected = useCallback(async () => {
     const selectedModelNames = filteredModels
-      .filter(m => selectedModels.has(m.id))
-      .map(m => m.name)
-    
+      .filter((m) => selectedModels.has(m.id))
+      .map((m) => m.name)
+
     if (selectedModelNames.length === 0) {
       toast({
         title: t('models.noModelsFound'),
@@ -311,9 +315,9 @@ export function ModelList() {
       })
       return
     }
-    
+
     const text = selectedModelNames.join(',')
-    
+
     try {
       await navigator.clipboard.writeText(text)
       toast({
@@ -329,7 +333,7 @@ export function ModelList() {
       })
     }
   }, [filteredModels, selectedModels, t])
-  
+
   const handleCopyAll = useCallback(async () => {
     if (filteredModels.length === 0) {
       toast({
@@ -339,9 +343,9 @@ export function ModelList() {
       })
       return
     }
-    
-    const text = filteredModels.map(m => m.name).join(',')
-    
+
+    const text = filteredModels.map((m) => m.name).join(',')
+
     try {
       await navigator.clipboard.writeText(text)
       toast({
@@ -357,13 +361,13 @@ export function ModelList() {
       })
     }
   }, [filteredModels, t])
-  
+
   const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(newPage)
     setSelectedModels(new Set())
     setSelectAll(false)
   }, [])
-  
+
   if (modelList.length === 0) {
     return (
       <Card>
@@ -373,13 +377,9 @@ export function ModelList() {
               <Cpu className="h-5 w-5 text-primary" />
               <CardTitle>{t('models.modelList')}</CardTitle>
             </div>
-            <Badge variant="outline">
-              {t('models.totalModels', { count: 0 })}
-            </Badge>
+            <Badge variant="outline">{t('models.totalModels', { count: 0 })}</Badge>
           </div>
-          <CardDescription>
-            {t('models.description')}
-          </CardDescription>
+          <CardDescription>{t('models.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center py-12 text-muted-foreground border rounded-lg">
@@ -391,7 +391,7 @@ export function ModelList() {
       </Card>
     )
   }
-  
+
   return (
     <Card>
       <CardHeader>
@@ -400,13 +400,9 @@ export function ModelList() {
             <Cpu className="h-5 w-5 text-primary" />
             <CardTitle>{t('models.modelList')}</CardTitle>
           </div>
-          <Badge variant="outline">
-            {t('models.totalModels', { count: modelList.length })}
-          </Badge>
+          <Badge variant="outline">{t('models.totalModels', { count: modelList.length })}</Badge>
         </div>
-        <CardDescription>
-          {t('models.description')}
-        </CardDescription>
+        <CardDescription>{t('models.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4">
@@ -424,7 +420,7 @@ export function ModelList() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {providerOptions.map(option => (
+              {providerOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -432,20 +428,11 @@ export function ModelList() {
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSelectAll}
-              className="h-8 px-2"
-            >
-              {selectAll ? (
-                <Check className="h-4 w-4 mr-2" />
-              ) : (
-                <Square className="h-4 w-4 mr-2" />
-              )}
+            <Button variant="ghost" size="sm" onClick={handleSelectAll} className="h-8 px-2">
+              {selectAll ? <Check className="h-4 w-4 mr-2" /> : <Square className="h-4 w-4 mr-2" />}
               {t('models.selectAll')}
             </Button>
             {selectedModels.size > 0 && (
@@ -454,7 +441,7 @@ export function ModelList() {
               </Badge>
             )}
           </div>
-          
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -476,7 +463,7 @@ export function ModelList() {
             </Button>
           </div>
         </div>
-        
+
         {paginatedModels.length > 0 ? (
           <>
             <div className="border rounded-lg">
@@ -503,7 +490,7 @@ export function ModelList() {
                 </TableBody>
               </Table>
             </div>
-            
+
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-4 py-4">
                 <Button
@@ -515,9 +502,9 @@ export function ModelList() {
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="text-sm">
-                  {t('models.pageInfo', { 
-                    current: currentPage, 
-                    total: totalPages 
+                  {t('models.pageInfo', {
+                    current: currentPage,
+                    total: totalPages,
                   })}
                 </span>
                 <Button

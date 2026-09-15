@@ -31,7 +31,8 @@ const FAKE_HEADERS = {
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
 }
 
 const FAKE_USER_DATA: Record<string, any> = {
@@ -79,11 +80,11 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
    */
   async startLogin(options: OAuthOptions): Promise<OAuthResult> {
     this.emitProgress('pending', 'Opening browser...')
-    
+
     try {
       await shell.openExternal(MINIMAX_API_BASE)
       this.emitProgress('pending', 'Please log in via browser and enter Token manually')
-      
+
       return {
         success: false,
         providerId: options.providerId,
@@ -93,7 +94,7 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to open browser'
       this.emitProgress('error', errorMessage)
-      
+
       return {
         success: false,
         providerId: options.providerId,
@@ -109,9 +110,13 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
    * - token: JWT token only (realUserID will be extracted from JWT)
    * - token + realUserID: Will be combined as "realUserID+JWTtoken"
    */
-  async loginWithToken(providerId: string, token: string, realUserID?: string): Promise<OAuthResult> {
+  async loginWithToken(
+    providerId: string,
+    token: string,
+    realUserID?: string,
+  ): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating Token...')
-    
+
     try {
       // If realUserID is provided, combine with token
       let finalToken = token
@@ -119,9 +124,9 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
         finalToken = `${realUserID.trim()}+${token}`
         console.log('[MiniMax] Combining realUserID with token')
       }
-      
+
       const validation = await this.validateToken({ token: finalToken })
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -132,7 +137,7 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
       }
 
       this.emitProgress('success', 'Token validation successful')
-      
+
       return {
         success: true,
         providerId,
@@ -143,7 +148,7 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       this.emitProgress('error', `Token validation failed: ${errorMessage}`)
-      
+
       return {
         success: false,
         providerId,
@@ -280,7 +285,8 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
   private extractUserIdFromToken(token: string): string | undefined {
     try {
       const payload = this.parseJWT(token)
-      return payload?.user?.id as string | undefined || payload?.sub as string | undefined
+      const user = payload?.user as { id?: string } | undefined
+      return user?.id || (payload?.sub as string | undefined)
     } catch {
       return undefined
     }
@@ -298,13 +304,13 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
       const response = await axios.get(`${MINIMAX_API_BASE}/v1/api/user/credit`, {
         headers: {
           ...FAKE_HEADERS,
-          'token': token,
+          token: token,
           Referer: `${MINIMAX_API_BASE}/`,
         },
         timeout: 15000,
         validateStatus: () => true,
       })
-      
+
       if (response.status === 200 && response.data?.statusInfo?.code === 0) {
         const data = response.data.data
         return {
@@ -313,7 +319,7 @@ export class MiniMaxAdapter extends BaseOAuthAdapter {
           remainingCredits: data?.remainCredit || data?.remaining_credits || 0,
         }
       }
-      
+
       return null
     } catch {
       return null

@@ -3,13 +3,18 @@ import type { NormalizedClientToolRequest, ToolClientAdapter } from './types.ts'
 import type { NormalizedToolDefinition } from '../types.ts'
 import { normalizeOpenAiTools, normalizeToolChoice } from './standardOpenAiTools.ts'
 
-const DECLARED_TOOL_REFUSAL = /\btool\s+[`"'“”]?([A-Za-z0-9_:-]+)[`"'“”]?\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\b/gi
-const REFUSAL_PREAMBLE = /^(?:\s*Tool\s+[A-Za-z0-9_:-]+\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\.?\s*)+/i
+const DECLARED_TOOL_REFUSAL =
+  /\btool\s+[`"'“”]?([A-Za-z0-9_:-]+)[`"'“”]?\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\b/gi
+const REFUSAL_PREAMBLE =
+  /^(?:\s*Tool\s+[A-Za-z0-9_:-]+\s+(?:(?:does\s+not|doesn't)\s+exist(?:s)?|is\s+not\s+available)\.?\s*)+/i
 const READ_ONLY_PROJECT_TOOL_NAMES = new Set(['glob', 'grep', 'read'])
 const CODE_CHANGE_TOOL_NAMES = new Set(['bash', 'glob', 'grep', 'read', 'edit', 'write'])
-const READ_ONLY_PROJECT_INTENT = /(?:\b(?:read|review|inspect|explore|understand|analy[sz]e)\b|阅读|读一下|查看|看看|分析|审查|检查|了解|项目|代码)/i
-const CODE_CHANGE_INTENT = /(?:\b(?:modify|edit|fix|implement|refactor|create|add|remove|replace|write)\b|修改|编辑|修复|实现|重构|添加|删除|替换|写入)/i
-const NEGATED_TOOL_INSTRUCTION = /(?:\b(?:do\s+not|don't|never|avoid)\b|(?:不要|禁止|严禁))[^\r\n.!?。！？]{0,240}/gi
+const READ_ONLY_PROJECT_INTENT =
+  /(?:\b(?:read|review|inspect|explore|understand|analy[sz]e)\b|阅读|读一下|查看|看看|分析|审查|检查|了解|项目|代码)/i
+const CODE_CHANGE_INTENT =
+  /(?:\b(?:modify|edit|fix|implement|refactor|create|add|remove|replace|write)\b|修改|编辑|修复|实现|重构|添加|删除|替换|写入)/i
+const NEGATED_TOOL_INSTRUCTION =
+  /(?:\b(?:do\s+not|don't|never|avoid)\b|(?:不要|禁止|严禁))[^\r\n.!?。！？]{0,240}/gi
 
 /**
  * OpenCode sends standard OpenAI function definitions and consumes standard
@@ -23,20 +28,21 @@ export const openCodeAdapter: ToolClientAdapter = {
   id: 'opencode',
   displayName: 'OpenCode',
   normalizeRequest(request: ChatCompletionRequest): NormalizedClientToolRequest {
-    const tools = selectOpenCodeTaskTools(
-      request,
-      normalizeOpenAiTools(request.tools, 'openai'),
-    )
+    const tools = selectOpenCodeTaskTools(request, normalizeOpenAiTools(request.tools, 'openai'))
     const normalizedChoice = normalizeToolChoice(request, new Set(tools.map((tool) => tool.name)))
-    const explicitlyRequestedTool = normalizedChoice.mode === 'auto'
-      ? findExplicitlyRequestedTool(request, tools.map((tool) => tool.name))
-      : undefined
-    const implicitReadTool = normalizedChoice.mode === 'auto'
-      ? findReadOnlyProjectStartingTool(request, tools)
-      : undefined
-    const toolChoice = explicitlyRequestedTool || implicitReadTool
-      ? { mode: 'forced' as const, forcedName: explicitlyRequestedTool ?? implicitReadTool }
-      : normalizedChoice
+    const explicitlyRequestedTool =
+      normalizedChoice.mode === 'auto'
+        ? findExplicitlyRequestedTool(
+            request,
+            tools.map((tool) => tool.name),
+          )
+        : undefined
+    const implicitReadTool =
+      normalizedChoice.mode === 'auto' ? findReadOnlyProjectStartingTool(request, tools) : undefined
+    const toolChoice =
+      explicitlyRequestedTool || implicitReadTool
+        ? { mode: 'forced' as const, forcedName: explicitlyRequestedTool ?? implicitReadTool }
+        : normalizedChoice
 
     return {
       clientAdapterId: 'opencode',
@@ -72,9 +78,7 @@ Exact listed tool names: ${tools.map((tool) => tool.name).join(', ')}`
 
     if (protocol !== 'openai_chat') return undefined
 
-    const singleToolContract = tools.length === 1
-      ? renderSingleToolContract(tools[0])
-      : ''
+    const singleToolContract = tools.length === 1 ? renderSingleToolContract(tools[0]) : ''
 
     return `[FluxMeld OpenCode compatibility tool contract]
 If completing the task at hand requires a listed tool, return exactly one OpenAI chat-completions JSON object with tool_calls and no prose. Never claim that a listed tool is unavailable. Use one exact listed name and encode function.arguments as a JSON string. If no tool is needed, answer normally.
@@ -145,9 +149,11 @@ function findReadOnlyProjectStartingTool(
     return undefined
   }
 
-  return tools.find((tool) => tool.name === 'glob')?.name
-    ?? tools.find((tool) => tool.name === 'grep')?.name
-    ?? tools.find((tool) => tool.name === 'read')?.name
+  return (
+    tools.find((tool) => tool.name === 'glob')?.name ??
+    tools.find((tool) => tool.name === 'grep')?.name ??
+    tools.find((tool) => tool.name === 'read')?.name
+  )
 }
 
 function isReadOnlyProjectTask(content: string): boolean {
@@ -169,9 +175,12 @@ function getLastUserText(request: ChatCompletionRequest): string | undefined {
 
 function hasToolCallSinceLastUser(request: ChatCompletionRequest): boolean {
   const lastUserIndex = request.messages.findLastIndex((message) => message.role === 'user')
-  return lastUserIndex >= 0 && request.messages
-    .slice(lastUserIndex + 1)
-    .some((message) => message.role === 'assistant' && (message.tool_calls?.length ?? 0) > 0)
+  return (
+    lastUserIndex >= 0 &&
+    request.messages
+      .slice(lastUserIndex + 1)
+      .some((message) => message.role === 'assistant' && (message.tool_calls?.length ?? 0) > 0)
+  )
 }
 
 function escapeRegExp(value: string): string {
@@ -232,6 +241,5 @@ function findExplicitlyRequestedTool(
   )
   return requestedTools
     .sort((left, right) => left.index - right.index)
-    .find((tool) => !alreadyCalled.has(tool.name))
-    ?.name
+    .find((tool) => !alreadyCalled.has(tool.name))?.name
 }

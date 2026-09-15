@@ -60,9 +60,7 @@ function filterLogs(logs: LogEntry[], filter: LogFilter): LogEntry[] {
 
   if (filter.keyword) {
     const keyword = filter.keyword.toLowerCase()
-    filtered = filtered.filter((log) =>
-      log.message.toLowerCase().includes(keyword)
-    )
+    filtered = filtered.filter((log) => log.message.toLowerCase().includes(keyword))
   }
 
   if (filter.startTime) {
@@ -106,7 +104,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
     const { logs, autoScroll, filter } = get()
     const newLogs = [log, ...logs].slice(0, 10000)
     set({ logs: newLogs })
-    
+
     if (autoScroll) {
       let shouldAdd = true
       if (filter.level !== 'all' && log.level !== filter.level) {
@@ -121,7 +119,7 @@ export const useLogsStore = create<LogsState>((set, get) => ({
       if (filter.endTime && log.timestamp > filter.endTime) {
         shouldAdd = false
       }
-      
+
       if (shouldAdd) {
         set({ filteredLogs: [log, ...get().filteredLogs].slice(0, 10000) })
       }

@@ -97,7 +97,7 @@ export class LoadBalancer {
     }
 
     if (preferredAccountId) {
-      const preferred = candidates.find(c => c.account.id === preferredAccountId)
+      const preferred = candidates.find((c) => c.account.id === preferredAccountId)
       if (preferred && !this.isAccountInFailure(preferredAccountId)) {
         return preferred
       }
@@ -131,7 +131,7 @@ export class LoadBalancer {
     excludedAccountIds: ReadonlySet<string> = new Set(),
     logAvailability: boolean = true,
   ): AccountSelection[] {
-    const providers = storeManager.getProviders().filter(p => p.enabled)
+    const providers = storeManager.getProviders().filter((p) => p.enabled)
     const candidates: AccountSelection[] = []
 
     for (const provider of providers) {
@@ -143,13 +143,16 @@ export class LoadBalancer {
         continue
       }
 
-      const accounts = storeManager.getAccountsByProviderId(provider.id, true)
-        .filter(account => this.isAccountAvailable(account))
-        .filter(account => !this.isAccountInFailure(account.id))
-        .filter(account => !excludedAccountIds.has(account.id))
+      const accounts = storeManager
+        .getAccountsByProviderId(provider.id, true)
+        .filter((account) => this.isAccountAvailable(account))
+        .filter((account) => !this.isAccountInFailure(account.id))
+        .filter((account) => !excludedAccountIds.has(account.id))
 
       if (logAvailability) {
-        console.log(`[LoadBalancer] Provider ${provider.name} (${provider.id}) has ${accounts.length} available accounts`)
+        console.log(
+          `[LoadBalancer] Provider ${provider.name} (${provider.id}) has ${accounts.length} available accounts`,
+        )
       }
 
       for (const account of accounts) {
@@ -178,14 +181,14 @@ export class LoadBalancer {
 
     const { baseModel } = splitQwenModeSuffix(provider, model)
     const normalizedModel = baseModel.toLowerCase()
-    const supported = effectiveModels.some(m => {
+    const supported = effectiveModels.some((m) => {
       const normalizedSupported = m.displayName.toLowerCase()
       if (normalizedSupported.endsWith('*')) {
         return normalizedModel.startsWith(normalizedSupported.slice(0, -1))
       }
       return normalizedSupported === normalizedModel
     })
-    
+
     if (supported) {
       return true
     }
@@ -200,23 +203,25 @@ export class LoadBalancer {
         }
         return false
       }
-      
+
       const actualModel = globalMapping.actualModel
       const normalizedActualModel = actualModel.toLowerCase()
-      const actualSupported = effectiveModels.some(m => {
+      const actualSupported = effectiveModels.some((m) => {
         const normalizedSupported = m.displayName.toLowerCase()
         if (normalizedSupported.endsWith('*')) {
           return normalizedActualModel.startsWith(normalizedSupported.slice(0, -1))
         }
         return normalizedSupported === normalizedActualModel
       })
-      
+
       if (actualSupported) {
-        console.log(`[LoadBalancer] Model "${model}" (actualModel: "${actualModel}") supported by ${provider.name}`)
+        console.log(
+          `[LoadBalancer] Model "${model}" (actualModel: "${actualModel}") supported by ${provider.name}`,
+        )
         return true
       }
     }
-    
+
     console.log(`[LoadBalancer] Provider ${provider.name} does not support model ${model}`)
     return false
   }
@@ -244,12 +249,14 @@ export class LoadBalancer {
 
     const { baseModel, suffix } = splitQwenModeSuffix(provider, model)
     const effectiveModels = storeManager.getEffectiveModels(provider.id)
-    const effectiveModel = effectiveModels.find(m => 
-      m.displayName.toLowerCase() === baseModel.toLowerCase()
+    const effectiveModel = effectiveModels.find(
+      (m) => m.displayName.toLowerCase() === baseModel.toLowerCase(),
     )
-    
+
     if (effectiveModel) {
-      console.log(`[LoadBalancer] Model mapped from "${model}" to "${effectiveModel.actualModelId}" via effective models`)
+      console.log(
+        `[LoadBalancer] Model mapped from "${model}" to "${effectiveModel.actualModelId}" via effective models`,
+      )
       return appendModelSuffix(effectiveModel.actualModelId, suffix)
     }
 
@@ -258,16 +265,20 @@ export class LoadBalancer {
 
     if (mapping && (!mapping.preferredProviderId || mapping.preferredProviderId === provider.id)) {
       const actualModel = mapping.actualModel
-      console.log(`[LoadBalancer] Model mapped from "${model}" to "${actualModel}" via global mapping`)
-      
-      const actualEffectiveModel = effectiveModels.find(m => 
-        m.displayName.toLowerCase() === actualModel.toLowerCase()
+      console.log(
+        `[LoadBalancer] Model mapped from "${model}" to "${actualModel}" via global mapping`,
+      )
+
+      const actualEffectiveModel = effectiveModels.find(
+        (m) => m.displayName.toLowerCase() === actualModel.toLowerCase(),
       )
       if (actualEffectiveModel) {
-        console.log(`[LoadBalancer] Model further mapped from "${actualModel}" to "${actualEffectiveModel.actualModelId}" via effective models`)
+        console.log(
+          `[LoadBalancer] Model further mapped from "${actualModel}" to "${actualEffectiveModel.actualModelId}" via effective models`,
+        )
         return appendModelSuffix(actualEffectiveModel.actualModelId, suffix)
       }
-      
+
       return appendModelSuffix(actualModel, suffix)
     }
 
@@ -279,7 +290,7 @@ export class LoadBalancer {
    * Round Robin strategy
    */
   private selectRoundRobin(candidates: AccountSelection[]): AccountSelection {
-    const providerIds = [...new Set(candidates.map(c => c.provider.id))]
+    const providerIds = [...new Set(candidates.map((c) => c.provider.id))]
     const key = providerIds.join(',')
 
     const currentIndex = this.roundRobinIndex.get(key) || 0
@@ -321,8 +332,8 @@ export class LoadBalancer {
    * Select account with least failures, preferring healthy accounts
    */
   private selectFailover(candidates: AccountSelection[]): AccountSelection {
-    const healthyCandidates = candidates.filter(c => !this.isAccountInFailure(c.account.id))
-    
+    const healthyCandidates = candidates.filter((c) => !this.isAccountInFailure(c.account.id))
+
     if (healthyCandidates.length > 0) {
       return this.selectRoundRobin(healthyCandidates)
     }
@@ -386,9 +397,7 @@ export class LoadBalancer {
    *     the fewest in-flight requests, then by today's usage, then name.
    */
   private selectBalanced(candidates: AccountSelection[]): AccountSelection {
-    const available = candidates.filter(
-      (candidate) => !this.isInFlight(candidate.account.id),
-    )
+    const available = candidates.filter((candidate) => !this.isInFlight(candidate.account.id))
     const pool = available.length > 0 ? available : candidates
 
     const selected = pool.reduce((best, current) => {
@@ -408,12 +417,18 @@ export class LoadBalancer {
       if (currentUsed < bestUsed) return current
       if (currentUsed > bestUsed) return best
 
-      return (current.account.id < best.account.id) ? current : best
+      return current.account.id < best.account.id ? current : best
     })
 
     // Acquire the concurrency lock + count the dispatch.
-    this.dispatchCounts.set(selected.account.id, (this.dispatchCounts.get(selected.account.id) ?? 0) + 1)
-    this.inFlightCounts.set(selected.account.id, (this.inFlightCounts.get(selected.account.id) ?? 0) + 1)
+    this.dispatchCounts.set(
+      selected.account.id,
+      (this.dispatchCounts.get(selected.account.id) ?? 0) + 1,
+    )
+    this.inFlightCounts.set(
+      selected.account.id,
+      (this.inFlightCounts.get(selected.account.id) ?? 0) + 1,
+    )
     return selected
   }
 
@@ -439,16 +454,17 @@ export class LoadBalancer {
    * Get all available models
    */
   getAvailableModels(): string[] {
-    const providers = storeManager.getProviders().filter(p => p.enabled)
+    const providers = storeManager.getProviders().filter((p) => p.enabled)
     const models = new Set<string>()
 
     for (const provider of providers) {
-      const accounts = storeManager.getAccountsByProviderId(provider.id)
-        .filter(account => this.isAccountAvailable(account))
+      const accounts = storeManager
+        .getAccountsByProviderId(provider.id)
+        .filter((account) => this.isAccountAvailable(account))
 
       if (accounts.length > 0) {
         const effectiveModels = storeManager.getEffectiveModels(provider.id)
-        effectiveModels.forEach(m => models.add(m.displayName))
+        effectiveModels.forEach((m) => models.add(m.displayName))
       }
     }
 
@@ -456,7 +472,10 @@ export class LoadBalancer {
   }
 }
 
-function splitQwenModeSuffix(provider: Provider, model: string): {
+function splitQwenModeSuffix(
+  provider: Provider,
+  model: string,
+): {
   baseModel: string
   suffix: '-thinking' | '-fast' | ''
 } {

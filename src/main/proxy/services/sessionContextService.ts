@@ -41,16 +41,18 @@ function messageSignature(message: ChatMessage): string {
     content: message.content,
     ...(message.name ? { name: message.name } : {}),
     ...(message.tool_call_id ? { tool_call_id: message.tool_call_id } : {}),
-    ...(message.tool_calls ? {
-      tool_calls: message.tool_calls.map((toolCall) => ({
-        id: toolCall.id,
-        type: toolCall.type,
-        function: {
-          name: toolCall.function.name,
-          arguments: toolCall.function.arguments,
-        },
-      })),
-    } : {}),
+    ...(message.tool_calls
+      ? {
+          tool_calls: message.tool_calls.map((toolCall) => ({
+            id: toolCall.id,
+            type: toolCall.type,
+            function: {
+              name: toolCall.function.name,
+              arguments: toolCall.function.arguments,
+            },
+          })),
+        }
+      : {}),
   })
 }
 
@@ -72,8 +74,8 @@ export function mergeSessionMessages(
 
   // The caller supplied the complete conversation already.
   if (
-    savedSignatures.length <= nextSignatures.length
-    && savedSignatures.every((signature, index) => signature === nextSignatures[index])
+    savedSignatures.length <= nextSignatures.length &&
+    savedSignatures.every((signature, index) => signature === nextSignatures[index])
   ) {
     return next
   }
@@ -109,18 +111,21 @@ export function assistantMessageFromResponse(response: unknown): ChatMessage | u
   const candidate = message as Partial<ChatMessage>
   if (candidate.role !== 'assistant') return undefined
   if (
-    typeof candidate.content !== 'string'
-    && candidate.content !== null
-    && !Array.isArray(candidate.content)
-  ) return undefined
+    typeof candidate.content !== 'string' &&
+    candidate.content !== null &&
+    !Array.isArray(candidate.content)
+  )
+    return undefined
 
   return cloneChatMessage({
     role: 'assistant',
     content: candidate.content,
     ...(typeof candidate.name === 'string' ? { name: candidate.name } : {}),
-    ...(Array.isArray(candidate.tool_calls) ? {
-      tool_calls: candidate.tool_calls as ChatMessage['tool_calls'],
-    } : {}),
+    ...(Array.isArray(candidate.tool_calls)
+      ? {
+          tool_calls: candidate.tool_calls as ChatMessage['tool_calls'],
+        }
+      : {}),
   })
 }
 
@@ -128,21 +133,24 @@ function mergeStreamToolCall(
   current: StreamToolCall | undefined,
   delta: Record<string, unknown>,
 ): StreamToolCall {
-  const functionDelta = delta.function && typeof delta.function === 'object'
-    ? delta.function as Record<string, unknown>
-    : {}
+  const functionDelta =
+    delta.function && typeof delta.function === 'object'
+      ? (delta.function as Record<string, unknown>)
+      : {}
   const currentFunction = current?.function ?? { name: '', arguments: '' }
 
   return {
-    id: typeof delta.id === 'string' ? delta.id : current?.id ?? '',
-    type: delta.type === 'function' ? 'function' : current?.type ?? 'function',
+    id: typeof delta.id === 'string' ? delta.id : (current?.id ?? ''),
+    type: delta.type === 'function' ? 'function' : (current?.type ?? 'function'),
     function: {
-      name: typeof functionDelta.name === 'string'
-        ? `${currentFunction.name}${functionDelta.name}`
-        : currentFunction.name,
-      arguments: typeof functionDelta.arguments === 'string'
-        ? `${currentFunction.arguments}${functionDelta.arguments}`
-        : currentFunction.arguments,
+      name:
+        typeof functionDelta.name === 'string'
+          ? `${currentFunction.name}${functionDelta.name}`
+          : currentFunction.name,
+      arguments:
+        typeof functionDelta.arguments === 'string'
+          ? `${currentFunction.arguments}${functionDelta.arguments}`
+          : currentFunction.arguments,
     },
   }
 }

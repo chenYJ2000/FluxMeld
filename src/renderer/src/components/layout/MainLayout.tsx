@@ -12,8 +12,16 @@ export function MainLayout() {
       <Sidebar />
       <section className="command-workspace">
         {!isDashboard && <Header />}
-        <main className={isDashboard ? 'command-content command-content-dashboard' : 'command-content'}>
-          <div className={isDashboard ? 'command-content-frame dashboard-content-frame' : 'command-content-frame'}>
+        <main
+          className={isDashboard ? 'command-content command-content-dashboard' : 'command-content'}
+        >
+          <div
+            className={
+              isDashboard
+                ? 'command-content-frame dashboard-content-frame'
+                : 'command-content-frame'
+            }
+          >
             <Outlet />
           </div>
         </main>

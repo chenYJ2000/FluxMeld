@@ -35,7 +35,7 @@ export function isAnthropicToolFormat(toolFormat?: string): boolean {
  * Convert OpenAI tool_calls to Anthropic tool_use format
  */
 export function openaiToAnthropicToolCalls(toolCalls: ToolCall[]): AnthropicToolUse[] {
-  return toolCalls.map(tc => ({
+  return toolCalls.map((tc) => ({
     type: 'tool_use' as const,
     id: tc.id,
     name: tc.function.name,
@@ -74,7 +74,7 @@ export function openaiDeltaToAnthropic(delta: any): any {
         id: tc.id,
         name: tc.function?.name,
       }
-      
+
       if (tc.function?.arguments) {
         try {
           result.input = JSON.parse(tc.function.arguments)
@@ -82,7 +82,7 @@ export function openaiDeltaToAnthropic(delta: any): any {
           result.input = tc.function.arguments
         }
       }
-      
+
       return result
     }),
   }
@@ -93,7 +93,7 @@ export function openaiDeltaToAnthropic(delta: any): any {
  */
 export function formatToolCalls(
   toolCalls: ToolCall[],
-  format: 'native' | 'json' | 'auto' = 'auto'
+  format: 'native' | 'json' | 'auto' = 'auto',
 ): ToolCall[] | AnthropicToolUse[] {
   if (format === 'native') {
     return openaiToAnthropicToolCalls(toolCalls)
@@ -106,18 +106,18 @@ export function formatToolCalls(
  */
 export function createAnthropicContent(
   content: string | null,
-  toolCalls: ToolCall[] | undefined
+  toolCalls: ToolCall[] | undefined,
 ): (string | AnthropicToolUse)[] {
   const blocks: (string | AnthropicToolUse)[] = []
-  
+
   if (content) {
     blocks.push(content)
   }
-  
+
   if (toolCalls && toolCalls.length > 0) {
     blocks.push(...openaiToAnthropicToolCalls(toolCalls))
   }
-  
+
   return blocks
 }
 
@@ -142,18 +142,20 @@ export function transformResponseToAnthropic(response: any): any {
     }
 
     const content: any[] = []
-    
+
     if (message.content) {
       content.push({ type: 'text', text: message.content })
     }
-    
+
     const toolUseBlocks = openaiToAnthropicToolCalls(toolCalls)
-    content.push(...toolUseBlocks.map(tu => ({
-      type: 'tool_use',
-      id: tu.id,
-      name: tu.name,
-      input: tu.input,
-    })))
+    content.push(
+      ...toolUseBlocks.map((tu) => ({
+        type: 'tool_use',
+        id: tu.id,
+        name: tu.name,
+        input: tu.input,
+      })),
+    )
 
     return {
       ...choice,
@@ -192,21 +194,21 @@ export function transformChunkToAnthropic(chunk: any): any {
     }
 
     const content: any[] = []
-    
+
     if (delta.content) {
       content.push({ type: 'text', text: delta.content })
     }
-    
+
     const toolUseBlocks = toolCalls.map((tc: any) => {
       const result: any = {
         type: 'tool_use',
         id: tc.id,
       }
-      
+
       if (tc.function?.name) {
         result.name = tc.function.name
       }
-      
+
       if (tc.function?.arguments) {
         try {
           result.input = JSON.parse(tc.function.arguments)
@@ -214,10 +216,10 @@ export function transformChunkToAnthropic(chunk: any): any {
           result.input = tc.function.arguments
         }
       }
-      
+
       return result
     })
-    
+
     content.push(...toolUseBlocks)
 
     return {

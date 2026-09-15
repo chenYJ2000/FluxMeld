@@ -23,7 +23,7 @@ import { storeManager } from '../../store/store'
 import {
   isAnthropicToolFormat,
   transformResponseToAnthropic,
-  transformChunkToAnthropic
+  transformChunkToAnthropic,
 } from '../utils/toolFormatConverter'
 import {
   ClientDisconnectedError,
@@ -54,10 +54,12 @@ function generateRequestId(): string {
  * Get Client IP
  */
 function getClientIP(ctx: Context): string {
-  return ctx.headers['x-real-ip'] as string ||
-    ctx.headers['x-forwarded-for'] as string ||
+  return (
+    (ctx.headers['x-real-ip'] as string) ||
+    (ctx.headers['x-forwarded-for'] as string) ||
     ctx.ip ||
     'unknown'
+  )
 }
 
 function normalizeSessionId(value: unknown, source: string): string | undefined {
@@ -108,7 +110,9 @@ function withoutLocalSessionFields(request: ChatCompletionRequest): ChatCompleti
 /**
  * Extract user input from messages (last user message, full content)
  */
-function extractUserInput(messages: Array<{ role: string; content?: string | any[] | null }>): string | undefined {
+function extractUserInput(
+  messages: Array<{ role: string; content?: string | any[] | null }>,
+): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const msg = messages[i]
     if (msg.role === 'user' && msg.content) {
@@ -133,23 +137,26 @@ function getToolRepairLogFields(result?: ForwardResult) {
   const telemetry = result?.toolRepair
   const formatFieldTypes = (
     issues: NonNullable<ForwardResult['toolRepair']>['firstValidationIssues'],
-  ) => issues.map((issue) => ({
-    json_pointer: issue.jsonPointer,
-    expected: issue.expected,
-    actual_type: issue.actualType,
-    keyword: issue.keyword,
-  }))
+  ) =>
+    issues.map((issue) => ({
+      json_pointer: issue.jsonPointer,
+      expected: issue.expected,
+      actual_type: issue.actualType,
+      keyword: issue.keyword,
+    }))
 
   return {
     repair_attempted: telemetry?.attempted ?? false,
     repair_attempts: telemetry?.attempts ?? 0,
-    repair_result: telemetry?.result ?? 'not_attempted' as const,
-    ...(telemetry ? {
-      first_validation_error: telemetry.firstValidationErrors[0],
-      final_validation_error: telemetry.finalValidationErrors[0],
-      first_field_types: formatFieldTypes(telemetry.firstValidationIssues),
-      final_field_types: formatFieldTypes(telemetry.finalValidationIssues),
-    } : {}),
+    repair_result: telemetry?.result ?? ('not_attempted' as const),
+    ...(telemetry
+      ? {
+          first_validation_error: telemetry.firstValidationErrors[0],
+          final_validation_error: telemetry.finalValidationErrors[0],
+          first_field_types: formatFieldTypes(telemetry.firstValidationIssues),
+          final_field_types: formatFieldTypes(telemetry.finalValidationIssues),
+        }
+      : {}),
   }
 }
 
@@ -222,14 +229,18 @@ router.post('/completions', async (ctx: Context) => {
 
   // Read feature parameters from Headers (lower priority than request body)
   const webSearchFromHeader = ctx.headers['x-web-search'] === 'true'
-  const reasoningEffortFromHeader = ctx.headers['x-reasoning-effort'] as 'low' | 'medium' | 'high' | undefined
+  const reasoningEffortFromHeader = ctx.headers['x-reasoning-effort'] as
+    'low' | 'medium' | 'high' | undefined
   const deepResearchFromHeader = ctx.headers['x-deep-research'] === 'true'
 
   // Handle reasoningEffort (camelCase) from AI SDK - convert to reasoning_effort (snake_case)
   const requestAny = request as any
   if (requestAny.reasoningEffort && !request.reasoning_effort) {
     request.reasoning_effort = requestAny.reasoningEffort
-    console.log('[Chat] Reasoning effort set via reasoningEffort (camelCase):', requestAny.reasoningEffort)
+    console.log(
+      '[Chat] Reasoning effort set via reasoningEffort (camelCase):',
+      requestAny.reasoningEffort,
+    )
     delete requestAny.reasoningEffort
   }
 
@@ -240,7 +251,10 @@ router.post('/completions', async (ctx: Context) => {
   }
   if (reasoningEffortFromHeader && request.reasoning_effort === undefined) {
     request.reasoning_effort = reasoningEffortFromHeader
-    console.log('[Chat] Reasoning effort set via X-Reasoning-Effort header:', reasoningEffortFromHeader)
+    console.log(
+      '[Chat] Reasoning effort set via X-Reasoning-Effort header:',
+      reasoningEffortFromHeader,
+    )
   }
   if (deepResearchFromHeader && request.deep_research === undefined) {
     request.deep_research = true
@@ -255,12 +269,13 @@ router.post('/completions', async (ctx: Context) => {
     request.model,
     config.loadBalanceStrategy,
     preferredProviderId,
-    preferredAccountId
+    preferredAccountId,
   )
 
   if (!selection) {
-    const hasExplicitMapping = Object.keys(config.modelMappings || {})
-      .some((model) => model.toLowerCase() === request.model.toLowerCase())
+    const hasExplicitMapping = Object.keys(config.modelMappings || {}).some(
+      (model) => model.toLowerCase() === request.model.toLowerCase(),
+    )
     const deprecation = hasExplicitMapping ? undefined : getModelDeprecation(request.model)
     ctx.status = deprecation ? 410 : 503
     ctx.body = {
@@ -269,13 +284,15 @@ router.post('/completions', async (ctx: Context) => {
         type: deprecation ? 'invalid_request_error' : 'service_unavailable_error',
         param: null,
         code: deprecation ? 'model_deprecated' : 'no_available_account',
-        ...(deprecation ? {
-          details: {
-            deprecated_model: deprecation.model,
-            suggested_replacement: deprecation.replacement,
-            requires_explicit_mapping: true,
-          },
-        } : {}),
+        ...(deprecation
+          ? {
+              details: {
+                deprecated_model: deprecation.model,
+                suggested_replacement: deprecation.replacement,
+                requires_explicit_mapping: true,
+              },
+            }
+          : {}),
       },
     }
     return
@@ -468,7 +485,10 @@ router.post('/completions', async (ctx: Context) => {
         })
 
         if (!persistedSession) {
-          console.warn('[Chat] Session disappeared before its context could be persisted:', requestContext.sessionId)
+          console.warn(
+            '[Chat] Session disappeared before its context could be persisted:',
+            requestContext.sessionId,
+          )
         }
       } catch (error) {
         // A local persistence failure should never turn a successful provider
@@ -578,13 +598,15 @@ router.post('/completions', async (ctx: Context) => {
           object: 'chat.completion.chunk',
           created: Math.floor(Date.now() / 1000),
           model: usedActualModel,
-          choices: [{
-            index: 0,
-            delta: {
-              content: `\n\n[Error: ${err.message}]`,
+          choices: [
+            {
+              index: 0,
+              delta: {
+                content: `\n\n[Error: ${err.message}]`,
+              },
+              finish_reason: 'stop',
             },
-            finish_reason: 'stop',
-          }],
+          ],
         }
 
         const serializedError = `data: ${JSON.stringify(errorEvent)}\n\ndata: [DONE]\n\n`
@@ -628,10 +650,7 @@ router.post('/completions', async (ctx: Context) => {
           wrapperStream.end()
         })
       } else {
-        const transformStream = streamHandler.createTransformStream(
-          usedActualModel,
-          requestId,
-        )
+        const transformStream = streamHandler.createTransformStream(usedActualModel, requestId)
 
         transformStream.on('data', (chunk: Buffer) => {
           collectedContent += chunk.toString()
@@ -649,7 +668,7 @@ router.post('/completions', async (ctx: Context) => {
 
       wrapperStream.once('close', () => {
         if (streamSettled) return
-        const upstreamStream = result.stream as (NodeJS.ReadableStream & { destroy?: () => void })
+        const upstreamStream = result.stream as NodeJS.ReadableStream & { destroy?: () => void }
         if (typeof upstreamStream.destroy === 'function') upstreamStream.destroy()
         finishStreamFailure(new Error('Client disconnected before stream completion'), false)
       })
@@ -672,14 +691,16 @@ router.post('/completions', async (ctx: Context) => {
           object: 'chat.completion',
           created: Math.floor(Date.now() / 1000),
           model: usedActualModel,
-          choices: [{
-            index: 0,
-            message: {
-              role: 'assistant',
-              content: '',
+          choices: [
+            {
+              index: 0,
+              message: {
+                role: 'assistant',
+                content: '',
+              },
+              finish_reason: 'stop',
             },
-            finish_reason: 'stop',
-          }],
+          ],
           usage: {
             prompt_tokens: 0,
             completion_tokens: 0,
@@ -751,9 +772,8 @@ router.post('/completions', async (ctx: Context) => {
       : isClientDisconnect
         ? 'client_disconnected'
         : null
-    const errorStack = !isTimeout && !isClientDisconnect && error instanceof Error
-      ? error.stack
-      : undefined
+    const errorStack =
+      !isTimeout && !isClientDisconnect && error instanceof Error ? error.stack : undefined
     const exceptionPayload = isTimeout
       ? createTimeoutErrorPayload(errorMessage, requestId)
       : {
@@ -770,15 +790,19 @@ router.post('/completions', async (ctx: Context) => {
       ctx.body = exceptionPayload
     }
 
-    storeManager.addLog(isClientDisconnect ? 'warn' : 'error', `Request exception: ${errorMessage}`, {
-      requestId,
-      providerId: provider.id,
-      accountId: account.id,
-      model: request.model,
-      latency,
-      error: errorMessage,
-      data: getToolRepairLogFields(),
-    })
+    storeManager.addLog(
+      isClientDisconnect ? 'warn' : 'error',
+      `Request exception: ${errorMessage}`,
+      {
+        requestId,
+        providerId: provider.id,
+        accountId: account.id,
+        model: request.model,
+        latency,
+        error: errorMessage,
+        data: getToolRepairLogFields(),
+      },
+    )
 
     const userInput = extractUserInput(request.messages)
     const exceptionResponseBody = isClientDisconnect ? undefined : JSON.stringify(exceptionPayload)

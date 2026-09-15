@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
 import { Plus, Search, Filter, Server, RefreshCw } from 'lucide-react'
 import { ProviderCard } from './ProviderCard'
@@ -51,11 +51,11 @@ export function ProviderList({
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const filteredProviders = providers.filter((provider) => {
-    const matchesSearch = 
+    const matchesSearch =
       provider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       provider.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      provider.supportedModels?.some(model => 
-        model.toLowerCase().includes(searchQuery.toLowerCase())
+      provider.supportedModels?.some((model) =>
+        model.toLowerCase().includes(searchQuery.toLowerCase()),
       )
 
     if (!matchesSearch) return false
@@ -82,10 +82,10 @@ export function ProviderList({
 
   const stats = {
     total: providers.length,
-    builtin: providers.filter(p => p.type === 'builtin').length,
-    custom: providers.filter(p => p.type === 'custom').length,
-    enabled: providers.filter(p => p.enabled).length,
-    online: Object.values(providerStatuses).filter(s => s === 'online').length,
+    builtin: providers.filter((p) => p.type === 'builtin').length,
+    custom: providers.filter((p) => p.type === 'custom').length,
+    enabled: providers.filter((p) => p.enabled).length,
+    online: Object.values(providerStatuses).filter((s) => s === 'online').length,
   }
 
   return (
@@ -139,7 +139,9 @@ export function ProviderList({
         <span>•</span>
         <span>{stats.enabled} enabled</span>
         <span>•</span>
-        <span>{stats.builtin} built-in, {stats.custom} custom</span>
+        <span>
+          {stats.builtin} built-in, {stats.custom} custom
+        </span>
       </div>
 
       {filteredProviders.length === 0 ? (
@@ -147,7 +149,7 @@ export function ProviderList({
           <Server className="h-12 w-12 mb-4 opacity-50" />
           <p className="text-lg font-medium">No providers found</p>
           <p className="text-sm">
-            {searchQuery || filter !== 'all' 
+            {searchQuery || filter !== 'all'
               ? 'Try adjusting your search or filter'
               : 'Click the button above to add your first provider'}
           </p>

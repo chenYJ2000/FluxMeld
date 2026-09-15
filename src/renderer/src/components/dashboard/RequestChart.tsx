@@ -27,16 +27,26 @@ const CHART_PADDING = {
 
 export function RequestChart({ data, className }: RequestChartProps) {
   const { t } = useTranslation()
-  const series = useMemo(() => [
-    { key: 'requests' as const, label: t('dashboard.totalRequests'), color: 'hsl(var(--primary))' },
-    { key: 'success' as const, label: t('common.success'), color: 'hsl(142, 76%, 36%)' },
-    { key: 'failed' as const, label: t('common.error'), color: 'hsl(0, 84%, 60%)' },
-  ], [t])
+  const series = useMemo(
+    () => [
+      {
+        key: 'requests' as const,
+        label: t('dashboard.totalRequests'),
+        color: 'hsl(var(--primary))',
+      },
+      { key: 'success' as const, label: t('common.success'), color: 'hsl(142, 76%, 36%)' },
+      { key: 'failed' as const, label: t('common.error'), color: 'hsl(0, 84%, 60%)' },
+    ],
+    [t],
+  )
 
   const chart = useMemo(() => {
     const plotWidth = CHART_WIDTH - CHART_PADDING.left - CHART_PADDING.right
     const plotHeight = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom
-    const maxValue = Math.max(1, ...data.flatMap(point => [point.requests, point.success, point.failed]))
+    const maxValue = Math.max(
+      1,
+      ...data.flatMap((point) => [point.requests, point.success, point.failed]),
+    )
     const yTicks = [maxValue, Math.ceil(maxValue / 2), 0]
     const xStep = data.length > 1 ? plotWidth / (data.length - 1) : 0
     const labelEvery = Math.max(1, Math.ceil(data.length / 6))
@@ -45,7 +55,10 @@ export function RequestChart({ data, className }: RequestChartProps) {
     const y = (value: number) => CHART_PADDING.top + (1 - value / maxValue) * plotHeight
     const pathFor = (key: keyof Pick<ChartDataPoint, 'requests' | 'success' | 'failed'>) =>
       data
-        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${x(index).toFixed(2)} ${y(point[key]).toFixed(2)}`)
+        .map(
+          (point, index) =>
+            `${index === 0 ? 'M' : 'L'} ${x(index).toFixed(2)} ${y(point[key]).toFixed(2)}`,
+        )
         .join(' ')
 
     return { plotWidth, plotHeight, maxValue, yTicks, labelEvery, x, y, pathFor }
@@ -72,7 +85,7 @@ export function RequestChart({ data, className }: RequestChartProps) {
               role="img"
               aria-label={t('dashboard.requestsTrend')}
             >
-              {chart.yTicks.map(tick => (
+              {chart.yTicks.map((tick) => (
                 <g key={tick}>
                   <line
                     x1={CHART_PADDING.left}
@@ -94,7 +107,7 @@ export function RequestChart({ data, className }: RequestChartProps) {
                 </g>
               ))}
 
-              {data.map((point, index) => (
+              {data.map((point, index) =>
                 index % chart.labelEvery === 0 || index === data.length - 1 ? (
                   <text
                     key={`${point.time}-${index}`}
@@ -105,10 +118,10 @@ export function RequestChart({ data, className }: RequestChartProps) {
                   >
                     {point.time}
                   </text>
-                ) : null
-              ))}
+                ) : null,
+              )}
 
-              {series.map(item => (
+              {series.map((item) => (
                 <path
                   key={item.key}
                   d={chart.pathFor(item.key)}
@@ -124,7 +137,7 @@ export function RequestChart({ data, className }: RequestChartProps) {
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-          {series.map(item => (
+          {series.map((item) => (
             <div key={item.key} className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
               <span>{item.label}</span>

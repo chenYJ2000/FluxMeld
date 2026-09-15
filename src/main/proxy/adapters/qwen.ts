@@ -11,7 +11,12 @@ import * as ZstdCodec from 'zstd-codec'
 import { createParser } from 'eventsource-parser'
 import { Account, Provider } from '../../store/types'
 import { hasToolUse, parseToolUse, ToolCall } from '../promptToolUse'
-import { toolsToSystemPrompt, TOOL_WRAP_HINT, hasToolPromptInjected, shouldInjectToolPrompt } from '../utils/tools'
+import {
+  toolsToSystemPrompt,
+  TOOL_WRAP_HINT,
+  hasToolPromptInjected,
+  shouldInjectToolPrompt,
+} from '../utils/tools'
 import { parseToolCallsFromText } from '../utils/toolParser'
 import { createBaseChunk } from '../utils/streamToolHandler'
 import { getProviderToolProfile } from '../toolCalling/providerProfiles'
@@ -51,7 +56,8 @@ const DEFAULT_HEADERS = {
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-site',
   Referer: 'https://www.qianwen.com/',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
 }
 
 interface QwenMessage {
@@ -63,6 +69,7 @@ interface QwenMessage {
 
 interface ChatCompletionRequest {
   model: string
+  originalModel?: string
   messages: QwenMessage[]
   tools?: any[]
   stream?: boolean
@@ -146,7 +153,9 @@ export class QwenAdapter {
     }
   }
 
-  private getApiParams(extra: Record<string, string | number> = {}): Record<string, string | number> {
+  private getApiParams(
+    extra: Record<string, string | number> = {},
+  ): Record<string, string | number> {
     return {
       biz_id: 'ai_qwen',
       chat_client: 'h5',
@@ -178,11 +187,14 @@ export class QwenAdapter {
       data?.sessions,
     ].filter(Array.isArray)
 
-    const sessionIds = candidateLists.flatMap((items: any[]) => (
+    const sessionIds = candidateLists.flatMap((items: any[]) =>
       items
         .map((item: any) => item?.session_id || item?.sessionId || item?.session?.id || item?.id)
-        .filter((sessionId: any): sessionId is string => typeof sessionId === 'string' && sessionId.length > 0)
-    ))
+        .filter(
+          (sessionId: any): sessionId is string =>
+            typeof sessionId === 'string' && sessionId.length > 0,
+        ),
+    )
 
     return [...new Set(sessionIds)]
   }
@@ -205,7 +217,7 @@ export class QwenAdapter {
         params: this.getApiParams(),
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     if (response.status !== 200 || response.data?.success === false) {
@@ -240,7 +252,7 @@ export class QwenAdapter {
         }),
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     if (response.status !== 200 || response.data?.success === false) {
@@ -265,7 +277,7 @@ export class QwenAdapter {
         params: this.getApiParams(),
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     if (response.status !== 200) {
@@ -299,18 +311,18 @@ export class QwenAdapter {
 
     const reqId = uuid(false)
     const sessionId = uuid(false)
-    
+
     let actualModel = this.mapModel(request.model)
-    
+
     // Determine if thinking and web search should be enabled
     // Priority: explicit parameters > model name detection
     // Use originalModel for feature detection (preserves user's intent before mapping)
     const modelForDetection = request.originalModel || request.model
     const modelLower = modelForDetection.toLowerCase()
-    
+
     let enableThinking = request.enableThinking ?? false
     let enableWebSearch = request.enableWebSearch ?? false
-    
+
     // Auto-enable based on model name (if not explicitly set)
     if (!enableThinking && (modelLower.includes('think') || modelLower.includes('r1'))) {
       enableThinking = true
@@ -329,7 +341,7 @@ export class QwenAdapter {
         console.log('[Qwen] Using thinking model:', actualModel)
       }
     }
-    
+
     console.log('[Qwen] Session info:', {
       sessionId,
       reqId,
@@ -341,25 +353,31 @@ export class QwenAdapter {
     // Build prompt content from conversation messages
     let systemPrompt = ''
     const conversationParts: string[] = []
-    
+
     for (const msg of request.messages) {
       if (msg.role === 'system') {
         systemPrompt = extractTextContent(msg.content)
       } else if (msg.role === 'user') {
         conversationParts.push(extractTextContent(msg.content))
       } else if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
-        conversationParts.push(toolProfile.formatAssistantToolCalls(msg.tool_calls.map(tc => ({
-          id: tc.id,
-          name: tc.function.name,
-          arguments: tc.function.arguments,
-        }))))
+        conversationParts.push(
+          toolProfile.formatAssistantToolCalls(
+            msg.tool_calls.map((tc) => ({
+              id: tc.id,
+              name: tc.function.name,
+              arguments: tc.function.arguments,
+            })),
+          ),
+        )
       } else if (msg.role === 'assistant') {
         conversationParts.push(`Assistant: ${extractTextContent(msg.content)}`)
       } else if (msg.role === 'tool' && msg.tool_call_id) {
-        conversationParts.push(toolProfile.formatToolResult({
-          toolCallId: msg.tool_call_id,
-          content: extractTextContent(msg.content),
-        }))
+        conversationParts.push(
+          toolProfile.formatToolResult({
+            toolCallId: msg.tool_call_id,
+            content: extractTextContent(msg.content),
+          }),
+        )
       }
     }
 
@@ -368,23 +386,19 @@ export class QwenAdapter {
     // Inject tools prompt if tools are provided and not already injected by client
     if (request.tools && request.tools.length > 0 && !hasToolPromptInjected(request.messages)) {
       const toolsPrompt = toolsToSystemPrompt(request.tools)
-      systemPrompt = systemPrompt 
-        ? systemPrompt + '\n\n' + toolsPrompt 
-        : toolsPrompt
+      systemPrompt = systemPrompt ? systemPrompt + '\n\n' + toolsPrompt : toolsPrompt
       // Add tool wrap hint to user content
       userContent = userContent + TOOL_WRAP_HINT
     }
 
     // If system prompt exists, prepend it to user content
-    const finalContent = systemPrompt 
-      ? `${systemPrompt}\n\nUser: ${userContent}`
-      : userContent
+    const finalContent = systemPrompt ? `${systemPrompt}\n\nUser: ${userContent}` : userContent
 
     const timestamp = Date.now()
     const nonce = generateNonce()
 
     const requestBody = {
-      deep_search: (enableWebSearch || enableThinking) ? '1' : '0',
+      deep_search: enableWebSearch || enableThinking ? '1' : '0',
       req_id: reqId,
       model: actualModel,
       scene: 'chat',
@@ -396,9 +410,9 @@ export class QwenAdapter {
           content: finalContent,
           mime_type: 'text/plain',
           meta_data: {
-            ori_query: finalContent
-          }
-        }
+            ori_query: finalContent,
+          },
+        },
       ],
       from: 'default',
       parent_req_id: '0',
@@ -408,7 +422,7 @@ export class QwenAdapter {
       chat_client: 'h5',
       client_tm: timestamp.toString(),
       protocol_version: 'v2',
-      biz_id: 'ai_qwen'
+      biz_id: 'ai_qwen',
     }
 
     const queryString = `biz_id=ai_qwen&chat_client=h5&device=pc&fr=pc&pr=qwen&ut=${uuid(false)}&nonce=${nonce}&timestamp=${timestamp}`
@@ -493,7 +507,11 @@ export class QwenAdapter {
   }
 
   static isQwenProvider(provider: Provider): boolean {
-    return provider.id === 'qwen' || provider.apiEndpoint.includes('qianwen.com') || provider.apiEndpoint.includes('aliyun.com')
+    return (
+      provider.id === 'qwen' ||
+      provider.apiEndpoint.includes('qianwen.com') ||
+      provider.apiEndpoint.includes('aliyun.com')
+    )
   }
 }
 
@@ -513,12 +531,18 @@ export class QwenStreamHandler {
   private thinkingContent: string = ''
   private sentThinkingRole: boolean = false
 
-  constructor(model: string, onEnd?: (sessionId: string) => void, toolCallingPlan?: ToolCallingPlan) {
+  constructor(
+    model: string,
+    onEnd?: (sessionId: string) => void,
+    toolCallingPlan?: ToolCallingPlan,
+  ) {
     this.model = model
     this.created = Math.floor(Date.now() / 1000)
     this.onEnd = onEnd
     this.toolCallingPlan = toolCallingPlan
-    this.toolStreamParser = toolCallingPlan?.shouldParseResponse ? new ToolStreamParser(toolCallingPlan) : undefined
+    this.toolStreamParser = toolCallingPlan?.shouldParseResponse
+      ? new ToolStreamParser(toolCallingPlan)
+      : undefined
   }
 
   hasSessionError(): boolean {
@@ -527,13 +551,13 @@ export class QwenStreamHandler {
 
   private sendToolCalls(transStream: PassThrough): void {
     if (this.toolCallsSent) return
-    
+
     // Use the new parser that supports both bracket and XML formats
     const { toolCalls } = parseToolCallsFromText(this.content, 'default')
-    
+
     if (toolCalls && toolCalls.length > 0) {
       this.toolCallsSent = true
-      
+
       // Send tool_calls delta
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i]
@@ -542,26 +566,30 @@ export class QwenStreamHandler {
             id: this.responseId || this.sessionId,
             model: this.model,
             object: 'chat.completion.chunk',
-            choices: [{
-              index: 0,
-              delta: {
-                tool_calls: [{
-                  index: i,
-                  id: tc.id,
-                  type: 'function',
-                  function: {
-                    name: tc.function.name,
-                    arguments: tc.function.arguments,
-                  },
-                }],
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: i,
+                      id: tc.id,
+                      type: 'function',
+                      function: {
+                        name: tc.function.name,
+                        arguments: tc.function.arguments,
+                      },
+                    },
+                  ],
+                },
+                finish_reason: null,
               },
-              finish_reason: null,
-            }],
+            ],
             created: this.created,
-          })}\n\n`
+          })}\n\n`,
         )
       }
-      
+
       // Send finish with tool_calls
       transStream.write(
         `data: ${JSON.stringify({
@@ -570,7 +598,7 @@ export class QwenStreamHandler {
           object: 'chat.completion.chunk',
           choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
           created: this.created,
-        })}\n\n`
+        })}\n\n`,
       )
       transStream.end('data: [DONE]\n\n')
       this.onEnd?.(this.sessionId)
@@ -581,7 +609,7 @@ export class QwenStreamHandler {
     const transStream = new PassThrough()
 
     console.log('[Qwen] Starting stream handler...')
-    
+
     const contentEncoding = response?.headers?.['content-encoding']
     console.log('[Qwen] Content-Encoding:', contentEncoding)
 
@@ -625,7 +653,14 @@ export class QwenStreamHandler {
             if (result.data?.messages) {
               console.log('[Qwen] Messages count:', result.data.messages.length)
               for (const msg of result.data.messages) {
-                console.log('[Qwen] Message:', msg.mime_type, 'status:', msg.status, 'content length:', msg.content?.length || 0)
+                console.log(
+                  '[Qwen] Message:',
+                  msg.mime_type,
+                  'status:',
+                  msg.status,
+                  'content length:',
+                  msg.content?.length || 0,
+                )
               }
             }
 
@@ -643,7 +678,7 @@ export class QwenStreamHandler {
               // Strategy: only use deep_think type to avoid duplicate content from multimodal_chat_think
               let eventThinkingContent = ''
               let eventThinkingType = ''
-              const eventMessages: Array<{ msg: any, hasMultiLoad: boolean }> = []
+              const eventMessages: Array<{ msg: any; hasMultiLoad: boolean }> = []
 
               for (const msg of result.data.messages) {
                 console.log('[Qwen] Message detail:', JSON.stringify(msg).substring(0, 500))
@@ -656,7 +691,8 @@ export class QwenStreamHandler {
                   if (load.type === 'deep_think' && load.content) {
                     // Only use deep_think type for thinking content
                     // multimodal_chat_think may contain slightly different content causing duplicates
-                    const newThinkingContent = load.content.think_content || load.content.content || ''
+                    const newThinkingContent =
+                      load.content.think_content || load.content.content || ''
                     if (newThinkingContent.length > eventThinkingContent.length) {
                       eventThinkingContent = newThinkingContent
                       eventThinkingType = load.type
@@ -665,7 +701,8 @@ export class QwenStreamHandler {
                   } else if (load.type === 'multimodal_chat_think') {
                     // Only fall back to multimodal_chat_think if no deep_think exists in this event
                     if (!msgHasMultiLoad && load.content) {
-                      const newThinkingContent = load.content.think_content || load.content.content || ''
+                      const newThinkingContent =
+                        load.content.think_content || load.content.content || ''
                       if (newThinkingContent.length > eventThinkingContent.length) {
                         eventThinkingContent = newThinkingContent
                         eventThinkingType = load.type
@@ -692,31 +729,39 @@ export class QwenStreamHandler {
                 if (chunk.trim()) {
                   // Send reasoning_content delta
                   if (!this.sentThinkingRole) {
-                    transStream.write(`data: ${JSON.stringify({
-                      id: this.responseId || this.sessionId,
-                      model: this.model,
-                      object: 'chat.completion.chunk',
-                      choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
-                      created: this.created,
-                    })}\n\n`)
+                    transStream.write(
+                      `data: ${JSON.stringify({
+                        id: this.responseId || this.sessionId,
+                        model: this.model,
+                        object: 'chat.completion.chunk',
+                        choices: [{ index: 0, delta: { role: 'assistant' }, finish_reason: null }],
+                        created: this.created,
+                      })}\n\n`,
+                    )
                     this.sentThinkingRole = true
                   }
 
-                  transStream.write(`data: ${JSON.stringify({
-                    id: this.responseId || this.sessionId,
-                    model: this.model,
-                    object: 'chat.completion.chunk',
-                    choices: [{ index: 0, delta: { reasoning_content: chunk }, finish_reason: null }],
-                    created: this.created,
-                  })}\n\n`)
+                  transStream.write(
+                    `data: ${JSON.stringify({
+                      id: this.responseId || this.sessionId,
+                      model: this.model,
+                      object: 'chat.completion.chunk',
+                      choices: [
+                        { index: 0, delta: { reasoning_content: chunk }, finish_reason: null },
+                      ],
+                      created: this.created,
+                    })}\n\n`,
+                  )
                 }
               }
 
               // Second pass: process answer content and completion status
               for (const { msg } of eventMessages) {
-                
                 // Filter out [(deep_think)] and [(multimodal_chat_think_*)] markers from content
-                if ((msg.mime_type === 'text/plain' || msg.mime_type === 'multi_load/iframe') && msg.content) {
+                if (
+                  (msg.mime_type === 'text/plain' || msg.mime_type === 'multi_load/iframe') &&
+                  msg.content
+                ) {
                   // Skip content that is just the deep_think marker
                   let newContent = msg.content
                   if (newContent === '[(deep_think)]' || newContent.trim() === '[(deep_think)]') {
@@ -726,24 +771,48 @@ export class QwenStreamHandler {
                   // Remove any deep_think and multimodal_chat_think markers from content
                   newContent = newContent.replace(/\[\(deep_think\)\]/g, '')
                   newContent = newContent.replace(/\[\(multimodal_chat_think_\d+\)\]/g, '')
-                  
+
                   if (!newContent.trim()) {
                     console.log('[Qwen] Skipping empty content after filtering')
                     continue
                   }
-                  
-                  console.log('[Qwen] newContent.length:', newContent.length, 'this.content.length:', this.content.length)
+
+                  console.log(
+                    '[Qwen] newContent.length:',
+                    newContent.length,
+                    'this.content.length:',
+                    this.content.length,
+                  )
                   if (newContent.length > this.content.length) {
                     const chunk = newContent.substring(this.content.length)
                     this.content = newContent
                     console.log('[Qwen] Writing chunk, length:', chunk.length)
 
                     // Process tool call interception
-                    const baseChunk = createBaseChunk(this.responseId || this.sessionId, this.model, this.created)
-                    const outputChunks = this.toolStreamParser?.push(chunk, baseChunk, !this.sentRole) ?? [{
-                      ...baseChunk,
-                      choices: [{ index: 0, delta: { ...(!this.sentRole ? { role: 'assistant' } : {}), content: chunk }, finish_reason: null }],
-                    }]
+                    const baseChunk = createBaseChunk(
+                      this.responseId || this.sessionId,
+                      this.model,
+                      this.created,
+                    )
+                    const outputChunks = this.toolStreamParser?.push(
+                      chunk,
+                      baseChunk,
+                      !this.sentRole,
+                    ) ?? [
+                      {
+                        ...baseChunk,
+                        choices: [
+                          {
+                            index: 0,
+                            delta: {
+                              ...(!this.sentRole ? { role: 'assistant' } : {}),
+                              content: chunk,
+                            },
+                            finish_reason: null,
+                          },
+                        ],
+                      },
+                    ]
 
                     for (const outChunk of outputChunks) {
                       transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
@@ -760,19 +829,28 @@ export class QwenStreamHandler {
                   // 只有当 multi_load/iframe 消息完成时才发送 stop
                   if (msg.mime_type === 'multi_load/iframe' && !this.stopSent) {
                     this.stopSent = true
-                    console.log('[Qwen] Sending stop for multi_load/iframe, content so far:', this.content.length)
-                    
+                    console.log(
+                      '[Qwen] Sending stop for multi_load/iframe, content so far:',
+                      this.content.length,
+                    )
+
                     // Flush any remaining tool calls
-                    const baseChunk = createBaseChunk(this.responseId || this.sessionId, this.model, this.created)
+                    const baseChunk = createBaseChunk(
+                      this.responseId || this.sessionId,
+                      this.model,
+                      this.created,
+                    )
                     const flushChunks = this.toolStreamParser?.flush(baseChunk) ?? []
-                    
+
                     for (const outChunk of flushChunks) {
                       transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
                     }
-                    
+
                     // Check if we emitted tool calls
-                    const finishReason = this.toolStreamParser?.hasEmittedToolCall() ? 'tool_calls' : 'stop'
-                    
+                    const finishReason = this.toolStreamParser?.hasEmittedToolCall()
+                      ? 'tool_calls'
+                      : 'stop'
+
                     transStream.write(
                       `data: ${JSON.stringify({
                         id: this.responseId || this.sessionId,
@@ -780,7 +858,7 @@ export class QwenStreamHandler {
                         object: 'chat.completion.chunk',
                         choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
                         created: this.created,
-                      })}\n\n`
+                      })}\n\n`,
                     )
                     safeEnd('data: [DONE]\n\n')
                     this.onEnd?.(this.sessionId)
@@ -797,9 +875,15 @@ export class QwenStreamHandler {
                   id: this.responseId || this.sessionId,
                   model: this.model,
                   object: 'chat.completion.chunk',
-                  choices: [{ index: 0, delta: { content: `\n[Error: ${result.error_msg || result.error_code}]` }, finish_reason: 'stop' }],
+                  choices: [
+                    {
+                      index: 0,
+                      delta: { content: `\n[Error: ${result.error_msg || result.error_code}]` },
+                      finish_reason: 'stop',
+                    },
+                  ],
                   created: this.created,
-                })}\n\n`
+                })}\n\n`,
               )
               safeEnd('data: [DONE]\n\n')
             }
@@ -812,18 +896,22 @@ export class QwenStreamHandler {
           console.log('[Qwen] Received complete event')
           if (!streamEnded && !this.stopSent) {
             this.stopSent = true
-            
+
             // Flush any remaining tool calls
-            const baseChunk = createBaseChunk(this.responseId || this.sessionId, this.model, this.created)
+            const baseChunk = createBaseChunk(
+              this.responseId || this.sessionId,
+              this.model,
+              this.created,
+            )
             const flushChunks = this.toolStreamParser?.flush(baseChunk) ?? []
-            
+
             for (const outChunk of flushChunks) {
               transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
             }
-            
+
             // Check if we emitted tool calls
             const finishReason = this.toolStreamParser?.hasEmittedToolCall() ? 'tool_calls' : 'stop'
-            
+
             transStream.write(
               `data: ${JSON.stringify({
                 id: this.responseId || this.sessionId,
@@ -831,7 +919,7 @@ export class QwenStreamHandler {
                 object: 'chat.completion.chunk',
                 choices: [{ index: 0, delta: {}, finish_reason: finishReason }],
                 created: this.created,
-              })}\n\n`
+              })}\n\n`,
             )
             safeEnd('data: [DONE]\n\n')
           }
@@ -840,7 +928,7 @@ export class QwenStreamHandler {
     }
 
     let decompressStream: any = stream
-    
+
     if (contentEncoding === 'gzip') {
       console.log('[Qwen] Decompressing gzip stream...')
       decompressStream = stream.pipe(createGunzip())
@@ -907,7 +995,12 @@ export class QwenStreamHandler {
         object: string
         choices: Array<{
           index: number
-          message: { role: string; content: string | null; reasoning_content?: string; tool_calls?: any[] }
+          message: {
+            role: string
+            content: string | null
+            reasoning_content?: string
+            tool_calls?: any[]
+          }
           finish_reason: string
         }>
         usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number }
@@ -967,7 +1060,12 @@ export class QwenStreamHandler {
           if (eventData && eventData !== '[DONE]') {
             try {
               const result = JSON.parse(eventData)
-              console.log('[Qwen] Non-stream parsed event:', eventType, 'data keys:', Object.keys(result))
+              console.log(
+                '[Qwen] Non-stream parsed event:',
+                eventType,
+                'data keys:',
+                Object.keys(result),
+              )
 
               if (result.communication) {
                 if (!data.id && result.communication.sessionid) {
@@ -988,7 +1086,11 @@ export class QwenStreamHandler {
                       const thinkContent = load.content.think_content || load.content.content || ''
                       if (thinkContent && thinkContent.length > thinkingAccumulator.length) {
                         thinkingAccumulator = thinkContent
-                        console.log('[Qwen] Non-stream: Thinking content length:', thinkingAccumulator.length, 'type: deep_think')
+                        console.log(
+                          '[Qwen] Non-stream: Thinking content length:',
+                          thinkingAccumulator.length,
+                          'type: deep_think',
+                        )
                       }
                       hasDeepThink = true
                     }
@@ -997,37 +1099,54 @@ export class QwenStreamHandler {
                   if (!hasDeepThink) {
                     for (const load of multiLoad) {
                       if (load.type === 'multimodal_chat_think' && load.content) {
-                        const thinkContent = load.content.think_content || load.content.content || ''
+                        const thinkContent =
+                          load.content.think_content || load.content.content || ''
                         if (thinkContent && thinkContent.length > thinkingAccumulator.length) {
                           thinkingAccumulator = thinkContent
-                          console.log('[Qwen] Non-stream: Thinking content length:', thinkingAccumulator.length, 'type: multimodal_chat_think (fallback)')
+                          console.log(
+                            '[Qwen] Non-stream: Thinking content length:',
+                            thinkingAccumulator.length,
+                            'type: multimodal_chat_think (fallback)',
+                          )
                         }
                       }
                     }
                   }
-                  
+
                   // Handle multi_load/iframe content (actual response content)
                   if (msg.mime_type === 'multi_load/iframe' && msg.content) {
                     // Filter out deep_think and multimodal_chat_think markers
                     let filteredContent = msg.content
-                    if (filteredContent === '[(deep_think)]' || filteredContent.trim() === '[(deep_think)]') {
+                    if (
+                      filteredContent === '[(deep_think)]' ||
+                      filteredContent.trim() === '[(deep_think)]'
+                    ) {
                       console.log('[Qwen] Non-stream: Skipping deep_think marker')
                       continue
                     }
                     // Filter out all think markers: [(deep_think)], [(multimodal_chat_think_*)]
                     filteredContent = filteredContent.replace(/\[\(deep_think\)\]/g, '')
-                    filteredContent = filteredContent.replace(/\[\(multimodal_chat_think_\d+\)\]/g, '')
+                    filteredContent = filteredContent.replace(
+                      /\[\(multimodal_chat_think_\d+\)\]/g,
+                      '',
+                    )
                     if (filteredContent.length > contentAccumulator.length) {
                       contentAccumulator = filteredContent
-                      console.log('[Qwen] Non-stream multi_load/iframe content length:', contentAccumulator.length)
+                      console.log(
+                        '[Qwen] Non-stream multi_load/iframe content length:',
+                        contentAccumulator.length,
+                      )
                     }
                   }
-                  
+
                   // Also handle text/plain content
                   if (msg.mime_type === 'text/plain' && msg.content) {
                     // Filter out deep_think and multimodal_chat_think markers
                     let filteredContent = msg.content.replace(/\[\(deep_think\)\]/g, '')
-                    filteredContent = filteredContent.replace(/\[\(multimodal_chat_think_\d+\)\]/g, '')
+                    filteredContent = filteredContent.replace(
+                      /\[\(multimodal_chat_think_\d+\)\]/g,
+                      '',
+                    )
                     if (filteredContent.length > contentAccumulator.length) {
                       contentAccumulator = filteredContent
                     }
@@ -1035,14 +1154,18 @@ export class QwenStreamHandler {
 
                   if (msg.status === 'complete' || msg.status === 'finished') {
                     if (msg.mime_type === 'multi_load/iframe') {
-                      console.log('[Qwen] Non-stream finished, content length:', contentAccumulator.length)
+                      console.log(
+                        '[Qwen] Non-stream finished, content length:',
+                        contentAccumulator.length,
+                      )
                       this.content = contentAccumulator
-                      
+
                       // Parse tool calls from content
-                      const { content: cleanContent, toolCalls } = this.toolCallingPlan?.shouldParseResponse
+                      const { content: cleanContent, toolCalls } = this.toolCallingPlan
+                        ?.shouldParseResponse
                         ? { content: contentAccumulator, toolCalls: [] }
                         : parseToolCallsFromText(contentAccumulator, 'qwen')
-                      
+
                       if (toolCalls.length > 0) {
                         data.choices[0].message.content = null
                         ;(data.choices[0].message as any).tool_calls = toolCalls
@@ -1050,12 +1173,12 @@ export class QwenStreamHandler {
                       } else {
                         data.choices[0].message.content = cleanContent.trim()
                       }
-                      
+
                       // Add reasoning_content if available
                       if (thinkingAccumulator) {
                         data.choices[0].message.reasoning_content = thinkingAccumulator
                       }
-                      
+
                       this.onEnd?.(this.sessionId)
                       resolved = true
                       resolve(data)
@@ -1070,7 +1193,10 @@ export class QwenStreamHandler {
           }
 
           if (eventType === 'complete' && !resolved) {
-            console.log('[Qwen] Non-stream complete event, content length:', contentAccumulator.length)
+            console.log(
+              '[Qwen] Non-stream complete event, content length:',
+              contentAccumulator.length,
+            )
             this.content = contentAccumulator
             finalizeWithData(contentAccumulator)
             // Add reasoning_content if available
@@ -1085,8 +1211,10 @@ export class QwenStreamHandler {
       }
 
       let decompressStream: any = stream
-      
-      const contentEncoding = response?.headers?.['content-encoding']?.toLowerCase()
+
+      const rawContentEncoding = response?.headers?.['content-encoding']
+      const contentEncoding =
+        typeof rawContentEncoding === 'string' ? rawContentEncoding.toLowerCase() : undefined
       if (contentEncoding === 'gzip') {
         console.log('[Qwen] Decompressing gzip stream...')
         decompressStream = stream.pipe(createGunzip())
@@ -1109,7 +1237,10 @@ export class QwenStreamHandler {
               const decompressedStr = Buffer.from(decompressed).toString('utf8')
               buffer = decompressedStr
               processBuffer()
-              console.log('[Qwen] Zstd non-stream finished, content length:', contentAccumulator.length)
+              console.log(
+                '[Qwen] Zstd non-stream finished, content length:',
+                contentAccumulator.length,
+              )
               this.content = contentAccumulator
               finalizeWithData(contentAccumulator)
               // Add reasoning_content if available

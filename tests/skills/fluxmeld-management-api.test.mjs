@@ -3,6 +3,7 @@ import { spawn, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import test from 'node:test'
 
 const script = 'skills/fluxmeld-management-api/scripts/management-api.mjs'
@@ -60,7 +61,9 @@ test('restore-tool-config exits nonzero on non-2xx response', async () => {
   const configFile = path.join(os.tmpdir(), `toolCallingConfig-${process.pid}.json`)
   const mockFile = path.join(os.tmpdir(), `mock-fetch-${process.pid}.mjs`)
   fs.writeFileSync(configFile, JSON.stringify({ enabled: true }))
-  fs.writeFileSync(mockFile, `
+  fs.writeFileSync(
+    mockFile,
+    `
 globalThis.fetch = async (url, options = {}) => {
   if (!String(url).endsWith('/v0/management/config/toolCallingConfig')) {
     throw new Error('unexpected url ' + url)
@@ -73,19 +76,20 @@ globalThis.fetch = async (url, options = {}) => {
     headers: { 'Content-Type': 'application/json' },
   })
 }
-`)
+`,
+  )
 
   try {
-    const result = await runScript([
-      'restore-tool-config',
-      '--file',
-      configFile,
-    ], {
-      FLUXMELD_BASE_URL: 'http://mock.local',
-      FLUXMELD_MGMT_SECRET: 'mgmt_super_secret_value',
-    }, {
-      nodeArgs: ['--import', mockFile],
-    })
+    const result = await runScript(
+      ['restore-tool-config', '--file', configFile],
+      {
+        FLUXMELD_BASE_URL: 'http://mock.local',
+        FLUXMELD_MGMT_SECRET: 'mgmt_super_secret_value',
+      },
+      {
+        nodeArgs: ['--import', pathToFileURL(mockFile).href],
+      },
+    )
 
     assert.notEqual(result.status, 0)
     assert.match(result.stderr, /restore-tool-config failed/)
@@ -126,14 +130,14 @@ function runScript(args, env, options = {}) {
     })
     let stdout = ''
     let stderr = ''
-    child.stdout.on('data', chunk => {
+    child.stdout.on('data', (chunk) => {
       stdout += chunk
     })
-    child.stderr.on('data', chunk => {
+    child.stderr.on('data', (chunk) => {
       stderr += chunk
     })
     child.on('error', reject)
-    child.on('close', status => {
+    child.on('close', (status) => {
       resolve({ status, stdout, stderr })
     })
   })

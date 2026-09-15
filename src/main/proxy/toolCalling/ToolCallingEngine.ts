@@ -10,10 +10,7 @@ import {
 import { getToolProtocol } from './protocols/index.ts'
 import { hasFencedCodeBlock } from './protocols/shared.ts'
 import { parseToolCallContent } from './responseParser.ts'
-import {
-  getToolClientAdapter,
-  resolveToolClientAdapterForRequest,
-} from './clientAdapters/index.ts'
+import { getToolClientAdapter, resolveToolClientAdapterForRequest } from './clientAdapters/index.ts'
 import { buildToolCallingRuntimePlan } from './runtimePlan.ts'
 import type {
   JsonRuntimeType,
@@ -72,14 +69,15 @@ export class ToolCallingRequestError extends Error {
 
 export function isToolCallingResponseErrorMessage(message?: string): boolean {
   return Boolean(
-    message?.startsWith('Upstream model did not return the required tool call')
-    || message?.startsWith('Upstream model returned invalid tool arguments')
+    message?.startsWith('Upstream model did not return the required tool call') ||
+    message?.startsWith('Upstream model returned invalid tool arguments'),
   )
 }
 
 const MAX_SCHEMA_CACHE_ENTRIES = 256
 const MAX_SCHEMA_CHARS = 100_000
-const MANAGED_PROTOCOL_MARKER = /<\/?\|FLUXMELD\||<\/?(?:tool_calls|tool_use|invoke|parameter|parameters|arguments|antml:function_calls|antml:invoke|antml:parameters)\b|\[\/?function_calls\]|\[call:[^\]]+\]|\[\/call\]/i
+const MANAGED_PROTOCOL_MARKER =
+  /<\/?\|FLUXMELD\||<\/?(?:tool_calls|tool_use|invoke|parameter|parameters|arguments|antml:function_calls|antml:invoke|antml:parameters)\b|\[\/?function_calls\]|\[call:[^\]]+\]|\[\/call\]/i
 const schemaValidator = new Ajv({
   allErrors: true,
   coerceTypes: false,
@@ -111,19 +109,23 @@ export class ToolCallingEngine {
     requestId?: string
   }): ToolCallingTransformResult {
     const { request, provider, actualModel, requestId } = input
-    const adapterResolution = resolveToolClientAdapterForRequest(this.config.clientAdapterId, request)
+    const adapterResolution = resolveToolClientAdapterForRequest(
+      this.config.clientAdapterId,
+      request,
+    )
     const adapter = adapterResolution.adapter
     const normalizedClientRequest = adapter.normalizeRequest(request)
-    const clientRequest = adapterResolution.resolvedBy === 'request_identity'
-      ? {
-          ...normalizedClientRequest,
-          diagnostics: {
-            ...normalizedClientRequest.diagnostics,
-            configuredClientAdapterId: adapterResolution.configuredClientAdapterId,
-            clientAdapterResolution: adapterResolution.resolvedBy,
-          },
-        }
-      : normalizedClientRequest
+    const clientRequest =
+      adapterResolution.resolvedBy === 'request_identity'
+        ? {
+            ...normalizedClientRequest,
+            diagnostics: {
+              ...normalizedClientRequest.diagnostics,
+              configuredClientAdapterId: adapterResolution.configuredClientAdapterId,
+              clientAdapterResolution: adapterResolution.resolvedBy,
+            },
+          }
+        : normalizedClientRequest
     const plan = buildToolCallingRuntimePlan({
       requestId,
       providerId: provider.id,
@@ -169,10 +171,11 @@ export class ToolCallingEngine {
     const message = result?.choices?.[0]?.message
     const rawContent = typeof message?.content === 'string' ? message.content : ''
     const rawResponsePreview = sanitizeDiagnosticPreview(
-      rawContent || JSON.stringify({
-        content: message?.content ?? null,
-        tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
-      }),
+      rawContent ||
+        JSON.stringify({
+          content: message?.content ?? null,
+          tool_calls: Array.isArray(message?.tool_calls) ? message.tool_calls : [],
+        }),
     )
 
     try {
@@ -234,13 +237,17 @@ export class ToolCallingEngine {
         malformedReason: parseResult.malformedReason,
         fencedBlockDetected: hasFencedCodeBlock(message.content),
         rawContentPreview: rawResponsePreview,
-        ...(this.config.diagnosticsEnabled ? {
-          rawMatchPreviews: parseResult.rawMatches.map((raw) => sanitizeDiagnosticPreview(raw, 800)),
-          parsedArgumentsPreview: parseResult.toolCalls.map((call) => ({
-            name: sanitizeToolName(call.function.name),
-            arguments: sanitizeDiagnosticPreview(call.function.arguments, 1200),
-          })),
-        } : {}),
+        ...(this.config.diagnosticsEnabled
+          ? {
+              rawMatchPreviews: parseResult.rawMatches.map((raw) =>
+                sanitizeDiagnosticPreview(raw, 800),
+              ),
+              parsedArgumentsPreview: parseResult.toolCalls.map((call) => ({
+                name: sanitizeToolName(call.function.name),
+                arguments: sanitizeDiagnosticPreview(call.function.arguments, 1200),
+              })),
+            }
+          : {}),
       }
 
       if (parseResult.toolCalls.length === 0) {
@@ -274,10 +281,10 @@ export class ToolCallingEngine {
         rawContentPreview: rawResponsePreview,
       }
       plan.diagnostics = diagnostics
-      const reasoningContent = typeof message?.reasoning_content === 'string'
-        && message.reasoning_content.trim()
-        ? message.reasoning_content
-        : error.reasoningContent
+      const reasoningContent =
+        typeof message?.reasoning_content === 'string' && message.reasoning_content.trim()
+          ? message.reasoning_content
+          : error.reasoningContent
       throw new ToolCallingResponseError(
         error.message,
         error.code,
@@ -315,7 +322,9 @@ export class ToolCallingEngine {
     const details = [
       invalidToolNames.length > 0 ? `invalid tools: ${invalidToolNames.join(', ')}` : undefined,
       malformedReason,
-    ].filter(Boolean).join('; ')
+    ]
+      .filter(Boolean)
+      .join('; ')
     const suffix = details ? ` (${details})` : ''
     throw new ToolCallingResponseError(
       `Upstream model did not return the required tool call${suffix}`,
@@ -344,12 +353,9 @@ export function validateAndSanitizeToolCalls(
 
     const rawArguments = publicToolCall.function?.arguments
     if (typeof rawArguments !== 'string') {
-      throwInvalidToolArguments(
-        toolName,
-        'arguments must be a JSON string',
-        true,
-        [createValidationIssue('', 'type', 'must be a JSON string', 'JSON string', rawArguments)],
-      )
+      throwInvalidToolArguments(toolName, 'arguments must be a JSON string', true, [
+        createValidationIssue('', 'type', 'must be a JSON string', 'JSON string', rawArguments),
+      ])
     }
     if (MANAGED_PROTOCOL_MARKER.test(rawArguments)) {
       throwInvalidToolArguments(
@@ -369,7 +375,15 @@ export function validateAndSanitizeToolCalls(
         toolName,
         'arguments are not valid JSON',
         true,
-        [createValidationIssue('', 'parse', 'must be valid JSON', 'valid JSON object', rawArguments)],
+        [
+          createValidationIssue(
+            '',
+            'parse',
+            'must be valid JSON',
+            'valid JSON object',
+            rawArguments,
+          ),
+        ],
         rawArguments,
       )
     }
@@ -452,17 +466,19 @@ function buildSchemaValidationIssues(
 ): ToolArgumentValidationIssue[] {
   return (errors ?? []).slice(0, 6).map((error) => {
     const params = error.params as Record<string, unknown>
-    const relatedProperty = error.keyword === 'required'
-      ? String(params.missingProperty ?? '')
-      : error.keyword === 'additionalProperties'
-        ? String(params.additionalProperty ?? '')
-        : ''
+    const relatedProperty =
+      error.keyword === 'required'
+        ? String(params.missingProperty ?? '')
+        : error.keyword === 'additionalProperties'
+          ? String(params.additionalProperty ?? '')
+          : ''
     const jsonPointer = relatedProperty
       ? appendJsonPointer(error.instancePath, relatedProperty)
       : error.instancePath
-    const actualValue = error.keyword === 'required'
-      ? MISSING_JSON_VALUE
-      : getJsonPointerValue(argumentsValue, jsonPointer)
+    const actualValue =
+      error.keyword === 'required'
+        ? MISSING_JSON_VALUE
+        : getJsonPointerValue(argumentsValue, jsonPointer)
 
     return {
       jsonPointer,
@@ -477,10 +493,12 @@ function buildSchemaValidationIssues(
 function formatSchemaErrors(issues: ToolArgumentValidationIssue[]): string {
   if (issues.length === 0) return 'arguments do not match the declared JSON Schema'
 
-  return issues.map((issue) => {
-    const pointer = issue.jsonPointer || '(document root)'
-    return `${pointer} ${issue.message} (expected ${issue.expected}, actual ${issue.actualType})`
-  }).join('; ')
+  return issues
+    .map((issue) => {
+      const pointer = issue.jsonPointer || '(document root)'
+      return `${pointer} ${issue.message} (expected ${issue.expected}, actual ${issue.actualType})`
+    })
+    .join('; ')
 }
 
 function createValidationIssue(
@@ -514,9 +532,11 @@ function getJsonPointerValue(root: unknown, pointer: string): unknown | typeof M
   for (const encodedToken of pointer.slice(1).split('/')) {
     const token = encodedToken.replace(/~1/g, '/').replace(/~0/g, '~')
     if (
-      (typeof current !== 'object' || current === null)
-      || !Object.prototype.hasOwnProperty.call(current, token)
-    ) return MISSING_JSON_VALUE
+      typeof current !== 'object' ||
+      current === null ||
+      !Object.prototype.hasOwnProperty.call(current, token)
+    )
+      return MISSING_JSON_VALUE
     current = (current as Record<string, unknown>)[token]
   }
   return current

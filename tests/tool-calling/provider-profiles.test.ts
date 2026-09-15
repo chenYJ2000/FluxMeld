@@ -2,9 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getProviderToolProfile } from '../../src/main/proxy/toolCalling/providerProfiles.ts'
 
-const calls = [
-  { id: 'call_1', name: 'default_api:read_file', arguments: '{"filePath":"/tmp/a"}' },
-]
+const calls = [{ id: 'call_1', name: 'default_api:read_file', arguments: '{"filePath":"/tmp/a"}' }]
 
 test('first-version providers use managed prompt and managed xml by default', () => {
   for (const providerId of ['deepseek', 'kimi', 'glm', 'qwen']) {

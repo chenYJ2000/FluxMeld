@@ -3,29 +3,37 @@ import { getManagedProtocols, getToolProtocol } from './protocols/index.ts'
 
 export function parseToolCallContent(content: string, plan: ToolCallingPlan): ToolParseResult {
   const protocols = orderedProtocols(plan.protocol)
-  const results = protocols.map((protocol) => protocol.parse(content, {
-    tools: plan.tools,
-    protocol: protocol.id,
-  }))
-  const detectedProtocols = unique(results
-    .filter((result) => result.protocol !== 'unknown')
-    .map((result) => result.protocol as ToolProtocolId))
+  const results = protocols.map((protocol) =>
+    protocol.parse(content, {
+      tools: plan.tools,
+      protocol: protocol.id,
+    }),
+  )
+  const detectedProtocols = unique(
+    results
+      .filter((result) => result.protocol !== 'unknown')
+      .map((result) => result.protocol as ToolProtocolId),
+  )
   const successful = results.find((result) => result.toolCalls.length > 0)
 
   if (successful) {
     return { ...successful, detectedProtocols }
   }
 
-  const informative = results.find((result) => (
-    result.rawMatches.length > 0
-    || result.invalidToolNames.length > 0
-    || Boolean(result.malformedReason)
-  )) ?? results[0]
+  const informative =
+    results.find(
+      (result) =>
+        result.rawMatches.length > 0 ||
+        result.invalidToolNames.length > 0 ||
+        Boolean(result.malformedReason),
+    ) ?? results[0]
   const invalidToolNames = unique(results.flatMap((result) => result.invalidToolNames))
   const malformedToolNames = unique(results.flatMap((result) => result.malformedToolNames ?? []))
-  const malformedReasons = unique(results
-    .map((result) => result.malformedReason)
-    .filter((reason): reason is string => Boolean(reason)))
+  const malformedReasons = unique(
+    results
+      .map((result) => result.malformedReason)
+      .filter((reason): reason is string => Boolean(reason)),
+  )
 
   return {
     ...informative,

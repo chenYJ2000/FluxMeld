@@ -31,10 +31,12 @@ async function addPadding(inputPath, outputPath) {
 const inputPath = path.join(__dirname, '..', 'build', 'icon.png')
 const outputPath = path.join(__dirname, '..', 'build', 'icon.png')
 
-loadImage(inputPath).then(img => {
-  console.log(`Original image size: ${img.width}x${img.height}`)
-  return addPadding(inputPath, outputPath)
-}).catch(err => {
-  console.error('Error:', err)
-  process.exit(1)
-})
+loadImage(inputPath)
+  .then((img) => {
+    console.log(`Original image size: ${img.width}x${img.height}`)
+    return addPadding(inputPath, outputPath)
+  })
+  .catch((err) => {
+    console.error('Error:', err)
+    process.exit(1)
+  })

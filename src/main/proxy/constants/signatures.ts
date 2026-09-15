@@ -126,11 +126,7 @@ export const CLIENT_SIGNATURES: Record<ClientType, ClientSignatureConfig> = {
   vscodeAgent: {
     id: 'vscodeAgent',
     name: 'VSCode Agent',
-    detectPatterns: [
-      'GitHub Copilot',
-      'AI programming assistant',
-      'VS Code Agent',
-    ],
+    detectPatterns: ['GitHub Copilot', 'AI programming assistant', 'VS Code Agent'],
     toolCallFormat: 'native',
     injectsPrompt: true,
   },
@@ -180,6 +176,11 @@ export interface DetectionResult {
   matchedSignatures: string[]
   toolCallFormat: ToolCallFormat
   injectsPrompt: boolean
+  /** Markers delimiting an injected tool-prompt section, when known. */
+  promptSectionMarkers?: {
+    start: string
+    end: string
+  }
 }
 
 /**
@@ -216,9 +217,7 @@ export function detectClientFromContent(content: string): DetectionResult {
   for (const [clientType, config] of Object.entries(CLIENT_SIGNATURES)) {
     if (clientType === 'unknown') continue
 
-    const matchedSignatures = config.detectPatterns.filter((pattern) =>
-      content.includes(pattern)
-    )
+    const matchedSignatures = config.detectPatterns.filter((pattern) => content.includes(pattern))
 
     if (matchedSignatures.length > 0) {
       const confidence = matchedSignatures.length / config.detectPatterns.length
@@ -248,6 +247,7 @@ export function detectClientFromContent(content: string): DetectionResult {
     ...bestMatch,
     toolCallFormat: config.toolCallFormat,
     injectsPrompt: config.injectsPrompt,
+    promptSectionMarkers: config.promptSectionMarkers,
   }
 }
 
@@ -274,9 +274,7 @@ export function getClientSignature(clientType: ClientType): ClientSignatureConfi
  * Get all known client types
  */
 export function getKnownClientTypes(): ClientType[] {
-  return Object.keys(CLIENT_SIGNATURES).filter(
-    (key) => key !== 'unknown'
-  ) as ClientType[]
+  return Object.keys(CLIENT_SIGNATURES).filter((key) => key !== 'unknown') as ClientType[]
 }
 
 /**

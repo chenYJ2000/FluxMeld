@@ -22,17 +22,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 
-import { 
-  Key, 
-  Plus, 
-  Copy, 
-  Trash2, 
-  Eye, 
-  EyeOff,
-  Shield,
-  Clock,
-  BarChart3,
-} from 'lucide-react'
+import { Key, Plus, Copy, Trash2, Eye, EyeOff, Shield, Clock, BarChart3 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { useSettingsStore } from '@/stores/settingsStore'
 import type { ApiKey } from '@/types/electron'
@@ -65,9 +55,7 @@ export default function ApiKeysPage() {
   const apiKeys = config?.apiKeys || []
 
   const handleToggleEnabled = async (keyId: string, enabled: boolean) => {
-    const updatedKeys = apiKeys.map(k => 
-      k.id === keyId ? { ...k, enabled } : k
-    )
+    const updatedKeys = apiKeys.map((k) => (k.id === keyId ? { ...k, enabled } : k))
     await updateConfig({ apiKeys: updatedKeys })
     toast({
       title: enabled ? t('apiKeys.keyEnabled') : t('apiKeys.keyDisabled'),
@@ -101,8 +89,8 @@ export default function ApiKeysPage() {
 
   const handleDeleteKey = async () => {
     if (!deleteKeyId) return
-    
-    const updatedKeys = apiKeys.filter(k => k.id !== deleteKeyId)
+
+    const updatedKeys = apiKeys.filter((k) => k.id !== deleteKeyId)
     await updateConfig({ apiKeys: updatedKeys })
     setDeleteKeyId(null)
     toast({
@@ -167,16 +155,15 @@ export default function ApiKeysPage() {
             <Shield className="h-5 w-5" />
             {t('apiKeys.apiKeyAuth')}
           </CardTitle>
-          <CardDescription>
-            {t('apiKeys.apiKeyAuthDesc')}
-          </CardDescription>
+          <CardDescription>{t('apiKeys.apiKeyAuthDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
               <Label htmlFor="global-enable">{t('apiKeys.enableApiKeyAuth')}</Label>
               <p className="text-sm text-muted-foreground">
-                {t('apiKeys.currentStatus')}: {config?.enableApiKey ? t('common.enabled') : t('common.disabled')}
+                {t('apiKeys.currentStatus')}:{' '}
+                {config?.enableApiKey ? t('common.enabled') : t('common.disabled')}
               </p>
             </div>
             <Switch
@@ -196,7 +183,8 @@ export default function ApiKeysPage() {
               {t('apiKeys.apiKeyList')}
             </CardTitle>
             <CardDescription>
-              {t('apiKeys.totalKeys', { count: apiKeys.length })}, {t('apiKeys.enabledKeys', { count: apiKeys.filter(k => k.enabled).length })}
+              {t('apiKeys.totalKeys', { count: apiKeys.length })},{' '}
+              {t('apiKeys.enabledKeys', { count: apiKeys.filter((k) => k.enabled).length })}
             </CardDescription>
           </div>
           <Button onClick={() => setShowAddDialog(true)}>
@@ -209,9 +197,7 @@ export default function ApiKeysPage() {
             <div className="text-center py-12">
               <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <p className="text-muted-foreground">{t('apiKeys.noApiKeys')}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('apiKeys.clickToCreate')}
-              </p>
+              <p className="text-sm text-muted-foreground mt-1">{t('apiKeys.clickToCreate')}</p>
             </div>
           ) : (
             <Table>
@@ -234,9 +220,7 @@ export default function ApiKeysPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {visibleKeys.has(apiKey.id) 
-                            ? apiKey.key 
-                            : maskKey(apiKey.key)}
+                          {visibleKeys.has(apiKey.id) ? apiKey.key : maskKey(apiKey.key)}
                         </code>
                         <Button
                           variant="ghost"
@@ -263,9 +247,7 @@ export default function ApiKeysPage() {
                     <TableCell>
                       <Switch
                         checked={apiKey.enabled}
-                        onCheckedChange={(checked) => 
-                          handleToggleEnabled(apiKey.id, checked)
-                        }
+                        onCheckedChange={(checked) => handleToggleEnabled(apiKey.id, checked)}
                       />
                     </TableCell>
                     <TableCell>
@@ -302,9 +284,7 @@ export default function ApiKeysPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('apiKeys.createApiKey')}</DialogTitle>
-            <DialogDescription>
-              {t('apiKeys.createApiKeyDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('apiKeys.createApiKeyDesc')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -321,9 +301,7 @@ export default function ApiKeysPage() {
             <Button variant="outline" onClick={() => setShowAddDialog(false)}>
               {t('apiKeys.cancel')}
             </Button>
-            <Button onClick={handleAddKey}>
-              {t('apiKeys.create')}
-            </Button>
+            <Button onClick={handleAddKey}>{t('apiKeys.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -332,9 +310,7 @@ export default function ApiKeysPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('apiKeys.confirmDelete')}</DialogTitle>
-            <DialogDescription>
-              {t('apiKeys.confirmDeleteDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('apiKeys.confirmDeleteDesc')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteKeyId(null)}>

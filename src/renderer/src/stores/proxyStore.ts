@@ -1,5 +1,11 @@
 import { create } from 'zustand'
-import type { ProxyStatus, ProxyStatistics, LoadBalanceStrategy, ModelMapping, AppConfig } from '@/types/electron'
+import type {
+  ProxyStatus,
+  ProxyStatistics,
+  LoadBalanceStrategy,
+  ModelMapping,
+  AppConfig,
+} from '@/types/electron'
 
 export interface ProxyConfig {
   port: number
@@ -83,24 +89,26 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
 
   setProxyStatistics: (statistics) => set({ proxyStatistics: statistics }),
 
-  setProxyConfig: (config) => set((state) => ({
-    proxyConfig: { ...state.proxyConfig, ...config },
-  })),
+  setProxyConfig: (config) =>
+    set((state) => ({
+      proxyConfig: { ...state.proxyConfig, ...config },
+    })),
 
   setLoadBalanceStrategy: (strategy) => set({ loadBalanceStrategy: strategy }),
 
   setAccountWeights: (weights) => set({ accountWeights: weights }),
 
-  updateAccountWeight: (accountId, weight) => set((state) => {
-    const weights = [...state.accountWeights]
-    const index = weights.findIndex(w => w.accountId === accountId)
-    if (index >= 0) {
-      weights[index] = { accountId, weight }
-    } else {
-      weights.push({ accountId, weight })
-    }
-    return { accountWeights: weights }
-  }),
+  updateAccountWeight: (accountId, weight) =>
+    set((state) => {
+      const weights = [...state.accountWeights]
+      const index = weights.findIndex((w) => w.accountId === accountId)
+      if (index >= 0) {
+        weights[index] = { accountId, weight }
+      } else {
+        weights.push({ accountId, weight })
+      }
+      return { accountWeights: weights }
+    }),
 
   setModelMappings: (mappings) => set({ modelMappings: mappings }),
 
@@ -138,11 +146,12 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
         modelUsage: {},
         providerUsage: {},
       }
-      
-      const avgLatency = todayStats.successRequests > 0 
-        ? Math.round(todayStats.totalLatency / todayStats.successRequests) 
-        : 0
-      
+
+      const avgLatency =
+        todayStats.successRequests > 0
+          ? Math.round(todayStats.totalLatency / todayStats.successRequests)
+          : 0
+
       const statistics: ProxyStatistics = {
         totalRequests: todayStats.totalRequests,
         successRequests: todayStats.successRequests,
@@ -154,7 +163,7 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
         providerUsage: todayStats.providerUsage,
         accountUsage: persistentStats?.accountUsage || {},
       }
-      
+
       set({ proxyStatistics: statistics || DEFAULT_STATISTICS })
     } catch (error) {
       set({ proxyStatistics: DEFAULT_STATISTICS })
@@ -192,10 +201,10 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
     try {
       set({ isLoading: true, error: null })
       const currentConfig = get().appConfig
-      
+
       // Deep merge for nested objects like toolCallingConfig and sessionConfig
       let newConfig = { ...currentConfig, ...config } as AppConfig
-      
+
       // Handle toolCallingConfig deep merge
       if (config.toolCallingConfig && currentConfig?.toolCallingConfig) {
         newConfig.toolCallingConfig = {
@@ -207,7 +216,7 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
           },
         }
       }
-      
+
       // Handle sessionConfig deep merge
       if (config.sessionConfig && currentConfig?.sessionConfig) {
         newConfig.sessionConfig = {
@@ -215,7 +224,7 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
           ...config.sessionConfig,
         }
       }
-      
+
       await window.electronAPI.store.set('config', newConfig)
       set({ appConfig: newConfig })
       return true

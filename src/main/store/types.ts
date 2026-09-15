@@ -1,61 +1,58 @@
 /**
  * Credential Storage Module - Type Definitions
  * Defines core data structures for accounts, providers, and configuration
+ *
+ * Canonical domain types (Account, Provider, AppConfig, ...) live in
+ * `src/shared/types.ts` and are re-exported here so both the main process and
+ * the renderer share a single definition. Store-specific types remain below.
  */
 
-import type { ProviderStatus } from '../../shared/types'
 import type { LegacyToolPromptConfig, ToolCallingConfig } from '../../shared/toolCalling.ts'
 import { DEFAULT_TOOL_CALLING_CONFIG } from '../../shared/toolCalling.ts'
+import type {
+  Account,
+  AppConfig,
+  ContextManagementConfig,
+  CredentialField,
+  LogEntry,
+  ManagementApiConfig,
+  ModelMapping,
+  Provider,
+  RequestLogConfig,
+  SessionConfig,
+  SystemPrompt,
+} from '../../shared/types'
 
-/**
- * Account Status Enum
- */
-export type AccountStatus = 'active' | 'inactive' | 'expired' | 'error'
+export type {
+  Account,
+  AccountStatus,
+  ApiKey,
+  AppConfig,
+  AuthType,
+  ContextManagementConfig,
+  CredentialField,
+  EffectiveModel,
+  LoadBalanceStrategy,
+  LogEntry,
+  LogLevel,
+  ManagementApiConfig,
+  ModelMapping,
+  OutboundProxySettings,
+  PromptType,
+  Provider,
+  ProviderStatus,
+  ProviderType,
+  RequestLogConfig,
+  SessionConfig,
+  SlidingWindowConfig,
+  SummaryConfig,
+  SystemPrompt,
+  Theme,
+  TokenLimitConfig,
+  ValidationResult,
+} from '../../shared/types'
 
-/**
- * Provider Type Enum
- */
-export type ProviderType = 'builtin' | 'custom'
-
-/**
- * Authentication Type Enum
- * - oauth: OAuth authentication
- * - token: Simple Token authentication
- * - cookie: Cookie authentication
- * - userToken: User Token authentication (DeepSeek)
- * - refresh_token: Refresh token authentication (GLM)
- * - jwt: JWT/Refresh token authentication (Kimi)
- * - realUserID_token: realUserID+JWT authentication (MiniMax)
- * - tongyi_sso_ticket: Tongyi SSO ticket authentication (Qwen)
- */
-export type AuthType = 
-  | 'oauth' 
-  | 'token' 
-  | 'cookie' 
-  | 'userToken' 
-  | 'refresh_token' 
-  | 'jwt' 
-  | 'realUserID_token' 
-  | 'tongyi_sso_ticket'
-
-/**
- * Credential Field Configuration Interface
- * Defines credential fields required by provider
- */
-export interface CredentialField {
-  /** Field name */
-  name: string
-  /** Field label (display name) */
-  label: string
-  /** Field type */
-  type: 'text' | 'password' | 'textarea'
-  /** Whether required */
-  required: boolean
-  /** Placeholder text */
-  placeholder?: string
-  /** Help text */
-  helpText?: string
-}
+export type { LegacyToolPromptConfig, ToolCallingConfig }
 
 /**
  * Built-in Provider Configuration Interface
@@ -75,228 +72,9 @@ export interface BuiltinProviderConfig extends Omit<Provider, 'createdAt' | 'upd
 }
 
 /**
- * Load Balance Strategy Enum
- */
-export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover' | 'least-recently-used' | 'balanced'
-
-/**
- * Theme Enum
- */
-export type Theme = 'light' | 'dark' | 'system'
-
-/**
- * Account Interface
- * Represents account configuration under a provider
- */
-export interface Account {
-  /** Account unique identifier */
-  id: string
-  /** Provider ID */
-  providerId: string
-  /** Account name */
-  name: string
-  /** Account email (optional) */
-  email?: string
-  /** Credential data (encrypted storage) */
-  credentials: Record<string, string>
-  /** Account status */
-  status: AccountStatus
-  /** Last used time (timestamp) */
-  lastUsed?: number
-  /** Created time (timestamp) */
-  createdAt: number
-  /** Updated time (timestamp) */
-  updatedAt: number
-  /** Error message (when status is error) */
-  errorMessage?: string
-  /** Last credential/health check time */
-  lastStatusCheck?: number
-  /** Request count */
-  requestCount?: number
-  /** Daily request limit */
-  dailyLimit?: number
-  /** Today used count */
-  todayUsed?: number
-}
-
-/**
- * Provider Interface
- * Represents an API provider configuration
- */
-export interface Provider {
-  /** Provider unique identifier */
-  id: string
-  /** Provider name */
-  name: string
-  /** Provider type */
-  type: ProviderType
-  /** Authentication type */
-  authType: AuthType
-  /** API endpoint address */
-  apiEndpoint: string
-  /** Chat API path */
-  chatPath?: string
-  /** Default request headers */
-  headers: Record<string, string>
-  /** Whether enabled */
-  enabled: boolean
-  /** Created time (timestamp) */
-  createdAt: number
-  /** Updated time (timestamp) */
-  updatedAt: number
-  /** Provider description */
-  description?: string
-  /** Icon URL */
-  icon?: string
-  /** Supported model list */
-  supportedModels?: string[]
-  /** Model name mapping */
-  modelMappings?: Record<string, string>
-  /** Provider status */
-  status?: ProviderStatus
-  /** Last status check time */
-  lastStatusCheck?: number
-}
-
-/**
- * Model Mapping Configuration
- * Maps request model to actual used model
- */
-export interface ModelMapping {
-  /** Request model name */
-  requestModel: string
-  /** Actual used model name */
-  actualModel: string
-  /** Preferred provider ID */
-  preferredProviderId?: string
-  /** Preferred account ID */
-  preferredAccountId?: string
-}
-
-/**
- * Application Configuration Interface
- */
-export interface AppConfig {
-  /** Proxy service port */
-  proxyPort: number
-  /** Proxy service bind address */
-  proxyHost: string
-  /** Load balance strategy */
-  loadBalanceStrategy: LoadBalanceStrategy
-  /** Model mapping configuration */
-  modelMappings: Record<string, ModelMapping>
-  /** Default model mappings have been seeded into editable config */
-  defaultModelMappingsSeeded?: boolean
-  /** UI theme */
-  theme: Theme
-  /** Auto start on boot */
-  autoStart: boolean
-  /** Auto start proxy on launch */
-  autoStartProxy: boolean
-  /** Minimize to tray */
-  minimizeToTray: boolean
-  /** Log level */
-  logLevel: 'debug' | 'info' | 'warn' | 'error'
-  /** Log retention days */
-  logRetentionDays: number
-  /** Request log persistence configuration */
-  requestLogConfig: RequestLogConfig
-  /** Request timeout (milliseconds) */
-  requestTimeout: number
-  /** Retry count */
-  retryCount: number
-  /** API Key list */
-  apiKeys: ApiKey[]
-  /** Whether to enable API Key authentication */
-  enableApiKey: boolean
-  /** OAuth proxy mode: 'system' uses system proxy, 'none' disables proxy */
-  oauthProxyMode: 'system' | 'none'
-  /** Session management configuration */
-  sessionConfig: SessionConfig
-  /** Tool calling configuration */
-  toolCallingConfig: ToolCallingConfig
-  /** Legacy migration input from pre-v2 tool prompt settings */
-  toolPromptConfig?: LegacyToolPromptConfig
-  /** Management API configuration */
-  managementApi: ManagementApiConfig
-  /** Context management configuration */
-  contextManagement: ContextManagementConfig
-  /** Outbound (Clash/mihomo) external controller settings */
-  outboundProxy: OutboundProxySettings
-}
-
-/**
- * Outbound Proxy (Clash/mihomo external controller) Settings
- * Used by the on-demand outbound proxy manager to reach the controller API.
- */
-export interface OutboundProxySettings {
-  /** Clash external controller address, e.g. "127.0.0.1:9097" */
-  controllerUrl: string
-  /** Clash external controller secret (Bearer token) */
-  secret: string
-}
-
-/**
- * Log Level Enum
- */
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
-
-/**
  * Session Status Enum
  */
 export type SessionStatus = 'active' | 'expired' | 'deleted'
-
-/**
- * Sliding Window Configuration Interface
- * Controls message count-based context trimming
- */
-export interface SlidingWindowConfig {
-  /** Whether sliding window strategy is enabled */
-  enabled: boolean
-  /** Maximum number of messages to keep */
-  maxMessages: number
-}
-
-/**
- * Token Limit Configuration Interface
- * Controls token count-based context trimming
- */
-export interface TokenLimitConfig {
-  /** Whether token limit strategy is enabled */
-  enabled: boolean
-  /** Maximum number of tokens to keep */
-  maxTokens: number
-}
-
-/**
- * Summary Configuration Interface
- * Controls context summarization strategy
- */
-export interface SummaryConfig {
-  /** Whether summary strategy is enabled */
-  enabled: boolean
-  /** Number of recent messages to keep after summarization */
-  keepRecentMessages: number
-  /** Custom summary prompt template (optional) */
-  summaryPrompt?: string
-}
-
-/**
- * Context Management Configuration Interface
- * Controls how conversation context is managed and trimmed
- */
-export interface ContextManagementConfig {
-  /** Whether context management is enabled */
-  enabled: boolean
-  /** Strategy configurations */
-  strategies: {
-    slidingWindow: SlidingWindowConfig
-    tokenLimit: TokenLimitConfig
-    summary: SummaryConfig
-  }
-  /** Execution order of strategies */
-  executionOrder: ('slidingWindow' | 'tokenLimit' | 'summary')[]
-}
 
 /**
  * Chat Message Interface
@@ -359,80 +137,6 @@ export interface SessionRecord {
     /** Last provider-side conversation identifier, when one is available. */
     providerSessionId?: string
   }
-}
-
-/**
- * Session Configuration Interface
- * Global session management settings
- */
-export interface SessionConfig {
-  /** Session timeout (minutes), default 30 */
-  sessionTimeout: number
-  /** Max messages per session, default 50 */
-  maxMessagesPerSession: number
-  /** Delete session after timeout */
-  deleteAfterTimeout: boolean
-  /** Max active sessions per account, default 3 */
-  maxSessionsPerAccount: number
-}
-
-export type { LegacyToolPromptConfig, ToolCallingConfig }
-
-/**
- * Management API Configuration Interface
- * Controls the management API server settings
- */
-export interface ManagementApiConfig {
-  /** Whether to enable the management API */
-  enableManagementApi: boolean
-  /** Secret key for management API authentication */
-  managementApiSecret: string
-  /** Management API port (optional, defaults to proxyPort) */
-  managementApiPort?: number
-}
-
-/**
- * API Key Interface
- */
-export interface ApiKey {
-  /** API Key ID */
-  id: string
-  /** API Key name */
-  name: string
-  /** API Key value */
-  key: string
-  /** Whether enabled */
-  enabled: boolean
-  /** Created time */
-  createdAt: number
-  /** Last used time */
-  lastUsedAt?: number
-  /** Usage count */
-  usageCount: number
-  /** Description */
-  description?: string
-}
-
-/**
- * Log Entry Interface
- */
-export interface LogEntry {
-  /** Log ID */
-  id: string
-  /** Timestamp */
-  timestamp: number
-  /** Log level */
-  level: LogLevel
-  /** Log message */
-  message: string
-  /** Related account ID */
-  accountId?: string
-  /** Related provider ID */
-  providerId?: string
-  /** Request ID */
-  requestId?: string
-  /** Extra data */
-  data?: Record<string, unknown>
 }
 
 /**
@@ -514,19 +218,6 @@ export interface RequestLogEntry {
   errorStack?: string
 }
 
-export interface RequestLogConfig {
-  /** Whether detailed request logs are persisted */
-  enabled: boolean
-  /** Maximum persisted request log entries */
-  maxEntries: number
-  /** Whether request and response bodies are stored */
-  includeBodies: boolean
-  /** Maximum characters persisted for each body field */
-  maxBodyChars: number
-  /** Whether obvious sensitive values are redacted */
-  redactSensitiveData: boolean
-}
-
 /**
  * Daily Statistics Interface
  * Statistics for a single day
@@ -574,57 +265,6 @@ export interface PersistentStatistics {
 }
 
 /**
- * System Prompt Type Enum
- */
-export type PromptType = 'general' | 'tool-use' | 'agent' | 'translation' | 'search'
-
-/**
- * System Prompt Interface
- */
-export interface SystemPrompt {
-  /** Unique identifier */
-  id: string
-  /** Prompt name */
-  name: string
-  /** Prompt description */
-  description: string
-  /** Prompt content */
-  prompt: string
-  /** Prompt type */
-  type: PromptType
-  /** Whether built-in (built-in prompts cannot be edited/deleted) */
-  isBuiltin: boolean
-  /** Emoji icon */
-  emoji?: string
-  /** Group tags */
-  groups?: string[]
-  /** Creation time */
-  createdAt: number
-  /** Update time */
-  updatedAt: number
-}
-
-/**
- * Credential Validation Result Interface
- */
-export interface ValidationResult {
-  /** Whether valid */
-  valid: boolean
-  /** Error message */
-  error?: string
-  /** Validation time */
-  validatedAt: number
-  /** Account info (returned when validation succeeds) */
-  accountInfo?: {
-    name?: string
-    email?: string
-    quota?: number
-    used?: number
-    expiresAt?: number
-  }
-}
-
-/**
  * Custom Model Configuration
  * User-defined model with display name and actual API model ID
  */
@@ -662,19 +302,6 @@ export const DEEPSEEK_LEGACY_MODEL_MAPPING_NAMES = [
   'DeepSeek-R1',
   'DeepSeek-R1-Search',
 ]
-
-/**
- * Effective Model Information
- * Combined model info after merging defaults with user overrides
- */
-export interface EffectiveModel {
-  /** Model display name (used in AI client) */
-  displayName: string
-  /** Actual model ID (used in API call) */
-  actualModelId: string
-  /** Whether this is a user-added custom model */
-  isCustom: boolean
-}
 
 /**
  * Storage Data Structure Interface
@@ -805,12 +432,13 @@ export function isDefaultModelMapping(requestModel: string): boolean {
 }
 
 export function normalizeModelMappingsWithDefaults(
-  mappings?: Record<string, ModelMapping>
+  mappings?: Record<string, ModelMapping>,
 ): Record<string, ModelMapping> {
   const legacyModelNames = new Set(DEEPSEEK_LEGACY_MODEL_MAPPING_NAMES)
   const customMappings = Object.fromEntries(
-    Object.entries(mappings || {}).filter(([requestModel]) =>
-      !isDefaultModelMapping(requestModel) && !legacyModelNames.has(requestModel)
+    Object.entries(mappings || {}).filter(
+      ([requestModel]) =>
+        !isDefaultModelMapping(requestModel) && !legacyModelNames.has(requestModel),
     ),
   )
 
@@ -821,7 +449,7 @@ export function normalizeModelMappingsWithDefaults(
 }
 
 export function sanitizeDeepSeekModelOverrides(
-  overrides?: ProviderModelOverrides
+  overrides?: ProviderModelOverrides,
 ): ProviderModelOverrides {
   const migratedModelNames = new Set([
     ...DEEPSEEK_PRIMARY_MODELS,
@@ -830,11 +458,11 @@ export function sanitizeDeepSeekModelOverrides(
   ])
 
   return {
-    addedModels: (overrides?.addedModels || []).filter(model =>
-      !migratedModelNames.has(model.displayName)
+    addedModels: (overrides?.addedModels || []).filter(
+      (model) => !migratedModelNames.has(model.displayName),
     ),
-    excludedModels: (overrides?.excludedModels || []).filter(model =>
-      DEEPSEEK_PRIMARY_MODELS.includes(model)
+    excludedModels: (overrides?.excludedModels || []).filter((model) =>
+      DEEPSEEK_PRIMARY_MODELS.includes(model),
     ),
   }
 }
@@ -865,6 +493,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   toolPromptConfig: undefined,
   managementApi: DEFAULT_MANAGEMENT_API_CONFIG,
   contextManagement: DEFAULT_CONTEXT_MANAGEMENT_CONFIG,
+  language: 'zh-CN',
   outboundProxy: {
     controllerUrl: '127.0.0.1:9097',
     secret: '',

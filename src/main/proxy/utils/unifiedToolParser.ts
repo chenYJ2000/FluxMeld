@@ -27,19 +27,19 @@ export function detectToolCallFormat(content: string): ToolCallFormat {
   if (content.includes('[function_calls]') || /\[call[:=]/.test(content)) {
     return 'bracket'
   }
-  
+
   if (content.includes('<tool_use>')) {
     return 'xml'
   }
-  
+
   if (content.includes('<antml:function_calls>') || content.includes('antml:function_calls')) {
     return 'anthropic'
   }
-  
+
   if (/"tool_calls"\s*:/i.test(content) || /"function"\s*:\s*\{/i.test(content)) {
     return 'json'
   }
-  
+
   return 'unknown'
 }
 
@@ -48,11 +48,11 @@ export function detectToolCallFormat(content: string): ToolCallFormat {
  */
 export function parseToolCallsUnified(content: string): UnifiedParseResult {
   const format = detectToolCallFormat(content)
-  
+
   console.log('[UnifiedToolParser] Detected format:', format)
-  
+
   let result: { content: string; toolCalls: ToolCall[]; rawMatches: string[] }
-  
+
   switch (format) {
     case 'bracket':
       result = parseBracketFormat(content)
@@ -69,18 +69,22 @@ export function parseToolCallsUnified(content: string): UnifiedParseResult {
     default:
       return { content, toolCalls: [], format: 'unknown', rawMatches: [] }
   }
-  
+
   return { ...result, format }
 }
 
 /**
  * Parse bracket format: [function_calls][call:name]{args}[/call][/function_calls]
  */
-function parseBracketFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseBracketFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
   let cleanContent = content
-  
+
   let processedText = content
   const missingBracketRegex = /(^|[^\/\[])(function_calls\])/g
   if (!processedText.includes('[function_calls]') && missingBracketRegex.test(processedText)) {
@@ -131,7 +135,7 @@ function parseBracketFormat(content: string): { content: string; toolCalls: Tool
           type: 'function',
           function: { name: functionName, arguments: JSON.stringify(parsed) },
         })
-        
+
         callStartRegex.lastIndex = rawTextEndIndex
       }
     }
@@ -150,27 +154,32 @@ function parseBracketFormat(content: string): { content: string; toolCalls: Tool
 /**
  * Parse XML format: <tool_use><name>tool_name</name><arguments>{...}</arguments></tool_use>
  */
-function parseXmlFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseXmlFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
   let cleanContent = content
 
-  const toolUseRegex = /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
-  
+  const toolUseRegex =
+    /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
+
   let match
   let index = 0
-  
+
   while ((match = toolUseRegex.exec(content)) !== null) {
     const rawText = match[0]
     const name = match[1].trim()
     let argsStr = match[2].trim()
-    
+
     if (argsStr.startsWith('```')) {
       argsStr = argsStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
     }
-    
+
     const parsed = tryParseJSON(argsStr)
-    
+
     if (parsed) {
       rawMatches.push(rawText)
       toolCalls.push({
@@ -195,7 +204,11 @@ function parseXmlFormat(content: string): { content: string; toolCalls: ToolCall
 /**
  * Parse Anthropic format: <antml:function_calls>...</antml:function_calls>
  */
-function parseAnthropicFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseAnthropicFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
   let cleanContent = content
@@ -207,16 +220,17 @@ function parseAnthropicFormat(content: string): { content: string; toolCalls: To
     const blockContent = blockMatch[1]
     rawMatches.push(blockMatch[0])
 
-    const invokeRegex = /<antml:invoke name="([^"]+)">\s*<antml:parameters>([\s\S]*?)<\/antml:parameters>\s*<\/antml:invoke>/g
+    const invokeRegex =
+      /<antml:invoke name="([^"]+)">\s*<antml:parameters>([\s\S]*?)<\/antml:parameters>\s*<\/antml:invoke>/g
     let invokeMatch
     let index = 0
 
     while ((invokeMatch = invokeRegex.exec(blockContent)) !== null) {
       const name = invokeMatch[1]
       const argsStr = invokeMatch[2].trim()
-      
+
       const parsed = tryParseJSON(argsStr)
-      
+
       if (parsed) {
         toolCalls.push({
           index: index++,
@@ -241,13 +255,17 @@ function parseAnthropicFormat(content: string): { content: string; toolCalls: To
 /**
  * Parse JSON format: Standard OpenAI tool_calls JSON
  */
-function parseJsonFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseJsonFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
 
   try {
     const parsed = JSON.parse(content)
-    
+
     if (parsed.tool_calls && Array.isArray(parsed.tool_calls)) {
       for (let i = 0; i < parsed.tool_calls.length; i++) {
         const tc = parsed.tool_calls[i]
@@ -258,9 +276,10 @@ function parseJsonFormat(content: string): { content: string; toolCalls: ToolCal
             type: 'function',
             function: {
               name: tc.function.name,
-              arguments: typeof tc.function.arguments === 'string' 
-                ? tc.function.arguments 
-                : JSON.stringify(tc.function.arguments),
+              arguments:
+                typeof tc.function.arguments === 'string'
+                  ? tc.function.arguments
+                  : JSON.stringify(tc.function.arguments),
             },
           })
         }
@@ -277,10 +296,10 @@ function parseJsonFormat(content: string): { content: string; toolCalls: ToolCal
 
   while ((match = toolCallsRegex.exec(content)) !== null) {
     const toolCallsStr = `[${match[1]}]`
-    
+
     try {
       const calls = JSON.parse(toolCallsStr)
-      
+
       for (let i = 0; i < calls.length; i++) {
         const tc = calls[i]
         if (tc.function) {
@@ -290,14 +309,15 @@ function parseJsonFormat(content: string): { content: string; toolCalls: ToolCal
             type: 'function',
             function: {
               name: tc.function.name,
-              arguments: typeof tc.function.arguments === 'string' 
-                ? tc.function.arguments 
-                : JSON.stringify(tc.function.arguments),
+              arguments:
+                typeof tc.function.arguments === 'string'
+                  ? tc.function.arguments
+                  : JSON.stringify(tc.function.arguments),
             },
           })
         }
       }
-      
+
       rawMatches.push(match[0])
     } catch {
       // Skip invalid JSON
@@ -478,7 +498,7 @@ function tryRegexFallback(str: string): any | null {
             const contentValue = str.substring(valueStart, valueEnd)
             return {
               filePath: filePathMatch[1],
-              content: contentValue.replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              content: contentValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
             }
           }
         }
@@ -505,16 +525,19 @@ function tryRegexFallback(str: string): any | null {
             return null
           }
 
-          if (oldStrValueStart !== 0 && oldStrValueEnd > oldStrValueStart && 
-              newStrValueStart !== 0 && newStrValueEnd > newStrValueStart) {
-
+          if (
+            oldStrValueStart !== 0 &&
+            oldStrValueEnd > oldStrValueStart &&
+            newStrValueStart !== 0 &&
+            newStrValueEnd > newStrValueStart
+          ) {
             const oldStrValue = str.substring(oldStrValueStart, oldStrValueEnd)
             const newStrValue = str.substring(newStrValueStart, newStrValueEnd)
 
             return {
               filePath: filePathMatch[1],
               old_str: oldStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
-              new_str: newStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              new_str: newStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
             }
           }
         }

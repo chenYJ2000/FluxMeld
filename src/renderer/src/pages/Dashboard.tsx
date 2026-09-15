@@ -1,15 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  Activity,
-  CheckCircle2,
-  Clock3,
-  Pause,
-  Play,
-  RefreshCw,
-  Users,
-} from 'lucide-react'
+import { Activity, CheckCircle2, Clock3, Pause, Play, RefreshCw, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   StatsCard,
@@ -50,7 +42,7 @@ export function Dashboard() {
     const interval = setInterval(() => {
       useDashboardStore.getState().refreshData()
     }, 60000)
-    
+
     return () => clearInterval(interval)
   }, [])
 
@@ -62,18 +54,18 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!window.electronAPI?.proxy?.onStatusChanged) return
-    
+
     const unsubscribe = window.electronAPI.proxy.onStatusChanged((status) => {
       useDashboardStore.getState().setProxyStatus(status)
       setProxyEnabled(status.isRunning)
     })
-    
+
     return unsubscribe
   }, [setProxyEnabled])
 
   const handleToggleProxy = useCallback(async () => {
     if (!window.electronAPI?.proxy) return
-    
+
     try {
       if (proxyStatus?.isRunning) {
         await window.electronAPI.proxy.stop()
@@ -100,15 +92,16 @@ export function Dashboard() {
     navigate('/logs')
   }, [navigate])
 
-  const handleActivityClick = useCallback((item: { id: string; type: string; title: string }) => {
-    navigate('/logs?tab=request&highlight=' + item.id)
-  }, [navigate])
+  const handleActivityClick = useCallback(
+    (item: { id: string; type: string; title: string }) => {
+      navigate('/logs?tab=request&highlight=' + item.id)
+    },
+    [navigate],
+  )
 
   const isElectron = !!window.electronAPI
   const isProxyRunning = proxyStatus?.isRunning ?? proxyEnabled
-  const endpoint = proxyStatus
-    ? `${proxyStatus.host}:${proxyStatus.port}`
-    : '127.0.0.1:8080'
+  const endpoint = proxyStatus ? `${proxyStatus.host}:${proxyStatus.port}` : '127.0.0.1:8080'
 
   return (
     <div className="relay-dashboard space-y-4">
@@ -138,7 +131,11 @@ export function Dashboard() {
               disabled={isLoading}
               className={cn('relay-primary-button', isProxyRunning && 'is-live')}
             >
-              {isProxyRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              {isProxyRunning ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
               {isProxyRunning ? t('quickActions.stopProxy') : t('quickActions.startProxy')}
             </Button>
             <Button

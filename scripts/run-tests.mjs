@@ -9,11 +9,13 @@ const testFilePattern = /\.test\.(?:js|mjs|ts)$/
 
 async function collectTestFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true })
-  const files = await Promise.all(entries.map(async (entry) => {
-    const path = join(directory, entry.name)
-    if (entry.isDirectory()) return collectTestFiles(path)
-    return testFilePattern.test(entry.name) ? [path] : []
-  }))
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const path = join(directory, entry.name)
+      if (entry.isDirectory()) return collectTestFiles(path)
+      return testFilePattern.test(entry.name) ? [path] : []
+    }),
+  )
 
   return files.flat()
 }
@@ -23,10 +25,14 @@ if (testFiles.length === 0) {
   throw new Error('No test files found')
 }
 
-const child = spawn(process.execPath, ['--import', 'tsx', '--test', ...testFiles], {
-  cwd: projectRoot,
-  stdio: 'inherit',
-})
+const child = spawn(
+  process.execPath,
+  ['--import', 'tsx', ...process.argv.slice(2), '--test', ...testFiles],
+  {
+    cwd: projectRoot,
+    stdio: 'inherit',
+  },
+)
 
 child.once('error', (error) => {
   console.error(error)

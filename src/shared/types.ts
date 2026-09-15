@@ -5,16 +5,26 @@ export type ProviderStatus = 'online' | 'offline' | 'unknown'
 export type ProviderType = 'builtin' | 'custom'
 
 // Provider vendor type (for OAuth adapters)
-export type ProviderVendor = 'deepseek' | 'glm' | 'kimi' | 'mimo' | 'minimax' | 'qwen' | 'qwen-ai' | 'zai' | 'perplexity' | 'custom'
+export type ProviderVendor =
+  | 'deepseek'
+  | 'glm'
+  | 'kimi'
+  | 'mimo'
+  | 'minimax'
+  | 'qwen'
+  | 'qwen-ai'
+  | 'zai'
+  | 'perplexity'
+  | 'custom'
 
-export type AuthType = 
-  | 'oauth' 
-  | 'token' 
-  | 'cookie' 
-  | 'userToken' 
-  | 'refresh_token' 
-  | 'jwt' 
-  | 'realUserID_token' 
+export type AuthType =
+  | 'oauth'
+  | 'token'
+  | 'cookie'
+  | 'userToken'
+  | 'refresh_token'
+  | 'jwt'
+  | 'realUserID_token'
   | 'tongyi_sso_ticket'
 
 export interface CredentialField {
@@ -26,14 +36,50 @@ export interface CredentialField {
   helpText?: string
 }
 
-export type LoadBalanceStrategy = 'round-robin' | 'fill-first' | 'failover' | 'least-recently-used' | 'balanced'
+export type LoadBalanceStrategy =
+  'round-robin' | 'fill-first' | 'failover' | 'least-recently-used' | 'balanced'
 
 export type Theme = 'light' | 'dark' | 'system'
 
-export type {
-  LegacyToolPromptConfig,
-  ToolCallingConfig,
-} from './toolCalling'
+/** Controls message count-based context trimming */
+export interface SlidingWindowConfig {
+  enabled: boolean
+  maxMessages: number
+}
+
+/** Controls token count-based context trimming */
+export interface TokenLimitConfig {
+  enabled: boolean
+  maxTokens: number
+}
+
+/** Controls context summarization strategy */
+export interface SummaryConfig {
+  enabled: boolean
+  keepRecentMessages: number
+  summaryPrompt?: string
+}
+
+/** Controls how conversation context is managed and trimmed */
+export interface ContextManagementConfig {
+  enabled: boolean
+  strategies: {
+    slidingWindow: SlidingWindowConfig
+    tokenLimit: TokenLimitConfig
+    summary: SummaryConfig
+  }
+  executionOrder: ('slidingWindow' | 'tokenLimit' | 'summary')[]
+}
+
+/** Clash/mihomo external controller settings for the outbound proxy manager */
+export interface OutboundProxySettings {
+  controllerUrl: string
+  secret: string
+}
+
+import type { LegacyToolPromptConfig, ToolCallingConfig } from './toolCalling'
+
+export type { LegacyToolPromptConfig, ToolCallingConfig } from './toolCalling'
 
 export interface Account {
   id: string
@@ -46,6 +92,8 @@ export interface Account {
   createdAt: number
   updatedAt: number
   errorMessage?: string
+  /** Last credential/health check time */
+  lastStatusCheck?: number
   requestCount?: number
   dailyLimit?: number
   todayUsed?: number
@@ -68,6 +116,8 @@ export interface Provider {
   modelMappings?: Record<string, string>
   status?: ProviderStatus
   lastStatusCheck?: number
+  /** Credential field configuration (present on built-in providers) */
+  credentialFields?: CredentialField[]
 }
 
 export interface ModelMapping {
@@ -93,6 +143,8 @@ export interface AppConfig {
   proxyHost: string
   loadBalanceStrategy: LoadBalanceStrategy
   modelMappings: Record<string, ModelMapping>
+  /** Default model mappings have been seeded into editable config */
+  defaultModelMappingsSeeded?: boolean
   theme: Theme
   autoStart: boolean
   autoStartProxy: boolean
@@ -109,12 +161,9 @@ export interface AppConfig {
   toolCallingConfig: ToolCallingConfig
   toolPromptConfig?: LegacyToolPromptConfig
   managementApi: ManagementApiConfig
-  contextManagement?: unknown
+  contextManagement?: ContextManagementConfig
   language: 'zh-CN' | 'en-US'
-  outboundProxy: {
-    controllerUrl: string
-    secret: string
-  }
+  outboundProxy: OutboundProxySettings
 }
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
@@ -399,11 +448,14 @@ export interface StatisticsResponse {
   modelUsage: Record<string, number>
   providerUsage: Record<string, number>
   accountUsage: Record<string, number>
-  dailyStats?: Record<string, {
-    totalRequests: number
-    successRequests: number
-    failedRequests: number
-  }>
+  dailyStats?: Record<
+    string,
+    {
+      totalRequests: number
+      successRequests: number
+      failedRequests: number
+    }
+  >
 }
 
 export interface ConfigUpdateRequest {

@@ -63,8 +63,10 @@ Tool results will be provided as FluxMeld XML result blocks:
 
     parseBlocks(parseable, {
       blockPattern: /<\|FLUXMELD\|tool_calls\b[^>]*>([\s\S]*?)<\/\|FLUXMELD\|tool_calls>/g,
-      invokePattern: /<\|FLUXMELD\|invoke\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/\|FLUXMELD\|invoke>/g,
-      parameterPattern: /<\|FLUXMELD\|parameter\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/\|FLUXMELD\|parameter>/g,
+      invokePattern:
+        /<\|FLUXMELD\|invoke\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/\|FLUXMELD\|invoke>/g,
+      parameterPattern:
+        /<\|FLUXMELD\|parameter\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/\|FLUXMELD\|parameter>/g,
       rawMatches,
       invalidToolNames,
       malformedToolNames,
@@ -76,7 +78,8 @@ Tool results will be provided as FluxMeld XML result blocks:
     parseBlocks(parseable, {
       blockPattern: /<tool_calls\b[^>]*>([\s\S]*?)<\/tool_calls>/g,
       invokePattern: /<invoke\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/invoke>/g,
-      parameterPattern: /<parameter\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/parameter>/g,
+      parameterPattern:
+        /<parameter\b[^>]*\bname\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/parameter>/g,
       rawMatches,
       invalidToolNames,
       malformedToolNames,
@@ -179,7 +182,13 @@ function parseBlocks(content: string, options: ParseBlockOptions): void {
       }
 
       options.toolCalls.push(
-        buildToolCall(`call_${options.toolCalls.length}`, options.toolCalls.length, name, JSON.stringify(args), invokeMatch[0]),
+        buildToolCall(
+          `call_${options.toolCalls.length}`,
+          options.toolCalls.length,
+          name,
+          JSON.stringify(args),
+          invokeMatch[0],
+        ),
       )
     }
 
@@ -214,7 +223,9 @@ function normalizeWrappedObject(value: unknown): Record<string, unknown> | undef
 }
 
 function extractWrappedArguments(value: string): string | undefined {
-  const match = value.match(/<(?:arguments|parameters)>\s*([\s\S]*?)\s*<\/(?:arguments|parameters)>/i)
+  const match = value.match(
+    /<(?:arguments|parameters)>\s*([\s\S]*?)\s*<\/(?:arguments|parameters)>/i,
+  )
   return match?.[1]
 }
 

@@ -1,7 +1,7 @@
 /**
  * Perplexity Authentication Adapter
  * Authentication method: Cookie-based authentication with in-app browser login
- * 
+ *
  * Note: Perplexity uses Cloudflare protection, so we cannot validate tokens
  * via API calls. We accept cookies directly as valid credentials.
  */
@@ -38,19 +38,24 @@ export class PerplexityAdapter extends BaseOAuthAdapter {
     }
   }
 
-  async loginWithCookies(providerId: string, cookies: Record<string, string>): Promise<OAuthResult> {
+  async loginWithCookies(
+    providerId: string,
+    cookies: Record<string, string>,
+  ): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating cookies...')
 
-    const sessionToken = cookies['__Secure-next-auth.session-token'] ||
-                         cookies['next-auth.session-token'] ||
-                         cookies['sessionToken']
+    const sessionToken =
+      cookies['__Secure-next-auth.session-token'] ||
+      cookies['next-auth.session-token'] ||
+      cookies['sessionToken']
 
     if (!sessionToken) {
       return {
         success: false,
         providerId,
         providerType: 'perplexity',
-        error: 'Session token is required (__Secure-next-auth.session-token or next-auth.session-token)',
+        error:
+          'Session token is required (__Secure-next-auth.session-token or next-auth.session-token)',
       }
     }
 
@@ -69,19 +74,20 @@ export class PerplexityAdapter extends BaseOAuthAdapter {
     }
   }
 
-  protected async processCallback(data: OAuthCallbackData): Promise<void> {
-  }
+  protected async processCallback(data: OAuthCallbackData): Promise<void> {}
 
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
-    const sessionToken = credentials['__Secure-next-auth.session-token'] ||
-                         credentials['next-auth.session-token'] ||
-                         credentials['sessionToken'] ||
-                         credentials['token']
+    const sessionToken =
+      credentials['__Secure-next-auth.session-token'] ||
+      credentials['next-auth.session-token'] ||
+      credentials['sessionToken'] ||
+      credentials['token']
 
     if (!sessionToken) {
       return {
         valid: false,
-        error: 'Session token is required (__Secure-next-auth.session-token or next-auth.session-token)',
+        error:
+          'Session token is required (__Secure-next-auth.session-token or next-auth.session-token)',
       }
     }
 
@@ -95,10 +101,11 @@ export class PerplexityAdapter extends BaseOAuthAdapter {
   }
 
   async refreshToken(credentials: Record<string, string>): Promise<CredentialInfo | null> {
-    const sessionToken = credentials['__Secure-next-auth.session-token'] ||
-                         credentials['next-auth.session-token'] ||
-                         credentials['sessionToken'] ||
-                         credentials['token']
+    const sessionToken =
+      credentials['__Secure-next-auth.session-token'] ||
+      credentials['next-auth.session-token'] ||
+      credentials['sessionToken'] ||
+      credentials['token']
 
     if (!sessionToken) {
       return null

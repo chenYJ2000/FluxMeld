@@ -20,11 +20,11 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { 
-  Search, 
-  Filter, 
-  X, 
-  Server, 
+import {
+  Search,
+  Filter,
+  X,
+  Server,
   RefreshCw,
   Plus,
   Layers,
@@ -133,11 +133,17 @@ export function ProviderFilter({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className={cn(statusFilter !== 'all' && 'border-primary')}>
-                <div className={cn(
-                  'w-2 h-2 rounded-full',
-                  statusFilterOptions.find(s => s.value === statusFilter)?.color
-                )} />
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(statusFilter !== 'all' && 'border-primary')}
+              >
+                <div
+                  className={cn(
+                    'w-2 h-2 rounded-full',
+                    statusFilterOptions.find((s) => s.value === statusFilter)?.color,
+                  )}
+                />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -156,12 +162,7 @@ export function ProviderFilter({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={onRefresh}
-            disabled={isRefreshing}
-          >
+          <Button variant="outline" size="icon" onClick={onRefresh} disabled={isRefreshing}>
             <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
           </Button>
 
@@ -175,40 +176,33 @@ export function ProviderFilter({
       {hasActiveFilters && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">{t('logs.filter')}:</span>
-          
+
           {searchQuery && (
             <Badge variant="secondary" className="gap-1">
               {t('common.search')}: {searchQuery}
-              <X 
-                className="h-3 w-3 cursor-pointer" 
-                onClick={() => onSearchChange('')}
-              />
+              <X className="h-3 w-3 cursor-pointer" onClick={() => onSearchChange('')} />
             </Badge>
           )}
-          
+
           {typeFilter !== 'all' && (
             <Badge variant="secondary" className="gap-1">
-              {t('providers.providerType')}: {t(typeFilterOptions.find(t => t.value === typeFilter)?.labelKey || '')}
-              <X 
-                className="h-3 w-3 cursor-pointer" 
-                onClick={() => onTypeFilterChange('all')}
-              />
+              {t('providers.providerType')}:{' '}
+              {t(typeFilterOptions.find((t) => t.value === typeFilter)?.labelKey || '')}
+              <X className="h-3 w-3 cursor-pointer" onClick={() => onTypeFilterChange('all')} />
             </Badge>
           )}
-          
+
           {statusFilter !== 'all' && (
             <Badge variant="secondary" className="gap-1">
-              {t('providers.status')}: {t(statusFilterOptions.find(s => s.value === statusFilter)?.labelKey || '')}
-              <X 
-                className="h-3 w-3 cursor-pointer" 
-                onClick={() => onStatusFilterChange('all')}
-              />
+              {t('providers.status')}:{' '}
+              {t(statusFilterOptions.find((s) => s.value === statusFilter)?.labelKey || '')}
+              <X className="h-3 w-3 cursor-pointer" onClick={() => onStatusFilterChange('all')} />
             </Badge>
           )}
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
+
+          <Button
+            variant="ghost"
+            size="sm"
             className="h-6 px-2 text-xs"
             onClick={handleClearFilters}
           >
@@ -219,16 +213,22 @@ export function ProviderFilter({
 
       {stats && (
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{t('providers.total')}: {stats.total}</span>
+          <span>
+            {t('providers.total')}: {stats.total}
+          </span>
           <span>•</span>
           <span className="flex items-center gap-1">
             <div className="w-2 h-2 rounded-full bg-green-500" />
             {stats.online} {t('providers.onlineCount')}
           </span>
           <span>•</span>
-          <span>{stats.enabled} {t('providers.enabled')}</span>
+          <span>
+            {stats.enabled} {t('providers.enabled')}
+          </span>
           <span>•</span>
-          <span>{stats.builtin} {t('providers.builtin')}, {stats.custom} {t('providers.custom')}</span>
+          <span>
+            {stats.builtin} {t('providers.builtin')}, {stats.custom} {t('providers.custom')}
+          </span>
         </div>
       )}
     </div>

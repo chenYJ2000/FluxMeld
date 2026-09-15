@@ -22,7 +22,9 @@ export function getLatestToolCallingSmokeResult(): ToolCallingSmokeResult {
   return latestSmokeResult
 }
 
-export function setLatestToolCallingSmokeResult(result: ToolCallingSmokeResult): ToolCallingSmokeResult {
+export function setLatestToolCallingSmokeResult(
+  result: ToolCallingSmokeResult,
+): ToolCallingSmokeResult {
   latestSmokeResult = { ...result }
   return latestSmokeResult
 }
@@ -33,18 +35,20 @@ export function buildSmokeFixture(clientAdapterId: ToolClientAdapterId) {
       model: 'tool-smoke-test',
       stream: false,
       messages: [{ role: 'user', content: 'Use the bash tool to run printf OPENCODE_SMOKE.' }],
-      tools: [{
-        type: 'function',
-        function: {
-          name: 'bash',
-          description: 'Run a shell command',
-          parameters: {
-            type: 'object',
-            properties: { command: { type: 'string' } },
-            required: ['command'],
+      tools: [
+        {
+          type: 'function',
+          function: {
+            name: 'bash',
+            description: 'Run a shell command',
+            parameters: {
+              type: 'object',
+              properties: { command: { type: 'string' } },
+              required: ['command'],
+            },
           },
         },
-      }],
+      ],
       tool_choice: { type: 'function', function: { name: 'bash' } },
     }
   }
@@ -53,20 +57,23 @@ export function buildSmokeFixture(clientAdapterId: ToolClientAdapterId) {
     model: 'tool-smoke-test',
     stream: false,
     messages: [{ role: 'user', content: 'Get weather for Hangzhou with the weather tool.' }],
-    tools: [{
-      type: 'function',
-      function: {
-        name: 'weather-test:get_weather',
-        description: 'Get weather for a city',
-        parameters: {
-          type: 'object',
-          properties: { city: { type: 'string' } },
-          required: ['city'],
+    tools: [
+      {
+        type: 'function',
+        function: {
+          name: 'weather-test:get_weather',
+          description: 'Get weather for a city',
+          parameters: {
+            type: 'object',
+            properties: { city: { type: 'string' } },
+            required: ['city'],
+          },
         },
       },
-    }],
-    tool_choice: clientAdapterId === 'cherry-studio-mcp'
-      ? { type: 'function', function: { name: 'weather-test:get_weather' } }
-      : 'auto',
+    ],
+    tool_choice:
+      clientAdapterId === 'cherry-studio-mcp'
+        ? { type: 'function', function: { name: 'weather-test:get_weather' } }
+        : 'auto',
   }
 }

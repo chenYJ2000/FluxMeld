@@ -59,10 +59,10 @@ export function resolveToolClientAdapterForRequest(
 }
 
 export function hasOpenCodeSystemIdentity(messages: ChatMessage[]): boolean {
-  return messages.some((message) => (
-    message.role === 'system'
-    && OPENCODE_SYSTEM_IDENTITY.test(getMessageText(message.content))
-  ))
+  return messages.some(
+    (message) =>
+      message.role === 'system' && OPENCODE_SYSTEM_IDENTITY.test(getMessageText(message.content)),
+  )
 }
 
 export function listToolClientAdapters(): ToolClientAdapter[] {

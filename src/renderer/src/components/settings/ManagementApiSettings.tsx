@@ -97,14 +97,14 @@ export function ManagementApiSettings() {
           <div className="space-y-2">
             <Label>{t('settings.managementApi.getExample')}</Label>
             <pre className="block w-full rounded-md bg-muted p-3 text-sm font-mono overflow-x-auto whitespace-pre-wrap break-all">
-{`curl -X GET "${apiEndpoint}/accounts"${authFlag}`}
+              {`curl -X GET "${apiEndpoint}/accounts"${authFlag}`}
             </pre>
           </div>
 
           <div className="space-y-2">
             <Label>{t('settings.managementApi.batchExample')}</Label>
             <pre className="block w-full rounded-md bg-muted p-3 text-sm font-mono overflow-x-auto whitespace-pre-wrap break-all">
-{`curl -X POST "${apiEndpoint}/accounts/batch" \\
+              {`curl -X POST "${apiEndpoint}/accounts/batch" \\
   -H "Content-Type: application/json"${authFlag} \\
   -d '{"accounts":[{"providerId":"deepseek","name":"a1","credentials":{"token":"YOUR_TOKEN"}}]}'`}
             </pre>

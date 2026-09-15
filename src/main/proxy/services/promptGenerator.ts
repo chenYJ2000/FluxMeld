@@ -35,9 +35,7 @@ export interface TemplateVariables {
 function generateToolDefinitions(tools: ChatCompletionTool[]): string {
   return tools
     .map((tool) => {
-      const params = tool.function.parameters
-        ? JSON.stringify(tool.function.parameters)
-        : '{}'
+      const params = tool.function.parameters ? JSON.stringify(tool.function.parameters) : '{}'
 
       return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
     })
@@ -299,7 +297,7 @@ export class PromptGenerator {
  */
 export function generateToolPrompt(
   tools: ChatCompletionTool[],
-  format: ProtocolFormat = 'bracket'
+  format: ProtocolFormat = 'bracket',
 ): string {
   return PromptGenerator.generate(tools, { format })
 }

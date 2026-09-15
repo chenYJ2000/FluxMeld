@@ -7,11 +7,11 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src/renderer/src')
-    }
+      '@': resolve(__dirname, 'src/renderer/src'),
+    },
   },
   server: {
     host: '0.0.0.0',
-    port: 5173
-  }
+    port: 5173,
+  },
 })

@@ -61,7 +61,11 @@ async function main(): Promise<void> {
   await storeManager.initialize()
 
   const initialConfig = storeManager.getConfig()
-  if (!initialConfig.proxyHost || initialConfig.proxyHost === '127.0.0.1' || initialConfig.proxyHost === 'localhost') {
+  if (
+    !initialConfig.proxyHost ||
+    initialConfig.proxyHost === '127.0.0.1' ||
+    initialConfig.proxyHost === 'localhost'
+  ) {
     storeManager.updateConfig({ proxyHost: '0.0.0.0' })
     console.log('[web] proxy host set to 0.0.0.0 for LAN access')
   }

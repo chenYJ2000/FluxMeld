@@ -8,10 +8,7 @@ import type { Context } from 'koa'
 import { managementAuthMiddleware } from '../../middleware/managementAuth'
 import { proxyServer } from '../../server'
 import { proxyStatusManager } from '../../status'
-import type {
-  ManagementApiResponse,
-  ProxyStatusResponse,
-} from '../../../../shared/types'
+import type { ManagementApiResponse, ProxyStatusResponse } from '../../../../shared/types'
 
 const router = new Router({ prefix: '/v0/management/proxy' })
 

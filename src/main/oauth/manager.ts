@@ -52,7 +52,7 @@ export class OAuthManager extends EventEmitter {
    */
   private getAdapter(providerId: string, providerType: ProviderType): BaseOAuthAdapter {
     const key = `${providerId}_${providerType}`
-    
+
     if (!this.adapters.has(key)) {
       const adapter = createAdapter(providerType, {
         providerId,
@@ -60,19 +60,19 @@ export class OAuthManager extends EventEmitter {
         authMethods: [],
         callbackPort: DEFAULT_CALLBACK_PORT,
       })
-      
+
       if (this.mainWindow) {
         adapter.setMainWindow(this.mainWindow)
       }
-      
+
       adapter.setProgressCallback((event) => {
         this.emit('progress', event)
         this.sendProgressToRenderer(event)
       })
-      
+
       this.adapters.set(key, adapter)
     }
-    
+
     return this.adapters.get(key)!
   }
 
@@ -100,7 +100,7 @@ export class OAuthManager extends EventEmitter {
 
     return new Promise((resolve, reject) => {
       const adapter = this.getAdapter(options.providerId, options.providerType)
-      
+
       const timeout = setTimeout(() => {
         this.cancelLogin()
         const result: OAuthResult = {
@@ -122,7 +122,8 @@ export class OAuthManager extends EventEmitter {
 
       this.emit('statusChange', 'pending')
 
-      adapter.startLogin(options)
+      adapter
+        .startLogin(options)
         .then((result) => {
           this.cleanup()
           resolve(result)
@@ -143,14 +144,20 @@ export class OAuthManager extends EventEmitter {
     token: string,
     realUserID?: string,
     mimoUserId?: string,
-    mimoPhToken?: string
+    mimoPhToken?: string,
   ): Promise<OAuthResult> {
     const adapter = this.getAdapter(providerId, providerType)
-    
+
     if ('loginWithToken' in adapter && typeof (adapter as any).loginWithToken === 'function') {
-      return await (adapter as any).loginWithToken(providerId, token, realUserID, mimoUserId, mimoPhToken)
+      return await (adapter as any).loginWithToken(
+        providerId,
+        token,
+        realUserID,
+        mimoUserId,
+        mimoPhToken,
+      )
     }
-    
+
     // For Mimo, validate with all three tokens
     if (providerType === 'mimo') {
       if (!mimoUserId || !mimoPhToken) {
@@ -166,7 +173,7 @@ export class OAuthManager extends EventEmitter {
         user_id: mimoUserId,
         ph_token: mimoPhToken,
       })
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -175,7 +182,7 @@ export class OAuthManager extends EventEmitter {
           error: validation.error || 'Token validation failed',
         }
       }
-      
+
       return {
         success: true,
         providerId,
@@ -188,9 +195,9 @@ export class OAuthManager extends EventEmitter {
         accountInfo: validation.accountInfo,
       }
     }
-    
+
     const validation = await adapter.validateToken({ token })
-    
+
     if (!validation.valid) {
       return {
         success: false,
@@ -199,7 +206,7 @@ export class OAuthManager extends EventEmitter {
         error: validation.error || 'Token validation failed',
       }
     }
-    
+
     return {
       success: true,
       providerId,
@@ -236,7 +243,7 @@ export class OAuthManager extends EventEmitter {
   async validateToken(
     providerId: string,
     providerType: ProviderType,
-    credentials: Record<string, string>
+    credentials: Record<string, string>,
   ): Promise<TokenValidationResult> {
     const adapter = this.getAdapter(providerId, providerType)
     return adapter.validateToken(credentials)
@@ -248,7 +255,7 @@ export class OAuthManager extends EventEmitter {
   async refreshToken(
     providerId: string,
     providerType: ProviderType,
-    credentials: Record<string, string>
+    credentials: Record<string, string>,
   ): Promise<CredentialInfo | null> {
     const adapter = this.getAdapter(providerId, providerType)
     return adapter.refreshToken(credentials)
@@ -277,7 +284,7 @@ export class OAuthManager extends EventEmitter {
     providerId: string,
     providerType: ProviderType,
     timeout?: number,
-    proxyMode?: 'system' | 'none'
+    proxyMode?: 'system' | 'none',
   ): Promise<OAuthResult> {
     this.emit('statusChange', 'pending')
     this.sendProgressToRenderer({
@@ -297,7 +304,11 @@ export class OAuthManager extends EventEmitter {
         })
       }
 
-      const completeHandler = (result: { success: boolean; credentials?: Record<string, string>; error?: string }) => {
+      const completeHandler = (result: {
+        success: boolean
+        credentials?: Record<string, string>
+        error?: string
+      }) => {
         inAppLoginManager.off('status', statusHandler)
         inAppLoginManager.off('tokenFound', tokenFoundHandler)
         inAppLoginManager.off('complete', completeHandler)
@@ -327,7 +338,11 @@ export class OAuthManager extends EventEmitter {
 
       let validationTimeout: NodeJS.Timeout | null = null
 
-      const tokenFoundHandler = async (event: { key: string; value: string; allCookies?: Record<string, string> }) => {
+      const tokenFoundHandler = async (event: {
+        key: string
+        value: string
+        allCookies?: Record<string, string>
+      }) => {
         console.log('[OAuthManager] tokenFoundHandler called:', {
           isValidating,
           key: event.key,
@@ -336,13 +351,17 @@ export class OAuthManager extends EventEmitter {
 
         // Store the token
         collectedTokens[event.key] = event.value
-        
+
         // Store all cookies if provided (needed for Cloudflare-protected requests)
         if (event.allCookies) {
           collectedTokens['cookies'] = event.allCookies as any
-          console.log('[OAuthManager] Stored all cookies:', Object.keys(event.allCookies).length, 'cookies')
+          console.log(
+            '[OAuthManager] Stored all cookies:',
+            Object.keys(event.allCookies).length,
+            'cookies',
+          )
         }
-        
+
         console.log('[OAuthManager] Collected tokens:', Object.keys(collectedTokens))
 
         // For MiniMax, we need both token and realUserID before validating
@@ -363,7 +382,10 @@ export class OAuthManager extends EventEmitter {
 
             // Wait 500ms for realUserID to be collected
             validationTimeout = setTimeout(() => {
-              console.log('[OAuthManager] Proceeding with validation, collected tokens:', Object.keys(collectedTokens))
+              console.log(
+                '[OAuthManager] Proceeding with validation, collected tokens:',
+                Object.keys(collectedTokens),
+              )
               validateAndComplete()
             }, 500)
             return
@@ -392,7 +414,7 @@ export class OAuthManager extends EventEmitter {
               hasUserId: !!hasUserId,
               hasPhToken: !!hasPhToken,
             })
-            
+
             // Clear any existing timeout
             if (validationTimeout) {
               clearTimeout(validationTimeout)
@@ -400,7 +422,10 @@ export class OAuthManager extends EventEmitter {
 
             // Wait 500ms for all tokens to be collected
             validationTimeout = setTimeout(() => {
-              console.log('[OAuthManager] Proceeding with Mimo validation, collected tokens:', Object.keys(collectedTokens))
+              console.log(
+                '[OAuthManager] Proceeding with Mimo validation, collected tokens:',
+                Object.keys(collectedTokens),
+              )
               validateAndComplete()
             }, 500)
             return
@@ -451,7 +476,9 @@ export class OAuthManager extends EventEmitter {
               const combinedToken = `${realUserID}+${token}`
               validationCredentials = { token: combinedToken }
               finalCredentials = { token, realUserID }
-              console.log('[OAuthManager] MiniMax: Using combined token for validation, saving separately')
+              console.log(
+                '[OAuthManager] MiniMax: Using combined token for validation, saving separately',
+              )
             } else {
               validationCredentials = { token }
               finalCredentials = { token }
@@ -488,13 +515,19 @@ export class OAuthManager extends EventEmitter {
               user_id: userId,
               ph_token: phToken,
             }
-            console.log('[OAuthManager] Mimo: Final credentials prepared:', Object.keys(finalCredentials))
+            console.log(
+              '[OAuthManager] Mimo: Final credentials prepared:',
+              Object.keys(finalCredentials),
+            )
           } else {
             validationCredentials = { ...collectedTokens }
             finalCredentials = { ...collectedTokens }
           }
 
-          console.log('[OAuthManager] Calling adapter.validateToken with credentials:', Object.keys(validationCredentials))
+          console.log(
+            '[OAuthManager] Calling adapter.validateToken with credentials:',
+            Object.keys(validationCredentials),
+          )
           const validation = await adapter.validateToken(validationCredentials)
           console.log('[OAuthManager] Validation result:', {
             valid: validation.valid,
@@ -503,7 +536,10 @@ export class OAuthManager extends EventEmitter {
           })
 
           if (validation.valid) {
-            console.log('[OAuthManager] Token is valid, completing login with credential keys:', Object.keys(finalCredentials))
+            console.log(
+              '[OAuthManager] Token is valid, completing login with credential keys:',
+              Object.keys(finalCredentials),
+            )
             inAppLoginManager.completeWithSuccess(finalCredentials)
           } else {
             console.log('[OAuthManager] Token validation failed:', validation.error)
@@ -516,7 +552,7 @@ export class OAuthManager extends EventEmitter {
         } catch (error) {
           console.error(
             '[OAuthManager] Validation error:',
-            error instanceof Error ? error.message : 'Unknown validation error'
+            error instanceof Error ? error.message : 'Unknown validation error',
           )
           this.sendProgressToRenderer({
             status: 'pending',
@@ -530,16 +566,18 @@ export class OAuthManager extends EventEmitter {
       inAppLoginManager.on('tokenFound', tokenFoundHandler)
       inAppLoginManager.on('complete', completeHandler)
 
-      inAppLoginManager.startLogin({
-        providerId,
-        providerType,
-        timeout: timeout || DEFAULT_TIMEOUT,
-        proxyMode,
-      }).then((result) => {
-        if (!result.success) {
-          completeHandler(result)
-        }
-      })
+      inAppLoginManager
+        .startLogin({
+          providerId,
+          providerType,
+          timeout: timeout || DEFAULT_TIMEOUT,
+          proxyMode,
+        })
+        .then((result) => {
+          if (!result.success) {
+            completeHandler(result)
+          }
+        })
     })
   }
 

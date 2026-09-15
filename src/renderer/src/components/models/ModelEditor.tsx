@@ -37,12 +37,7 @@ interface ModelEditorProps {
   providerName: string
 }
 
-export function ModelEditor({
-  open,
-  onOpenChange,
-  providerId,
-  providerName,
-}: ModelEditorProps) {
+export function ModelEditor({ open, onOpenChange, providerId, providerName }: ModelEditorProps) {
   const { t } = useTranslation()
   const { toast } = useToast()
   const setModelsLastUpdated = useProvidersStore((state) => state.setModelsLastUpdated)
@@ -79,8 +74,8 @@ export function ModelEditor({
     }
   }
 
-  const defaultModels = models.filter(m => !m.isCustom)
-  const customModels = models.filter(m => m.isCustom)
+  const defaultModels = models.filter((m) => !m.isCustom)
+  const customModels = models.filter((m) => m.isCustom)
 
   const handleAddModel = async () => {
     if (!newDisplayName.trim()) {
@@ -101,7 +96,7 @@ export function ModelEditor({
       return
     }
 
-    if (models.some(m => m.displayName === newDisplayName.trim())) {
+    if (models.some((m) => m.displayName === newDisplayName.trim())) {
       toast({
         title: t('common.error'),
         description: t('modelEditor.nameExists'),
@@ -200,7 +195,7 @@ export function ModelEditor({
     }
   }
 
-  const renderModelTable = (modelList: EffectiveModel[], isCustom: boolean) => {
+  const renderModelTable = (modelList: EffectiveModel[], _isCustom: boolean) => {
     if (modelList.length === 0) {
       return (
         <div className="text-center py-8 text-muted-foreground border rounded-lg">
@@ -267,12 +262,8 @@ export function ModelEditor({
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {t('modelEditor.title', { name: providerName })}
-            </DialogTitle>
-            <DialogDescription>
-              {t('modelEditor.warningMessage')}
-            </DialogDescription>
+            <DialogTitle>{t('modelEditor.title', { name: providerName })}</DialogTitle>
+            <DialogDescription>{t('modelEditor.warningMessage')}</DialogDescription>
           </DialogHeader>
 
           {isLoading ? (
@@ -293,9 +284,7 @@ export function ModelEditor({
 
               <Alert>
                 <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>
-                  {t('modelEditor.warningMessage')}
-                </AlertDescription>
+                <AlertDescription>{t('modelEditor.warningMessage')}</AlertDescription>
               </Alert>
             </div>
           )}
@@ -324,10 +313,7 @@ export function ModelEditor({
                   {t('modelEditor.resetDefault')}
                 </Button>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {t('modelEditor.cancel')}
               </Button>
             </div>
@@ -350,9 +336,7 @@ export function ModelEditor({
                 value={newDisplayName}
                 onChange={(e) => setNewDisplayName(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('modelEditor.displayNameHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('modelEditor.displayNameHelp')}</p>
             </div>
 
             <div className="space-y-2">
@@ -363,9 +347,7 @@ export function ModelEditor({
                 value={newActualModelId}
                 onChange={(e) => setNewActualModelId(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('modelEditor.actualIdHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('modelEditor.actualIdHelp')}</p>
             </div>
           </div>
 

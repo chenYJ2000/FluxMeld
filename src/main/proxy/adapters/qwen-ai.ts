@@ -21,7 +21,8 @@ const DEFAULT_HEADERS = {
   'Accept-Language': 'zh-CN,zh;q=0.9',
   'Content-Type': 'application/json',
   source: 'web',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
   'sec-ch-ua': '"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
   'sec-ch-ua-mobile': '?0',
   'sec-ch-ua-platform': '"macOS"',
@@ -30,7 +31,8 @@ const DEFAULT_HEADERS = {
   'Sec-Fetch-Site': 'same-origin',
   'bx-v': '2.5.36',
   'bx-umidtoken': 'T2gAr9z8byN8sNOmfQ3X9j61MNTNmSqDO5L1rs2jMcQCVhOKgZICcBN-UdTuJGig-NM=',
-  'bx-ua': '231!lWD36kmUe5E+joKDK5gBZ48FEl2ZWfPwIPF92lBLek2KxVW/XJ2EwruCiDOX5Px4EXNhmh6EfS9eDwQGRwijIK64A4nPqeLysJcDjUACje/H3J4ZgGZpicG6K8AkiGGaEKC830+QSiSUsLRlL/EyhXTmLcJc/5iDkMuOpUhNz0e0Q/nTqjVJ3ko00Q/oyE+jauHhUHfb1GxGHkE+++3+qCS4+ItkaA6tiItCo+romzElfLFD6RIj7oHt9vffs98nLwpHnaqKjufnLFMejSlAUGiQvTofIiGhIvftAMcoFV4mrUHsqyQ/ncQihmJHkbxXjvM57FCb6b9dEIRZl7jgj0+QLNLRs0NZ4azdZ6rzbGTSO8KA5I3Aq/3gBr87X16Mj0oJtaPKmFGaP2zghfOVhxQht8YjRd50lJa+Ue4PAuPSdu2O69DKLH8VOhrsB+psaBIRxnRi5POUQ6w8s8qlb9vxvExjHNOAKWXV1by1Nz+6FPWdyTeAgcmonjCcV0dCtPj/KyeVDkeSrDkKZjnDzHEqeCdfmJ65kve+Vy3YS0vagzyHfVEnzN0ULUZtkGfJXFNm6+bIa55wmGBhUeXbHL0EdlQXMu1YXxmcwBgTaq7tlQcfv7AefanbfjGE8R1IFnNyg2/jXLbnLg5Z6l1oKqgnxZQg0DE9BJuw6s0XjGwTdSxybWxp+WFD/RsXt76uwvCBk7z+YmSFLtFj2UlTsoq+vl0DTmsVItDKf9SZ94NcuJ7mxJYI02S/2kQBfbbHG0d4hXevDrEC0cb86EvzN2ud+v6bAunNRGNFz/RH0KLusoBVeo+puCFKeeIJWEo0t1UicX5YxJwMAoV7+g0gK93y4W9sMQtso8/wY5wsBzis9dwfLvIwXpaAM1g0MZp/YIRq8T/Qc+U/8x99tam4er0IWizvrkjqhIzCWBKpJ4Y4gj3bOmiS3VCMEaoVfKCwUWENwYKuP3H5VI0n+O2vVVRrekUrwvkm6URRhVhN4eEFTCjB9nSQu++qKyDH8HPpkS3YfwF8/OQtrZo7hQXxvNmP2HcH/K7zcweD00BaoOLiYUtXRItGYbl06sVSbm04soRf1Jqpyo3XiRqBWD9rmJfr4w8NOEGVGUCKXLDLsXy+8JC4Iqf0FsIjWxjMVdraTUtCbwXRbYUownQVm6bt7LYD1SNPoWNPqUJgsLMwP33ugrb1UbHCs24roOch6Go5QHIPA8E15SZE9pkr1SkmqrNs/+KRomFJ9HyFnWUYhZIV9MRLqlOAt6XBBTash3WJnCjhx/PZGhXVvdn2jX4+0Pm55LsiNugA8vaAUJQBxD/8a1u/RvTgbj35+b7I7m8tG0hMhClNZF+tpsOmZZhUGuXH9uVbkJMlMuAmMVCHwn3O31GlLeXXzzep2WS3xN2U+p5J0I7GySnuZUkuGs1ZTVqGUvR2g4q+7ljU55Ak78yPZiQXeUeqS74azszvZvCqWxXn2eePj+gcpliOjrYKpglUP19rQrMt8PqLt8L0ghIqVCmMwl3Hgr/VUcqDpXdpPTR=',
+  'bx-ua':
+    '231!lWD36kmUe5E+joKDK5gBZ48FEl2ZWfPwIPF92lBLek2KxVW/XJ2EwruCiDOX5Px4EXNhmh6EfS9eDwQGRwijIK64A4nPqeLysJcDjUACje/H3J4ZgGZpicG6K8AkiGGaEKC830+QSiSUsLRlL/EyhXTmLcJc/5iDkMuOpUhNz0e0Q/nTqjVJ3ko00Q/oyE+jauHhUHfb1GxGHkE+++3+qCS4+ItkaA6tiItCo+romzElfLFD6RIj7oHt9vffs98nLwpHnaqKjufnLFMejSlAUGiQvTofIiGhIvftAMcoFV4mrUHsqyQ/ncQihmJHkbxXjvM57FCb6b9dEIRZl7jgj0+QLNLRs0NZ4azdZ6rzbGTSO8KA5I3Aq/3gBr87X16Mj0oJtaPKmFGaP2zghfOVhxQht8YjRd50lJa+Ue4PAuPSdu2O69DKLH8VOhrsB+psaBIRxnRi5POUQ6w8s8qlb9vxvExjHNOAKWXV1by1Nz+6FPWdyTeAgcmonjCcV0dCtPj/KyeVDkeSrDkKZjnDzHEqeCdfmJ65kve+Vy3YS0vagzyHfVEnzN0ULUZtkGfJXFNm6+bIa55wmGBhUeXbHL0EdlQXMu1YXxmcwBgTaq7tlQcfv7AefanbfjGE8R1IFnNyg2/jXLbnLg5Z6l1oKqgnxZQg0DE9BJuw6s0XjGwTdSxybWxp+WFD/RsXt76uwvCBk7z+YmSFLtFj2UlTsoq+vl0DTmsVItDKf9SZ94NcuJ7mxJYI02S/2kQBfbbHG0d4hXevDrEC0cb86EvzN2ud+v6bAunNRGNFz/RH0KLusoBVeo+puCFKeeIJWEo0t1UicX5YxJwMAoV7+g0gK93y4W9sMQtso8/wY5wsBzis9dwfLvIwXpaAM1g0MZp/YIRq8T/Qc+U/8x99tam4er0IWizvrkjqhIzCWBKpJ4Y4gj3bOmiS3VCMEaoVfKCwUWENwYKuP3H5VI0n+O2vVVRrekUrwvkm6URRhVhN4eEFTCjB9nSQu++qKyDH8HPpkS3YfwF8/OQtrZo7hQXxvNmP2HcH/K7zcweD00BaoOLiYUtXRItGYbl06sVSbm04soRf1Jqpyo3XiRqBWD9rmJfr4w8NOEGVGUCKXLDLsXy+8JC4Iqf0FsIjWxjMVdraTUtCbwXRbYUownQVm6bt7LYD1SNPoWNPqUJgsLMwP33ugrb1UbHCs24roOch6Go5QHIPA8E15SZE9pkr1SkmqrNs/+KRomFJ9HyFnWUYhZIV9MRLqlOAt6XBBTash3WJnCjhx/PZGhXVvdn2jX4+0Pm55LsiNugA8vaAUJQBxD/8a1u/RvTgbj35+b7I7m8tG0hMhClNZF+tpsOmZZhUGuXH9uVbkJMlMuAmMVCHwn3O31GlLeXXzzep2WS3xN2U+p5J0I7GySnuZUkuGs1ZTVqGUvR2g4q+7ljU55Ak78yPZiQXeUeqS74azszvZvCqWxXn2eePj+gcpliOjrYKpglUP19rQrMt8PqLt8L0ghIqVCmMwl3Hgr/VUcqDpXdpPTR=',
   Version: QWEN_AI_WEB_VERSION,
   Origin: 'https://chat.qwen.ai',
 }
@@ -73,7 +75,8 @@ function normalizeUsage(usage: any): OpenAiUsage | null {
   if (!usage || typeof usage !== 'object') return null
 
   const hasPromptTokens = usage.prompt_tokens !== undefined || usage.input_tokens !== undefined
-  const hasCompletionTokens = usage.completion_tokens !== undefined || usage.output_tokens !== undefined
+  const hasCompletionTokens =
+    usage.completion_tokens !== undefined || usage.output_tokens !== undefined
   if (!hasPromptTokens || !hasCompletionTokens) return null
 
   const promptTokens = Number(usage.prompt_tokens ?? usage.input_tokens)
@@ -185,9 +188,13 @@ function optionalPositiveInteger(value: unknown, field: string): number | undefi
 export function resolveQwenAiGenerationSettings(
   request: Pick<
     ChatCompletionRequest,
-    'enable_thinking' | 'thinking_budget' | 'reasoning_effort' | 'max_tokens' | 'max_completion_tokens'
+    | 'enable_thinking'
+    | 'thinking_budget'
+    | 'reasoning_effort'
+    | 'max_tokens'
+    | 'max_completion_tokens'
   >,
-  forceThinking?: boolean
+  forceThinking?: boolean,
 ): QwenAiGenerationSettings {
   if (request.enable_thinking !== undefined && typeof request.enable_thinking !== 'boolean') {
     throw new QwenAiRequestValidationError('enable_thinking must be a boolean')
@@ -197,7 +204,7 @@ export function resolveQwenAiGenerationSettings(
   const maxTokens = optionalPositiveInteger(request.max_tokens, 'max_tokens')
   const maxCompletionTokens = optionalPositiveInteger(
     request.max_completion_tokens,
-    'max_completion_tokens'
+    'max_completion_tokens',
   )
 
   let effortEnablesThinking: boolean | undefined
@@ -215,17 +222,14 @@ export function resolveQwenAiGenerationSettings(
       effortBudget = QWEN_REASONING_BUDGETS[effort]
     } else {
       throw new QwenAiRequestValidationError(
-        `Unsupported reasoning_effort for Qwen AI: ${rawEffort}`
+        `Unsupported reasoning_effort for Qwen AI: ${rawEffort}`,
       )
     }
   } else if (rawEffort !== undefined && rawEffort !== null) {
     throw new QwenAiRequestValidationError('reasoning_effort must be a string or boolean')
   }
 
-  const enableThinking = forceThinking
-    ?? request.enable_thinking
-    ?? effortEnablesThinking
-    ?? false
+  const enableThinking = forceThinking ?? request.enable_thinking ?? effortEnablesThinking ?? false
 
   let resolvedThinkingBudget = enableThinking
     ? (thinkingBudget ?? effortBudget ?? DEFAULT_QWEN_THINKING_BUDGET)
@@ -249,7 +253,7 @@ export function resolveQwenAiGenerationSettings(
 }
 
 export function buildQwenAiFeatureConfig(
-  settings: QwenAiGenerationSettings
+  settings: QwenAiGenerationSettings,
 ): Record<string, unknown> {
   return {
     thinking_enabled: settings.enableThinking,
@@ -281,8 +285,8 @@ function extractTextContent(content: QwenAiMessage['content']): string {
 
   if (Array.isArray(content)) {
     return content
-      .filter(item => item?.type === 'text' && typeof item.text === 'string')
-      .map(item => item.text)
+      .filter((item) => item?.type === 'text' && typeof item.text === 'string')
+      .map((item) => item.text)
       .join('\n')
   }
 
@@ -305,20 +309,24 @@ export function buildQwenAiPrompt(
     } else if (message.role === 'user') {
       if (text) conversationParts.push(`User: ${text}`)
     } else if (message.role === 'assistant' && message.tool_calls?.length) {
-      conversationParts.push(protocol.formatAssistantToolCalls(
-        message.tool_calls.map(toolCall => ({
-          id: toolCall.id,
-          name: toolCall.function.name,
-          arguments: toolCall.function.arguments,
-        }))
-      ))
+      conversationParts.push(
+        protocol.formatAssistantToolCalls(
+          message.tool_calls.map((toolCall) => ({
+            id: toolCall.id,
+            name: toolCall.function.name,
+            arguments: toolCall.function.arguments,
+          })),
+        ),
+      )
     } else if (message.role === 'assistant') {
       if (text) conversationParts.push(`Assistant: ${text}`)
     } else if (message.role === 'tool' && message.tool_call_id) {
-      conversationParts.push(protocol.formatToolResult({
-        toolCallId: message.tool_call_id,
-        content: text,
-      }))
+      conversationParts.push(
+        protocol.formatToolResult({
+          toolCallId: message.tool_call_id,
+          content: text,
+        }),
+      )
     } else if (message.role === 'tool' && text) {
       conversationParts.push(`Tool: ${text}`)
     }
@@ -377,7 +385,7 @@ export class QwenAiAdapter {
   mapModel(openaiModel: string): string {
     let model = openaiModel
     let forceThinking: boolean | undefined
-    
+
     if (model.endsWith('-thinking')) {
       forceThinking = true
       model = model.slice(0, -9)
@@ -385,15 +393,15 @@ export class QwenAiAdapter {
       forceThinking = false
       model = model.slice(0, -5)
     }
-    
+
     ;(this as any)._forceThinking = forceThinking
-    
+
     const lowerModel = model.toLowerCase()
-    
+
     if (MODEL_ALIASES[lowerModel]) {
       return MODEL_ALIASES[lowerModel]
     }
-    
+
     if (this.provider.modelMappings) {
       for (const [key, value] of Object.entries(this.provider.modelMappings)) {
         if (key.toLowerCase() === lowerModel) {
@@ -401,7 +409,7 @@ export class QwenAiAdapter {
         }
       }
     }
-    
+
     return model
   }
 
@@ -436,7 +444,10 @@ export class QwenAiAdapter {
 
       throw new Error('Failed to create chat: no chat ID returned')
     } catch (error) {
-      console.error('[QwenAI] Failed to create chat:', error instanceof Error ? error.message : 'Unknown error')
+      console.error(
+        '[QwenAI] Failed to create chat:',
+        error instanceof Error ? error.message : 'Unknown error',
+      )
       throw error
     }
   }
@@ -457,7 +468,10 @@ export class QwenAiAdapter {
       console.warn('[QwenAI] Failed to delete chat, status:', response.status)
       return false
     } catch (error) {
-      console.error('[QwenAI] Failed to delete chat:', error instanceof Error ? error.message : 'Unknown error')
+      console.error(
+        '[QwenAI] Failed to delete chat:',
+        error instanceof Error ? error.message : 'Unknown error',
+      )
       return false
     }
   }
@@ -471,7 +485,7 @@ export class QwenAiAdapter {
 
     try {
       console.log('[QwenAI] Deleting all chats for account')
-      
+
       const response = await this.axiosInstance.delete(url, {
         headers: this.getHeaders(),
       })
@@ -484,7 +498,10 @@ export class QwenAiAdapter {
       console.warn('[QwenAI] Failed to delete all chats, status:', response.status)
       return false
     } catch (error) {
-      console.error('[QwenAI] Failed to delete all chats:', error instanceof Error ? error.message : 'Unknown error')
+      console.error(
+        '[QwenAI] Failed to delete all chats:',
+        error instanceof Error ? error.message : 'Unknown error',
+      )
       return false
     }
   }
@@ -503,7 +520,7 @@ export class QwenAiAdapter {
     }
 
     const modelId = this.mapModel(request.model)
-    
+
     // Get forced thinking mode setting from originalModel (preserves user's intent before mapping)
     // If originalModel exists, use it for thinking detection; otherwise fall back to request.model
     const modelForThinking = request.originalModel || request.model
@@ -651,7 +668,7 @@ export class QwenAiStreamHandler {
   constructor(
     model: string,
     onEnd?: (chatId: string) => void,
-    outputLimits: QwenAiOutputLimits = {}
+    outputLimits: QwenAiOutputLimits = {},
   ) {
     this.model = model
     this.created = Math.floor(Date.now() / 1000)
@@ -694,36 +711,36 @@ export class QwenAiStreamHandler {
         }
         const laneIndex = index % laneCount
         return contents.map((content, currentIndex) =>
-          currentIndex === laneIndex ? content + event.content : content
+          currentIndex === laneIndex ? content + event.content : content,
         )
       },
       Array.from({ length: laneCount }, () => ''),
     )
-    const answerChunks = this.upstreamChoiceEvents.filter((event) =>
-      ['answer', 'final', 'none'].includes(event.phase) && event.content
+    const answerChunks = this.upstreamChoiceEvents.filter(
+      (event) => ['answer', 'final', 'none'].includes(event.phase) && event.content,
     )
     const contentLanes = answerChunks.reduce(
       (contents, event, index) => {
         const laneIndex = index % laneCount
         return contents.map((content, currentIndex) =>
-          currentIndex === laneIndex ? content + event.content : content
+          currentIndex === laneIndex ? content + event.content : content,
         )
       },
       Array.from({ length: laneCount }, () => ''),
     )
     const lanes = [...eventLanes, ...contentLanes]
 
-    return lanes.filter((content, index) =>
-      content.trim() && lanes.indexOf(content) === index
-    )
+    return lanes.filter((content, index) => content.trim() && lanes.indexOf(content) === index)
   }
 
   hasUnidentifiedMultiplexedResponse(): boolean {
     const offsets = this.responseCreatedChoiceOffsets
-    return this.upstreamEventSummary.responseCreatedCount > 1
-      && this.upstreamEventSummary.candidateCount === 0
-      && offsets.length === this.upstreamEventSummary.responseCreatedCount
-      && offsets.every((offset) => offset === offsets[0])
+    return (
+      this.upstreamEventSummary.responseCreatedCount > 1 &&
+      this.upstreamEventSummary.candidateCount === 0 &&
+      offsets.length === this.upstreamEventSummary.responseCreatedCount &&
+      offsets.every((offset) => offset === offsets[0])
+    )
   }
 
   private recordUpstreamEvent(data: any): void {
@@ -732,18 +749,20 @@ export class QwenAiStreamHandler {
     const delta = choice?.delta && typeof choice.delta === 'object' ? choice.delta : {}
     const remember = <T>(values: T[], value: T, limit: number = 24): T[] =>
       values.includes(value) || values.length >= limit ? values : [...values, value]
-    const identityEntries: Array<[string, unknown]> = [
-      ['choice.index', choice?.index],
-      ['choice.id', choice?.id],
-      ['choice.message_id', choice?.message_id],
-      ['delta.id', delta.id],
-      ['delta.response_id', delta.response_id],
-      ['delta.message_id', delta.message_id],
-      ['delta.choice_id', delta.choice_id],
-      ['delta.parent_id', delta.parent_id],
-      ['delta.extra.response_id', delta.extra?.response_id],
-      ['delta.extra.message_id', delta.extra?.message_id],
-    ].filter((entry) => ['string', 'number'].includes(typeof entry[1]))
+    const identityEntries: Array<[string, unknown]> = (
+      [
+        ['choice.index', choice?.index],
+        ['choice.id', choice?.id],
+        ['choice.message_id', choice?.message_id],
+        ['delta.id', delta.id],
+        ['delta.response_id', delta.response_id],
+        ['delta.message_id', delta.message_id],
+        ['delta.choice_id', delta.choice_id],
+        ['delta.parent_id', delta.parent_id],
+        ['delta.extra.response_id', delta.extra?.response_id],
+        ['delta.extra.message_id', delta.extra?.message_id],
+      ] as Array<[string, unknown]>
+    ).filter((entry) => ['string', 'number'].includes(typeof entry[1]))
     const candidateKey = identityEntries
       .map(([field, value]) => `${field}:${String(value)}`)
       .join('|')
@@ -754,9 +773,10 @@ export class QwenAiStreamHandler {
       const existingIndex = candidateKeys.indexOf(candidateKey)
       const candidateIndex = existingIndex >= 0 ? existingIndex : candidateKeys.length
       candidateKeys = existingIndex >= 0 ? candidateKeys : [...candidateKeys, candidateKey]
-      candidateSequence = candidateSequence.length >= 80
-        ? candidateSequence
-        : [...candidateSequence, `candidate_${candidateIndex + 1}`]
+      candidateSequence =
+        candidateSequence.length >= 80
+          ? candidateSequence
+          : [...candidateSequence, `candidate_${candidateIndex + 1}`]
     }
 
     const phase = typeof delta.phase === 'string' ? delta.phase : 'none'
@@ -767,35 +787,42 @@ export class QwenAiStreamHandler {
     const responseCreatedChoiceOffsets = responseCreated
       ? [...this.responseCreatedChoiceOffsets, this.upstreamChoiceEvents.length]
       : this.responseCreatedChoiceOffsets
-    const upstreamChoiceEvents = choices.length > 0
-      ? [...this.upstreamChoiceEvents, { phase, status, content: typeof delta.content === 'string' ? delta.content : '' }]
-      : this.upstreamChoiceEvents
+    const upstreamChoiceEvents =
+      choices.length > 0
+        ? [
+            ...this.upstreamChoiceEvents,
+            { phase, status, content: typeof delta.content === 'string' ? delta.content : '' },
+          ]
+        : this.upstreamChoiceEvents
 
     this.upstreamCandidateKeys = candidateKeys
     this.responseCreatedChoiceOffsets = responseCreatedChoiceOffsets
     this.upstreamChoiceEvents = upstreamChoiceEvents
     this.upstreamEventSummary = {
       eventCount: this.upstreamEventSummary.eventCount + 1,
-      responseCreatedCount: this.upstreamEventSummary.responseCreatedCount
-        + (responseCreated ? 1 : 0),
+      responseCreatedCount:
+        this.upstreamEventSummary.responseCreatedCount + (responseCreated ? 1 : 0),
       responseCreatedChoiceOffsets,
       choiceEventCount: this.upstreamEventSummary.choiceEventCount + (choices.length > 0 ? 1 : 0),
       maxChoicesPerEvent: Math.max(this.upstreamEventSummary.maxChoicesPerEvent, choices.length),
-      choiceIndices: choice?.index !== undefined
-        ? remember(this.upstreamEventSummary.choiceIndices, choice.index)
-        : this.upstreamEventSummary.choiceIndices,
+      choiceIndices:
+        choice?.index !== undefined
+          ? remember(this.upstreamEventSummary.choiceIndices, choice.index)
+          : this.upstreamEventSummary.choiceIndices,
       candidateCount: candidateKeys.length,
       candidateSequence,
       identityFields: identityEntries.reduce(
         (fields, [field]) => remember(fields, field),
         this.upstreamEventSummary.identityFields,
       ),
-      phaseStatusPairs: choices.length > 0
-        ? remember(this.upstreamEventSummary.phaseStatusPairs, `${phase}:${status}`)
-        : this.upstreamEventSummary.phaseStatusPairs,
-      deltaKeySets: choices.length > 0
-        ? remember(this.upstreamEventSummary.deltaKeySets, deltaKeySet)
-        : this.upstreamEventSummary.deltaKeySets,
+      phaseStatusPairs:
+        choices.length > 0
+          ? remember(this.upstreamEventSummary.phaseStatusPairs, `${phase}:${status}`)
+          : this.upstreamEventSummary.phaseStatusPairs,
+      deltaKeySets:
+        choices.length > 0
+          ? remember(this.upstreamEventSummary.deltaKeySets, deltaKeySet)
+          : this.upstreamEventSummary.deltaKeySets,
       contentChunkCount: this.upstreamEventSummary.contentChunkCount + (contentLength > 0 ? 1 : 0),
       contentChars: this.upstreamEventSummary.contentChars + contentLength,
     }
@@ -809,11 +836,11 @@ export class QwenAiStreamHandler {
 
   private sendToolCalls(transStream: PassThrough): void {
     if (this.toolCallsSent) return
-    
+
     const toolCalls = parseToolUse(this.content)
     if (toolCalls && toolCalls.length > 0) {
       this.toolCallsSent = true
-      
+
       // Send tool_calls delta
       for (let i = 0; i < toolCalls.length; i++) {
         const tc = toolCalls[i]
@@ -822,26 +849,30 @@ export class QwenAiStreamHandler {
             id: this.responseId || this.chatId,
             model: this.model,
             object: 'chat.completion.chunk',
-            choices: [{
-              index: 0,
-              delta: {
-                tool_calls: [{
-                  index: i,
-                  id: tc.id,
-                  type: 'function',
-                  function: {
-                    name: tc.function.name,
-                    arguments: tc.function.arguments,
-                  },
-                }],
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: i,
+                      id: tc.id,
+                      type: 'function',
+                      function: {
+                        name: tc.function.name,
+                        arguments: tc.function.arguments,
+                      },
+                    },
+                  ],
+                },
+                finish_reason: null,
               },
-              finish_reason: null,
-            }],
+            ],
             created: this.created,
-          })}\n\n`
+          })}\n\n`,
         )
       }
-      
+
       // Send finish with tool_calls
       transStream.write(
         `data: ${JSON.stringify({
@@ -851,7 +882,7 @@ export class QwenAiStreamHandler {
           choices: [{ index: 0, delta: {}, finish_reason: 'tool_calls' }],
           ...(this.usage ? { usage: this.usage } : {}),
           created: this.created,
-        })}\n\n`
+        })}\n\n`,
       )
       transStream.end('data: [DONE]\n\n')
       this.notifyEnd()
@@ -978,8 +1009,8 @@ export class QwenAiStreamHandler {
             lastCompletionTokens = normalizedUsage.completion_tokens
             console.log('[QwenAI] Upstream usage:', normalizedUsage)
             if (
-              this.outputLimits.maxCompletionTokens !== undefined
-              && normalizedUsage.completion_tokens >= this.outputLimits.maxCompletionTokens
+              this.outputLimits.maxCompletionTokens !== undefined &&
+              normalizedUsage.completion_tokens >= this.outputLimits.maxCompletionTokens
             ) {
               totalLimitReached = true
             }
@@ -989,7 +1020,9 @@ export class QwenAiStreamHandler {
             const nextResponseId = data['response.created'].response_id
             const responseRestarted = !!this.responseId && this.responseId !== nextResponseId
             if (responseRestarted) {
-              console.warn('[QwenAI] Upstream response restarted; discarding superseded partial output')
+              console.warn(
+                '[QwenAI] Upstream response restarted; discarding superseded partial output',
+              )
               this.content = ''
               this.usage = null
               reasoningText = ''
@@ -1013,7 +1046,14 @@ export class QwenAiStreamHandler {
             const status = delta.status
             const content = typeof delta.content === 'string' ? delta.content : ''
 
-            console.log('[QwenAI] Phase:', phase, 'Status:', status, 'Content length:', content.length)
+            console.log(
+              '[QwenAI] Phase:',
+              phase,
+              'Status:',
+              status,
+              'Content length:',
+              content.length,
+            )
 
             if (phase === 'think') {
               if (!totalLimitReached && status !== 'finished' && content) {
@@ -1025,9 +1065,15 @@ export class QwenAiStreamHandler {
                       id: this.responseId || this.chatId,
                       model: this.model,
                       object: 'chat.completion.chunk',
-                      choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: '' }, finish_reason: null }],
+                      choices: [
+                        {
+                          index: 0,
+                          delta: { role: 'assistant', reasoning_content: '' },
+                          finish_reason: null,
+                        },
+                      ],
                       created: this.created,
-                    })}\n\n`
+                    })}\n\n`,
                   )
                   hasSentReasoning = true
                   console.log('[QwenAI] Sent reasoning role chunk')
@@ -1038,9 +1084,11 @@ export class QwenAiStreamHandler {
                       id: this.responseId || this.chatId,
                       model: this.model,
                       object: 'chat.completion.chunk',
-                      choices: [{ index: 0, delta: { reasoning_content: content }, finish_reason: null }],
+                      choices: [
+                        { index: 0, delta: { reasoning_content: content }, finish_reason: null },
+                      ],
                       created: this.created,
-                    })}\n\n`
+                    })}\n\n`,
                   )
                 }
                 markReady()
@@ -1048,7 +1096,10 @@ export class QwenAiStreamHandler {
               // When status === 'finished', the think phase is done
             } else if (phase === 'thinking_summary') {
               const extra = delta.extra || {}
-              console.log('[QwenAI] thinking_summary extra:', JSON.stringify(extra).substring(0, 300))
+              console.log(
+                '[QwenAI] thinking_summary extra:',
+                JSON.stringify(extra).substring(0, 300),
+              )
               if (!totalLimitReached && extra.summary_thought?.content) {
                 const newSummary = extra.summary_thought.content.join('\n')
                 if (newSummary && newSummary.length > summaryText.length) {
@@ -1061,9 +1112,15 @@ export class QwenAiStreamHandler {
                           id: this.responseId || this.chatId,
                           model: this.model,
                           object: 'chat.completion.chunk',
-                          choices: [{ index: 0, delta: { role: 'assistant', reasoning_content: '' }, finish_reason: null }],
+                          choices: [
+                            {
+                              index: 0,
+                              delta: { role: 'assistant', reasoning_content: '' },
+                              finish_reason: null,
+                            },
+                          ],
                           created: this.created,
-                        })}\n\n`
+                        })}\n\n`,
                       )
                       hasSentReasoning = true
                     }
@@ -1072,9 +1129,11 @@ export class QwenAiStreamHandler {
                         id: this.responseId || this.chatId,
                         model: this.model,
                         object: 'chat.completion.chunk',
-                        choices: [{ index: 0, delta: { reasoning_content: diff }, finish_reason: null }],
+                        choices: [
+                          { index: 0, delta: { reasoning_content: diff }, finish_reason: null },
+                        ],
                         created: this.created,
-                      })}\n\n`
+                      })}\n\n`,
                     )
                     markReady()
                   }
@@ -1088,8 +1147,8 @@ export class QwenAiStreamHandler {
               }
 
               if (
-                this.outputLimits.maxTokens !== undefined
-                && lastCompletionTokens - answerTokenBaseline >= this.outputLimits.maxTokens
+                this.outputLimits.maxTokens !== undefined &&
+                lastCompletionTokens - answerTokenBaseline >= this.outputLimits.maxTokens
               ) {
                 answerLimitReached = true
               }
@@ -1114,11 +1173,7 @@ export class QwenAiStreamHandler {
               }
             }
 
-            if (
-              !terminal
-              && (totalLimitReached || answerLimitReached)
-              && this.content.trim()
-            ) {
+            if (!terminal && (totalLimitReached || answerLimitReached) && this.content.trim()) {
               this.outputLimitReached = true
               console.log('[QwenAI] Output limit reached; stopping upstream stream')
               finishStream('length')
@@ -1139,11 +1194,7 @@ export class QwenAiStreamHandler {
             }
           }
 
-          if (
-            !terminal
-            && (totalLimitReached || answerLimitReached)
-            && this.content.trim()
-          ) {
+          if (!terminal && (totalLimitReached || answerLimitReached) && this.content.trim()) {
             this.outputLimitReached = true
             console.log('[QwenAI] Output limit reached on usage event; stopping upstream stream')
             finishStream('length')
@@ -1271,8 +1322,8 @@ export class QwenAiStreamHandler {
               lastCompletionTokens = normalizedUsage.completion_tokens
               console.log('[QwenAI] Upstream usage:', normalizedUsage)
               if (
-                this.outputLimits.maxCompletionTokens !== undefined
-                && normalizedUsage.completion_tokens >= this.outputLimits.maxCompletionTokens
+                this.outputLimits.maxCompletionTokens !== undefined &&
+                normalizedUsage.completion_tokens >= this.outputLimits.maxCompletionTokens
               ) {
                 totalLimitReached = true
               }
@@ -1282,7 +1333,9 @@ export class QwenAiStreamHandler {
               const nextResponseId = parsed['response.created'].response_id
               const responseRestarted = !!this.responseId && this.responseId !== nextResponseId
               if (responseRestarted) {
-                console.warn('[QwenAI] Upstream response restarted; discarding superseded partial output')
+                console.warn(
+                  '[QwenAI] Upstream response restarted; discarding superseded partial output',
+                )
                 data.choices[0].message.content = ''
                 data.choices[0].message.reasoning_content = ''
                 data.choices[0].finish_reason = 'stop'
@@ -1325,8 +1378,8 @@ export class QwenAiStreamHandler {
                 }
 
                 if (
-                  this.outputLimits.maxTokens !== undefined
-                  && lastCompletionTokens - answerTokenBaseline >= this.outputLimits.maxTokens
+                  this.outputLimits.maxTokens !== undefined &&
+                  lastCompletionTokens - answerTokenBaseline >= this.outputLimits.maxTokens
                 ) {
                   answerLimitReached = true
                 }
@@ -1335,8 +1388,8 @@ export class QwenAiStreamHandler {
                   data.choices[0].message.content += content
                 }
                 if (
-                  (totalLimitReached || answerLimitReached)
-                  && data.choices[0].message.content.trim()
+                  (totalLimitReached || answerLimitReached) &&
+                  data.choices[0].message.content.trim()
                 ) {
                   this.outputLimitReached = true
                   data.choices[0].finish_reason = 'length'
@@ -1348,7 +1401,8 @@ export class QwenAiStreamHandler {
                   return
                 }
                 if (['finished', 'completed', 'done'].includes(status)) {
-                  const finishReason = delta.finish_reason || parsed.choices[0].finish_reason || 'stop'
+                  const finishReason =
+                    delta.finish_reason || parsed.choices[0].finish_reason || 'stop'
                   this.answerFinished = true
                   if (finishReason === 'length') this.outputLimitReached = true
                   data.choices[0].finish_reason = finishReason
@@ -1358,9 +1412,9 @@ export class QwenAiStreamHandler {
             }
 
             if (
-              !resolved
-              && (totalLimitReached || answerLimitReached)
-              && data.choices[0].message.content.trim()
+              !resolved &&
+              (totalLimitReached || answerLimitReached) &&
+              data.choices[0].message.content.trim()
             ) {
               this.outputLimitReached = true
               data.choices[0].finish_reason = 'length'

@@ -5,6 +5,7 @@ import { createTrayManager, TrayManager } from './tray/TrayManager'
 import { registerIpcHandlers } from './ipc/handlers'
 import { UpdaterManager } from './updater'
 import { storeManager } from './store/store'
+import { isAppQuitting as getAppQuittingState, markAppQuitting } from './lib/appLifecycle'
 
 // Prevent uncaught exceptions from crashing the app
 process.on('uncaughtException', (error) => {
@@ -26,12 +27,6 @@ if (process.platform === 'darwin' && process.arch === 'arm64') {
 // Automatically add --no-sandbox flag when running as root user
 if (process.getuid && process.getuid() === 0) {
   console.log('Detected running as root user, sandbox settings have been automatically handled')
-}
-
-declare module 'electron' {
-  interface App {
-    isQuitting?: boolean
-  }
 }
 
 const gotTheLock = app.requestSingleInstanceLock()
@@ -76,7 +71,7 @@ async function initializeApp(): Promise<void> {
   })
 
   app.on('before-quit', () => {
-    app.isQuitting = true
+    markAppQuitting()
     trayManager?.destroy()
   })
 
@@ -141,7 +136,7 @@ export function getAppVersion(): string {
 }
 
 export function isAppQuitting(): boolean {
-  return app.isQuitting ?? false
+  return getAppQuittingState()
 }
 
 export { getMainWindow }

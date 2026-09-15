@@ -8,24 +8,41 @@ import test from 'node:test'
 const script = 'skills/fluxmeld-tool-client-replay/scripts/replay-client-fixture.mjs'
 
 test('client profiles define prompt and tools expectations', () => {
-  const cherry = JSON.parse(fs.readFileSync('skills/fluxmeld-tool-client-replay/profiles/cherry-studio.json', 'utf8'))
+  const cherry = JSON.parse(
+    fs.readFileSync('skills/fluxmeld-tool-client-replay/profiles/cherry-studio.json', 'utf8'),
+  )
   assert.equal(cherry.id, 'cherry-studio')
   assert.equal(cherry.promptProtocol.visibleToolUseRequired, true)
   assert.equal(cherry.toolsProtocol.finishReason, 'tool_calls')
 
-  const openai = JSON.parse(fs.readFileSync('skills/fluxmeld-tool-client-replay/profiles/openai-tools.json', 'utf8'))
+  const openai = JSON.parse(
+    fs.readFileSync('skills/fluxmeld-tool-client-replay/profiles/openai-tools.json', 'utf8'),
+  )
   assert.equal(openai.id, 'openai-tools')
   assert.equal(openai.promptProtocol.visibleToolUseRequired, false)
 })
 
 test('replay dry-run reports selected fixture and model', () => {
-  const result = spawnSync('node', [script, '--fixture', 'sample.json', '--profile', 'cherry-studio', '--model', 'deepseek-v4-flash', '--dry-run'], {
-    env: {
-      ...process.env,
-      FLUXMELD_API_KEY: 'sk-secret-value',
+  const result = spawnSync(
+    'node',
+    [
+      script,
+      '--fixture',
+      'sample.json',
+      '--profile',
+      'cherry-studio',
+      '--model',
+      'deepseek-v4-flash',
+      '--dry-run',
+    ],
+    {
+      env: {
+        ...process.env,
+        FLUXMELD_API_KEY: 'sk-secret-value',
+      },
+      encoding: 'utf8',
     },
-    encoding: 'utf8',
-  })
+  )
 
   assert.equal(result.status, 0, result.stderr)
   assert.match(result.stdout, /cherry-studio/)
@@ -34,9 +51,22 @@ test('replay dry-run reports selected fixture and model', () => {
 })
 
 test('replay dry-run does not require fixture file', () => {
-  const result = spawnSync('node', [script, '--fixture', 'missing-fixture.json', '--profile', 'openai-tools', '--model', 'deepseek-v4-flash', '--dry-run'], {
-    encoding: 'utf8',
-  })
+  const result = spawnSync(
+    'node',
+    [
+      script,
+      '--fixture',
+      'missing-fixture.json',
+      '--profile',
+      'openai-tools',
+      '--model',
+      'deepseek-v4-flash',
+      '--dry-run',
+    ],
+    {
+      encoding: 'utf8',
+    },
+  )
 
   assert.equal(result.status, 0, result.stderr)
   assert.match(result.stdout, /missing-fixture\.json/)
@@ -49,20 +79,36 @@ test('replay dry-run does not require fixture file', () => {
 test('replay dry-run reports schema details when fixture exists without requiring api key', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fluxmeld-replay-'))
   const fixture = path.join(dir, 'fixture.json')
-  fs.writeFileSync(fixture, JSON.stringify({
-    scenarios: [
-      { kind: 'stream', body: { messages: [], tools: [] } },
-      { kind: 'non-stream', body: { messages: [], tools: [] } },
-    ],
-  }))
+  fs.writeFileSync(
+    fixture,
+    JSON.stringify({
+      scenarios: [
+        { kind: 'stream', body: { messages: [], tools: [] } },
+        { kind: 'non-stream', body: { messages: [], tools: [] } },
+      ],
+    }),
+  )
 
-  const result = spawnSync('node', [script, '--fixture', fixture, '--profile', 'openai-tools', '--model', 'deepseek-v4-flash', '--dry-run'], {
-    env: {
-      ...process.env,
-      FLUXMELD_API_KEY: '',
+  const result = spawnSync(
+    'node',
+    [
+      script,
+      '--fixture',
+      fixture,
+      '--profile',
+      'openai-tools',
+      '--model',
+      'deepseek-v4-flash',
+      '--dry-run',
+    ],
+    {
+      env: {
+        ...process.env,
+        FLUXMELD_API_KEY: '',
+      },
+      encoding: 'utf8',
     },
-    encoding: 'utf8',
-  })
+  )
 
   assert.equal(result.status, 0, result.stderr)
   const output = JSON.parse(result.stdout)
@@ -77,24 +123,31 @@ test('non-dry-run filters captured sensitive headers and runtime authorization w
   const capture = path.join(dir, 'request.json')
   const mock = path.join(dir, 'mock-fetch.mjs')
 
-  fs.writeFileSync(fixture, JSON.stringify({
-    scenarios: [{
-      kind: 'non-stream',
-      headers: {
-        Authorization: 'Bearer captured-key',
-        Cookie: 'captured-cookie=value',
-        'x-api-key': 'captured-x-api-key',
-        'api-key': 'captured-api-key',
-        'proxy-authorization': 'Basic captured-proxy',
-        'x-scenario': 'kept',
-      },
-      body: {
-        model: 'fixture-model',
-        messages: [{ role: 'user', content: 'hello' }],
-      },
-    }],
-  }))
-  fs.writeFileSync(mock, `
+  fs.writeFileSync(
+    fixture,
+    JSON.stringify({
+      scenarios: [
+        {
+          kind: 'non-stream',
+          headers: {
+            Authorization: 'Bearer captured-key',
+            Cookie: 'captured-cookie=value',
+            'x-api-key': 'captured-x-api-key',
+            'api-key': 'captured-api-key',
+            'proxy-authorization': 'Basic captured-proxy',
+            'x-scenario': 'kept',
+          },
+          body: {
+            model: 'fixture-model',
+            messages: [{ role: 'user', content: 'hello' }],
+          },
+        },
+      ],
+    }),
+  )
+  fs.writeFileSync(
+    mock,
+    `
 import fs from 'node:fs'
 
 globalThis.fetch = async (url, options) => {
@@ -105,17 +158,22 @@ globalThis.fetch = async (url, options) => {
   }))
   return new Response(JSON.stringify({ ok: true }), { status: 200 })
 }
-`)
+`,
+  )
 
-  const result = spawnSync('node', [script, '--fixture', fixture, '--profile', 'cherry-studio', '--model', 'deepseek-v4-flash'], {
-    env: {
-      ...process.env,
-      NODE_OPTIONS: `--import=file://${mock}`,
-      FLUXMELD_BASE_URL: 'http://127.0.0.1:8080',
-      FLUXMELD_API_KEY: 'runtime-secret',
+  const result = spawnSync(
+    'node',
+    [script, '--fixture', fixture, '--profile', 'cherry-studio', '--model', 'deepseek-v4-flash'],
+    {
+      env: {
+        ...process.env,
+        NODE_OPTIONS: `--import=file://${mock}`,
+        FLUXMELD_BASE_URL: 'http://127.0.0.1:8080',
+        FLUXMELD_API_KEY: 'runtime-secret',
+      },
+      encoding: 'utf8',
     },
-    encoding: 'utf8',
-  })
+  )
 
   assert.equal(result.status, 0, result.stderr)
   const captured = JSON.parse(fs.readFileSync(capture, 'utf8'))
@@ -129,14 +187,18 @@ globalThis.fetch = async (url, options) => {
 })
 
 test('missing model exits nonzero without leaking key', () => {
-  const result = spawnSync('node', [script, '--fixture', 'sample.json', '--profile', 'cherry-studio', '--dry-run'], {
-    env: {
-      ...process.env,
-      FLUXMELD_MODEL: '',
-      FLUXMELD_API_KEY: 'sk-secret-value',
+  const result = spawnSync(
+    'node',
+    [script, '--fixture', 'sample.json', '--profile', 'cherry-studio', '--dry-run'],
+    {
+      env: {
+        ...process.env,
+        FLUXMELD_MODEL: '',
+        FLUXMELD_API_KEY: 'sk-secret-value',
+      },
+      encoding: 'utf8',
     },
-    encoding: 'utf8',
-  })
+  )
 
   assert.notEqual(result.status, 0)
   assert.match(result.stderr, /--model or FLUXMELD_MODEL is required/)

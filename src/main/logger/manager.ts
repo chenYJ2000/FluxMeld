@@ -40,11 +40,11 @@ class LogManager {
   constructor() {
     const userDataPath = app.getPath('userData')
     const logDir = path.join(userDataPath, 'logs')
-    
+
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true })
     }
-    
+
     this.logFile = path.join(logDir, 'app.log')
   }
 
@@ -54,7 +54,7 @@ class LogManager {
 
   async initialize(): Promise<void> {
     if (this.initialized) return
-    
+
     try {
       await this.loadLogs()
       this.initialized = true
@@ -70,9 +70,9 @@ class LogManager {
       if (fs.existsSync(this.logFile)) {
         const content = await fs.promises.readFile(this.logFile, 'utf-8')
         const lines = content.trim().split('\n').filter(Boolean)
-        
+
         this.logs = lines
-          .map(line => {
+          .map((line) => {
             try {
               return JSON.parse(line) as LogEntry
             } catch {
@@ -90,7 +90,7 @@ class LogManager {
 
   private async saveLogs(): Promise<void> {
     try {
-      const content = this.logs.map(log => JSON.stringify(log)).join('\n')
+      const content = this.logs.map((log) => JSON.stringify(log)).join('\n')
       await fs.promises.writeFile(this.logFile, content, 'utf-8')
     } catch (error) {
       console.error('Failed to save logs:', error)
@@ -105,7 +105,7 @@ class LogManager {
       providerId?: string
       requestId?: string
       data?: Record<string, unknown>
-    }
+    },
   ): LogEntry {
     const entry: LogEntry = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -148,22 +148,20 @@ class LogManager {
     let filtered = [...this.logs]
 
     if (filter?.level && filter.level !== 'all') {
-      filtered = filtered.filter(log => log.level === filter.level)
+      filtered = filtered.filter((log) => log.level === filter.level)
     }
 
     if (filter?.keyword) {
       const keyword = filter.keyword.toLowerCase()
-      filtered = filtered.filter(log => 
-        log.message.toLowerCase().includes(keyword)
-      )
+      filtered = filtered.filter((log) => log.message.toLowerCase().includes(keyword))
     }
 
     if (filter?.startTime) {
-      filtered = filtered.filter(log => log.timestamp >= filter.startTime!)
+      filtered = filtered.filter((log) => log.timestamp >= filter.startTime!)
     }
 
     if (filter?.endTime) {
-      filtered = filtered.filter(log => log.timestamp <= filter.endTime!)
+      filtered = filtered.filter((log) => log.timestamp <= filter.endTime!)
     }
 
     filtered.sort((a, b) => b.timestamp - a.timestamp)
@@ -205,16 +203,14 @@ class LogManager {
       const dayEnd = now - i * dayMs
       const date = new Date(dayStart).toISOString().split('T')[0]
 
-      const dayLogs = this.logs.filter(
-        log => log.timestamp >= dayStart && log.timestamp < dayEnd
-      )
+      const dayLogs = this.logs.filter((log) => log.timestamp >= dayStart && log.timestamp < dayEnd)
 
       trends.push({
         date,
         total: dayLogs.length,
-        info: dayLogs.filter(l => l.level === 'info').length,
-        warn: dayLogs.filter(l => l.level === 'warn').length,
-        error: dayLogs.filter(l => l.level === 'error').length,
+        info: dayLogs.filter((l) => l.level === 'info').length,
+        warn: dayLogs.filter((l) => l.level === 'warn').length,
+        error: dayLogs.filter((l) => l.level === 'error').length,
       })
     }
 
@@ -229,8 +225,8 @@ class LogManager {
   async cleanOldLogs(): Promise<void> {
     const now = Date.now()
     const retentionMs = this.retentionDays * 24 * 60 * 60 * 1000
-    
-    this.logs = this.logs.filter(log => now - log.timestamp < retentionMs)
+
+    this.logs = this.logs.filter((log) => now - log.timestamp < retentionMs)
     await this.saveLogs()
   }
 
@@ -252,11 +248,11 @@ class LogManager {
     }
 
     return this.logs
-      .map(log => {
+      .map((log) => {
         const time = new Date(log.timestamp).toISOString()
         const level = log.level.toUpperCase().padEnd(5)
         let line = `[${time}] [${level}] ${log.message}`
-        
+
         if (log.providerId) {
           line += ` | Provider: ${log.providerId}`
         }
@@ -269,14 +265,14 @@ class LogManager {
         if (log.data) {
           line += ` | Data: ${JSON.stringify(log.data)}`
         }
-        
+
         return line
       })
       .join('\n')
   }
 
   getLogById(id: string): LogEntry | undefined {
-    return this.logs.find(log => log.id === id)
+    return this.logs.find((log) => log.id === id)
   }
 }
 

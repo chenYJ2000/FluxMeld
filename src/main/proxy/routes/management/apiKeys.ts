@@ -8,11 +8,11 @@ import type { Context } from 'koa'
 import { randomUUID } from 'crypto'
 import { managementAuthMiddleware } from '../../middleware/managementAuth'
 import { storeManager } from '../../../store/store'
-import type { 
+import type {
   ApiKey,
   CreateApiKeyRequest,
   UpdateApiKeyRequest,
-  ManagementApiResponse 
+  ManagementApiResponse,
 } from '../../../../shared/types'
 
 const router = new Router({ prefix: '/v0/management' })
@@ -28,7 +28,7 @@ function generateApiKeyValue(): string {
   const randomBytes = new Uint8Array(KEY_RANDOM_LENGTH)
   crypto.getRandomValues(randomBytes)
   const randomString = Array.from(randomBytes)
-    .map(b => b.toString(16).padStart(2, '0'))
+    .map((b) => b.toString(16).padStart(2, '0'))
     .join('')
     .slice(0, KEY_RANDOM_LENGTH)
   return `${API_KEY_PREFIX}${randomString}`
@@ -39,10 +39,9 @@ function generateApiKeyValue(): string {
  * Shows only the last 8 characters
  */
 function maskApiKey(key: ApiKey): ApiKey {
-  const maskedKey = key.key.length > 8 
-    ? `${API_KEY_PREFIX}...${key.key.slice(-8)}`
-    : `${API_KEY_PREFIX}...`
-  
+  const maskedKey =
+    key.key.length > 8 ? `${API_KEY_PREFIX}...${key.key.slice(-8)}` : `${API_KEY_PREFIX}...`
+
   return {
     ...key,
     key: maskedKey,
@@ -81,7 +80,7 @@ router.get('/api-keys', managementAuthMiddleware, async (ctx: Context) => {
     const config = storeManager.getConfig()
     const apiKeys = config.apiKeys || []
     const maskedKeys = apiKeys.map(maskApiKey)
-    
+
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse(maskedKeys)
   } catch (error) {
@@ -99,16 +98,16 @@ router.get('/api-keys', managementAuthMiddleware, async (ctx: Context) => {
 router.post('/api-keys', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const request = ctx.request.body as CreateApiKeyRequest
-    
+
     if (!request.name || typeof request.name !== 'string' || request.name.trim() === '') {
       ctx.status = 400
       ctx.body = createErrorResponse('invalid_request', 'Missing required field: name')
       return
     }
-    
+
     const config = storeManager.getConfig()
     const apiKeys = config.apiKeys || []
-    
+
     const newKey: ApiKey = {
       id: randomUUID(),
       name: request.name.trim(),
@@ -118,15 +117,15 @@ router.post('/api-keys', managementAuthMiddleware, async (ctx: Context) => {
       usageCount: 0,
       description: request.description?.trim(),
     }
-    
+
     apiKeys.push(newKey)
-    
+
     storeManager.updateConfig({ apiKeys })
-    
+
     storeManager.addLog('info', `Created API key: ${newKey.name}`, {
       data: { keyId: newKey.id },
     })
-    
+
     ctx.status = 201
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse(newKey)
@@ -145,49 +144,55 @@ router.put('/api-keys/:id', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const id = ctx.params.id
     const request = ctx.request.body as UpdateApiKeyRequest
-    
+
     const config = storeManager.getConfig()
     const apiKeys = config.apiKeys || []
-    const keyIndex = apiKeys.findIndex(k => k.id === id)
-    
+    const keyIndex = apiKeys.findIndex((k) => k.id === id)
+
     if (keyIndex === -1) {
       ctx.status = 404
       ctx.body = createErrorResponse('api_key_not_found', `API key not found: ${id}`)
       return
     }
-    
+
     const existingKey = apiKeys[keyIndex]
-    
+
     if (request.name !== undefined) {
       if (typeof request.name !== 'string' || request.name.trim() === '') {
         ctx.status = 400
-        ctx.body = createErrorResponse('invalid_request', 'Invalid field: name must be a non-empty string')
+        ctx.body = createErrorResponse(
+          'invalid_request',
+          'Invalid field: name must be a non-empty string',
+        )
         return
       }
       existingKey.name = request.name.trim()
     }
-    
+
     if (request.description !== undefined) {
       existingKey.description = request.description?.trim()
     }
-    
+
     if (request.enabled !== undefined) {
       if (typeof request.enabled !== 'boolean') {
         ctx.status = 400
-        ctx.body = createErrorResponse('invalid_request', 'Invalid field: enabled must be a boolean')
+        ctx.body = createErrorResponse(
+          'invalid_request',
+          'Invalid field: enabled must be a boolean',
+        )
         return
       }
       existingKey.enabled = request.enabled
     }
-    
+
     apiKeys[keyIndex] = existingKey
-    
+
     storeManager.updateConfig({ apiKeys })
-    
+
     storeManager.addLog('info', `Updated API key: ${existingKey.name}`, {
       data: { keyId: id },
     })
-    
+
     const maskedKey = maskApiKey(existingKey)
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse(maskedKey)
@@ -205,26 +210,26 @@ router.put('/api-keys/:id', managementAuthMiddleware, async (ctx: Context) => {
 router.delete('/api-keys/:id', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const id = ctx.params.id
-    
+
     const config = storeManager.getConfig()
     const apiKeys = config.apiKeys || []
-    const keyIndex = apiKeys.findIndex(k => k.id === id)
-    
+    const keyIndex = apiKeys.findIndex((k) => k.id === id)
+
     if (keyIndex === -1) {
       ctx.status = 404
       ctx.body = createErrorResponse('api_key_not_found', `API key not found: ${id}`)
       return
     }
-    
+
     const deletedKey = apiKeys[keyIndex]
     apiKeys.splice(keyIndex, 1)
-    
+
     storeManager.updateConfig({ apiKeys })
-    
+
     storeManager.addLog('info', `Deleted API key: ${deletedKey.name}`, {
       data: { keyId: id },
     })
-    
+
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse({ id, deleted: true })
   } catch (error) {
@@ -242,31 +247,31 @@ router.delete('/api-keys/:id', managementAuthMiddleware, async (ctx: Context) =>
 router.post('/api-keys/:id/regenerate', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const id = ctx.params.id
-    
+
     const config = storeManager.getConfig()
     const apiKeys = config.apiKeys || []
-    const keyIndex = apiKeys.findIndex(k => k.id === id)
-    
+    const keyIndex = apiKeys.findIndex((k) => k.id === id)
+
     if (keyIndex === -1) {
       ctx.status = 404
       ctx.body = createErrorResponse('api_key_not_found', `API key not found: ${id}`)
       return
     }
-    
+
     const existingKey = apiKeys[keyIndex]
     const newKeyValue = generateApiKeyValue()
-    
+
     existingKey.key = newKeyValue
     existingKey.usageCount = 0
-    
+
     apiKeys[keyIndex] = existingKey
-    
+
     storeManager.updateConfig({ apiKeys })
-    
+
     storeManager.addLog('info', `Regenerated API key: ${existingKey.name}`, {
       data: { keyId: id },
     })
-    
+
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse(existingKey)
   } catch (error) {

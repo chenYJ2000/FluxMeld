@@ -1,15 +1,21 @@
 /**
  * Default Prompt Adapter
  * Maintains backward compatibility with existing tool prompt injection logic
- * 
+ *
  * Uses variants from prompt/variants/ directory for unified variant definitions
  */
 
 import { ChatMessage, ChatCompletionTool, ToolCall } from '../../types'
-import { BasePromptAdapter, PromptVariant, TransformResult, ParseResult, ToolCallFormat } from './BasePromptAdapter'
+import {
+  BasePromptAdapter,
+  PromptVariant,
+  TransformResult,
+  ParseResult,
+  ToolCallFormat,
+} from './BasePromptAdapter'
 import { ClientType } from '../../utils/promptSignatures'
 import { parseToolCallsFromText } from '../../utils/toolParser'
-import { TOOL_PROMPT_SIGNATURES, hasGeneralToolPromptSignature } from '../../constants/signatures'
+import { GENERAL_TOOL_SIGNATURES, hasGeneralToolPromptSignature } from '../../constants/signatures'
 import { DEFAULT_VARIANT, XML_VARIANT } from '../../prompt/variants'
 
 /**
@@ -19,8 +25,8 @@ import { DEFAULT_VARIANT, XML_VARIANT } from '../../prompt/variants'
 export class DefaultPromptAdapter extends BasePromptAdapter {
   name = 'default'
   clientType: ClientType = 'unknown'
-  
-  detectSignatures = TOOL_PROMPT_SIGNATURES.general
+
+  detectSignatures = GENERAL_TOOL_SIGNATURES
 
   constructor() {
     super()
@@ -30,12 +36,12 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
 
   hasPromptInjected(messages: ChatMessage[]): boolean {
     const allContent = this.extractAllContent(messages)
-    
+
     if (hasGeneralToolPromptSignature(allContent)) {
       console.log('[DefaultAdapter] Detected existing tool prompt injection, skipping')
       return true
     }
-    
+
     return false
   }
 
@@ -44,13 +50,13 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
       return ''
     }
 
-    const toolDefinitions = tools.map(tool => {
-      const params = tool.function.parameters
-        ? JSON.stringify(tool.function.parameters)
-        : '{}'
+    const toolDefinitions = tools
+      .map((tool) => {
+        const params = tool.function.parameters ? JSON.stringify(tool.function.parameters) : '{}'
 
-      return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
-    }).join('\n')
+        return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
+      })
+      .join('\n')
 
     const template = variant?.toolPromptTemplate || DEFAULT_VARIANT.toolPromptTemplate
     return template.replace('{{TOOL_DEFINITIONS}}', toolDefinitions)
@@ -66,10 +72,10 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
     }
 
     const { toolCalls } = parseToolCallsFromText(content, 'default')
-    
+
     return {
       content,
-      toolCalls: toolCalls.map(tc => ({
+      toolCalls: toolCalls.map((tc) => ({
         index: tc.index,
         id: tc.id,
         type: tc.type,
@@ -81,20 +87,21 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
 
   private parseXmlToolCalls(content: string): ToolCall[] {
     const toolCalls: ToolCall[] = []
-    
-    const toolUseRegex = /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
-    
+
+    const toolUseRegex =
+      /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
+
     let match
     let index = 0
-    
+
     while ((match = toolUseRegex.exec(content)) !== null) {
       const name = match[1].trim()
       let argsStr = match[2].trim()
-      
+
       if (argsStr.startsWith('```')) {
         argsStr = argsStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       }
-      
+
       try {
         const parsed = JSON.parse(argsStr)
         toolCalls.push({
@@ -110,7 +117,7 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
         console.warn('[DefaultAdapter] Failed to parse XML tool arguments:', argsStr)
       }
     }
-    
+
     return toolCalls
   }
 
@@ -126,7 +133,7 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
     messages: ChatMessage[],
     tools: ChatCompletionTool[] | undefined,
     model: string,
-    _provider?: string
+    _provider?: string,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       return { messages, tools: undefined, injected: false }
@@ -154,7 +161,7 @@ export class DefaultPromptAdapter extends BasePromptAdapter {
     model: string,
     format: 'bracket' | 'xml',
     _provider?: string,
-    skipDetection: boolean = false
+    skipDetection: boolean = false,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       console.log('[DefaultAdapter] No tools to inject')

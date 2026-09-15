@@ -8,9 +8,9 @@ export default function LogsPage() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
   const tabFromUrl = searchParams.get('tab')
-  
+
   const [, setActiveTab] = useState(tabFromUrl === 'request' ? 'request' : 'request')
-  
+
   useEffect(() => {
     if (tabFromUrl === 'request') {
       setActiveTab('request')

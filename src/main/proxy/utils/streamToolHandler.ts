@@ -18,7 +18,6 @@ import {
   parseToolCallsStream as unifiedParseToolCallsStream,
   flushToolCallBuffer as unifiedFlushToolCallBuffer,
   shouldBlockOutput as unifiedShouldBlockOutput,
-  createBaseChunk as unifiedCreateBaseChunk
 } from './toolParser/index'
 
 // Re-export StreamState type for backward compatibility
@@ -53,8 +52,8 @@ export function processStreamContent(
   state: ToolCallState,
   baseChunk: any,
   isFirstChunk: boolean,
-  modelType: string = 'default'
-): { chunks: any[], shouldFlush: boolean } {
+  modelType: string = 'default',
+): { chunks: any[]; shouldFlush: boolean } {
   const result: any[] = []
   const marker = '[function_calls]'
 
@@ -74,14 +73,16 @@ export function processStreamContent(
         if (!state.hasEmittedToolCall) {
           result.push({
             ...baseChunk,
-            choices: [{
-              index: 0,
-              delta: {
-                ...(isFirstChunk ? { role: 'assistant' } : {}),
-                content: textBefore
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  ...(isFirstChunk ? { role: 'assistant' } : {}),
+                  content: textBefore,
+                },
+                finish_reason: null,
               },
-              finish_reason: null
-            }]
+            ],
           })
         }
         state.contentBuffer = state.contentBuffer.substring(markerIdx)
@@ -99,14 +100,16 @@ export function processStreamContent(
               if (!state.hasEmittedToolCall) {
                 result.push({
                   ...baseChunk,
-                  choices: [{
-                    index: 0,
-                    delta: {
-                      ...(isFirstChunk ? { role: 'assistant' } : {}),
-                      content: textBefore
+                  choices: [
+                    {
+                      index: 0,
+                      delta: {
+                        ...(isFirstChunk ? { role: 'assistant' } : {}),
+                        content: textBefore,
+                      },
+                      finish_reason: null,
                     },
-                    finish_reason: null
-                  }]
+                  ],
                 })
               }
               state.contentBuffer = potentialMarker
@@ -131,21 +134,26 @@ export function processStreamContent(
       if (state.contentBuffer && !state.hasEmittedToolCall) {
         result.push({
           ...baseChunk,
-          choices: [{
-            index: 0,
-            delta: {
-              ...(isFirstChunk ? { role: 'assistant' } : {}),
-              content: state.contentBuffer
+          choices: [
+            {
+              index: 0,
+              delta: {
+                ...(isFirstChunk ? { role: 'assistant' } : {}),
+                content: state.contentBuffer,
+              },
+              finish_reason: null,
             },
-            finish_reason: null
-          }]
+          ],
         })
       }
       state.contentBuffer = ''
       return { chunks: result, shouldFlush: true }
     }
 
-    const { content: cleanContent, toolCalls } = parseToolCallsFromText(state.contentBuffer, modelType)
+    const { content: cleanContent, toolCalls } = parseToolCallsFromText(
+      state.contentBuffer,
+      modelType,
+    )
 
     if (toolCalls.length > 0) {
       for (const tc of toolCalls) {
@@ -156,14 +164,16 @@ export function processStreamContent(
 
         const toolCallData = {
           ...baseChunk,
-          choices: [{
-            index: 0,
-            delta: {
-              role: isFirstChunk ? 'assistant' : undefined,
-              tool_calls: [tc]
+          choices: [
+            {
+              index: 0,
+              delta: {
+                role: isFirstChunk ? 'assistant' : undefined,
+                tool_calls: [tc],
+              },
+              finish_reason: null,
             },
-            finish_reason: null
-          }]
+          ],
         }
         result.push(toolCallData)
 
@@ -191,14 +201,16 @@ export function processStreamContent(
         if (!state.hasEmittedToolCall) {
           result.push({
             ...baseChunk,
-            choices: [{
-              index: 0,
-              delta: {
-                ...(isFirstChunk ? { role: 'assistant' } : {}),
-                content: state.contentBuffer
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  ...(isFirstChunk ? { role: 'assistant' } : {}),
+                  content: state.contentBuffer,
+                },
+                finish_reason: null,
               },
-              finish_reason: null
-            }]
+            ],
           })
         }
         state.contentBuffer = ''
@@ -212,14 +224,16 @@ export function processStreamContent(
     if (!state.hasEmittedToolCall) {
       result.push({
         ...baseChunk,
-        choices: [{
-          index: 0,
-          delta: {
-            ...(isFirstChunk ? { role: 'assistant' } : {}),
-            content: state.contentBuffer
+        choices: [
+          {
+            index: 0,
+            delta: {
+              ...(isFirstChunk ? { role: 'assistant' } : {}),
+              content: state.contentBuffer,
+            },
+            finish_reason: null,
           },
-          finish_reason: null
-        }]
+        ],
       })
     }
     state.contentBuffer = ''
@@ -235,7 +249,7 @@ export function processStreamContent(
 export function flushToolCallBuffer(
   state: ToolCallState,
   baseChunk: any,
-  modelType: string = 'default'
+  modelType: string = 'default',
 ): any[] {
   const result: any[] = []
 
@@ -243,7 +257,10 @@ export function flushToolCallBuffer(
     return result
   }
 
-  const { content: cleanContent, toolCalls } = parseToolCallsFromText(state.contentBuffer, modelType)
+  const { content: cleanContent, toolCalls } = parseToolCallsFromText(
+    state.contentBuffer,
+    modelType,
+  )
 
   if (toolCalls.length > 0) {
     for (const tc of toolCalls) {
@@ -251,11 +268,13 @@ export function flushToolCallBuffer(
       delete tc.rawText
       result.push({
         ...baseChunk,
-        choices: [{
-          index: 0,
-          delta: { tool_calls: [tc] },
-          finish_reason: null
-        }]
+        choices: [
+          {
+            index: 0,
+            delta: { tool_calls: [tc] },
+            finish_reason: null,
+          },
+        ],
       })
     }
     state.hasEmittedToolCall = true
@@ -263,25 +282,32 @@ export function flushToolCallBuffer(
     if (cleanContent && cleanContent.trim()) {
       result.push({
         ...baseChunk,
-        choices: [{
-          index: 0,
-          delta: { content: cleanContent },
-          finish_reason: null
-        }]
+        choices: [
+          {
+            index: 0,
+            delta: { content: cleanContent },
+            finish_reason: null,
+          },
+        ],
       })
     }
   } else {
     if (state.contentBuffer && !state.hasEmittedToolCall) {
       result.push({
         ...baseChunk,
-        choices: [{
-          index: 0,
-          delta: { content: state.contentBuffer },
-          finish_reason: null
-        }]
+        choices: [
+          {
+            index: 0,
+            delta: { content: state.contentBuffer },
+            finish_reason: null,
+          },
+        ],
       })
     } else if (state.contentBuffer && state.hasEmittedToolCall) {
-      console.warn('[StreamToolHandler] Discarding remaining buffer because tool calls were emitted:', state.contentBuffer.substring(0, 200) + '...')
+      console.warn(
+        '[StreamToolHandler] Discarding remaining buffer because tool calls were emitted:',
+        state.contentBuffer.substring(0, 200) + '...',
+      )
     }
   }
 
@@ -305,6 +331,6 @@ export function createBaseChunk(id: string, model: string, created: number) {
     id,
     model,
     object: 'chat.completion.chunk',
-    created
+    created,
   }
 }

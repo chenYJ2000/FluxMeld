@@ -21,7 +21,11 @@ export class ModelMapper {
 
     const directMapping = mappings[requestedModel]
     if (directMapping) {
-      if (!provider || !directMapping.preferredProviderId || directMapping.preferredProviderId === provider.id) {
+      if (
+        !provider ||
+        !directMapping.preferredProviderId ||
+        directMapping.preferredProviderId === provider.id
+      ) {
         return directMapping.actualModel
       }
     }
@@ -40,7 +44,7 @@ export class ModelMapper {
   private findWildcardMapping(
     requestedModel: string,
     mappings: Record<string, ModelMapping>,
-    provider?: Provider
+    provider?: Provider,
   ): ModelMapping | null {
     const normalizedRequested = requestedModel.toLowerCase()
 
@@ -49,7 +53,11 @@ export class ModelMapper {
         const normalizedPattern = pattern.toLowerCase()
 
         if (this.matchesPattern(normalizedRequested, normalizedPattern)) {
-          if (!provider || !mapping.preferredProviderId || mapping.preferredProviderId === provider.id) {
+          if (
+            !provider ||
+            !mapping.preferredProviderId ||
+            mapping.preferredProviderId === provider.id
+          ) {
             return mapping
           }
         }
@@ -91,7 +99,11 @@ export class ModelMapper {
     const mapping = config.modelMappings[requestedModel]
 
     if (mapping) {
-      if (!providerId || !mapping.preferredProviderId || mapping.preferredProviderId === providerId) {
+      if (
+        !providerId ||
+        !mapping.preferredProviderId ||
+        mapping.preferredProviderId === providerId
+      ) {
         return mapping.actualModel
       }
     }
@@ -122,7 +134,12 @@ export class ModelMapper {
   /**
    * Add model mapping
    */
-  addMapping(requestModel: string, actualModel: string, preferredProviderId?: string, preferredAccountId?: string): void {
+  addMapping(
+    requestModel: string,
+    actualModel: string,
+    preferredProviderId?: string,
+    preferredAccountId?: string,
+  ): void {
     const config = storeManager.getConfig()
     config.modelMappings[requestModel] = {
       requestModel,
@@ -158,24 +175,24 @@ export class ModelMapper {
    * Get list of providers supporting specified model
    */
   getProvidersForModel(model: string): Provider[] {
-    const providers = storeManager.getProviders().filter(p => p.enabled)
+    const providers = storeManager.getProviders().filter((p) => p.enabled)
     const preferredProviderId = this.getPreferredProvider(model)
 
     if (preferredProviderId) {
-      const preferred = providers.find(p => p.id === preferredProviderId)
+      const preferred = providers.find((p) => p.id === preferredProviderId)
       if (preferred) {
         return [preferred]
       }
     }
 
-    return providers.filter(provider => {
+    return providers.filter((provider) => {
       const effectiveModels = storeManager.getEffectiveModels(provider.id)
       if (effectiveModels.length === 0) {
         return true
       }
 
       const normalizedModel = model.toLowerCase()
-      return effectiveModels.some(m => {
+      return effectiveModels.some((m) => {
         const normalizedSupported = m.displayName.toLowerCase()
         if (normalizedSupported.endsWith('*')) {
           return normalizedModel.startsWith(normalizedSupported.slice(0, -1))

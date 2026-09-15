@@ -19,17 +19,11 @@ import mime from 'mime-types'
 import path from 'path'
 import { toolsToSystemPrompt, TOOL_WRAP_HINT, hasToolPromptInjected } from '../utils/tools'
 import { parseToolCallsFromText } from '../utils/toolParser'
-import { 
-  createBaseChunk,
-} from '../utils/streamToolHandler'
+import { createBaseChunk } from '../utils/streamToolHandler'
 import { getProviderToolProfile } from '../toolCalling/providerProfiles'
 import { ToolStreamParser } from '../toolCalling/ToolStreamParser'
 import type { ToolCallingPlan } from '../toolCalling/types'
-import {
-  getAbortReason,
-  RequestTimeoutError,
-  throwIfAborted,
-} from '../requestLifecycle'
+import { getAbortReason, RequestTimeoutError, throwIfAborted } from '../requestLifecycle'
 
 const GLM_API_BASE = 'https://chatglm.cn/chatglm'
 const DEFAULT_ASSISTANT_ID = '65940acff94777010aa6b796'
@@ -59,7 +53,8 @@ const FAKE_HEADERS = {
   'X-Device-Brand': '',
   'X-Device-Model': '',
   'X-Lang': 'zh',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
 }
 
 interface TokenInfo {
@@ -131,19 +126,21 @@ function getGLMUpstreamFailure(result: any): string | undefined {
   const status = typeof result?.status === 'string' ? result.status.toLowerCase() : ''
   const isFailureStatus = ['intervene', 'error', 'failed', 'fail'].includes(status)
   const lastError = result?.last_error
-  const hasLastError = typeof lastError === 'string'
-    ? Boolean(lastError.trim())
-    : lastError && typeof lastError === 'object'
-      ? Object.keys(lastError).length > 0
-      : Boolean(lastError)
+  const hasLastError =
+    typeof lastError === 'string'
+      ? Boolean(lastError.trim())
+      : lastError && typeof lastError === 'object'
+        ? Object.keys(lastError).length > 0
+        : Boolean(lastError)
   if (!isFailureStatus && result?.success !== false && !hasLastError) return undefined
 
-  const detail = result?.last_error?.intervene_text
-    ?? result?.last_error?.message
-    ?? result?.message
-    ?? result?.msg
-    ?? result?.last_error
-    ?? status
+  const detail =
+    result?.last_error?.intervene_text ??
+    result?.last_error?.message ??
+    result?.message ??
+    result?.msg ??
+    result?.last_error ??
+    status
   return sanitizeGLMUpstreamMessage(detail)
 }
 
@@ -153,7 +150,7 @@ function mergeGLMResponseParts(current: any[], incoming: unknown): any[] {
     const index = parts.findIndex((existing) => existing.logic_id === part.logic_id)
     return index === -1
       ? [...parts, part]
-      : parts.map((existing, existingIndex) => existingIndex === index ? part : existing)
+      : parts.map((existing, existingIndex) => (existingIndex === index ? part : existing))
   }, current)
 }
 
@@ -247,7 +244,7 @@ export class GLMAdapter {
         timeout: getGLMRequestTimeout(1800000, options),
         signal: options?.signal,
         validateStatus: () => true,
-      }
+      },
     )
 
     console.log('[GLM] Token refresh response status:', response.status)
@@ -311,7 +308,7 @@ export class GLMAdapter {
   ): Promise<{ source_id: string; file_url?: string }> {
     throwIfAborted(options?.signal)
     console.log('[GLM] Uploading file:', fileUrl.substring(0, 50) + '...')
-    
+
     let filename: string
     let fileData: Buffer
     let mimeType: string
@@ -330,7 +327,11 @@ export class GLMAdapter {
         signal: options?.signal,
       })
       fileData = Buffer.from(response.data)
-      mimeType = response.headers['content-type'] || mime.lookup(filename) || 'application/octet-stream'
+      const rawContentType = response.headers['content-type']
+      mimeType =
+        (typeof rawContentType === 'string' ? rawContentType : '') ||
+        mime.lookup(filename) ||
+        'application/octet-stream'
     }
 
     const formData = new FormData()
@@ -354,7 +355,7 @@ export class GLMAdapter {
         timeout: getGLMRequestTimeout(1800000, options),
         signal: options?.signal,
         validateStatus: () => true,
-      }
+      },
     )
 
     if (response.status !== 200 || !response.data?.result) {
@@ -387,10 +388,17 @@ export class GLMAdapter {
     return { fileUrls, imageUrls }
   }
 
-  private messagesToPrompt(messages: GLMMessage[], refs: any[] = [], toolsPrompt?: string, isMultiTurn: boolean = false): { role: string; content: any[] }[] {
+  private messagesToPrompt(
+    messages: GLMMessage[],
+    refs: any[] = [],
+    toolsPrompt?: string,
+    isMultiTurn: boolean = false,
+  ): { role: string; content: any[] }[] {
     const toolProfile = getProviderToolProfile('glm')
     // Separate image refs and file refs
-    const imageRefs = refs.filter((ref) => ref.width !== undefined || ref.height !== undefined || ref.image_url)
+    const imageRefs = refs.filter(
+      (ref) => ref.width !== undefined || ref.height !== undefined || ref.image_url,
+    )
     const fileRefs = refs.filter((ref) => !ref.width && !ref.height && !ref.image_url)
 
     // Build content array
@@ -418,22 +426,24 @@ export class GLMAdapter {
     }
 
     // Process messages including tool calls and tool responses
-    const processedMessages = messages.map(msg => {
+    const processedMessages = messages.map((msg) => {
       // Handle tool calls in assistant message
       if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0) {
         return {
           ...msg,
-          content: toolProfile.formatAssistantToolCalls(msg.tool_calls.map(tc => ({
-            id: tc.id,
-            name: tc.function.name,
-            arguments: tc.function.arguments,
-          }))),
+          content: toolProfile.formatAssistantToolCalls(
+            msg.tool_calls.map((tc) => ({
+              id: tc.id,
+              name: tc.function.name,
+              arguments: tc.function.arguments,
+            })),
+          ),
         }
       }
       // Handle tool response message
       if (msg.role === 'tool' && msg.tool_call_id) {
-        return { 
-          ...msg, 
+        return {
+          ...msg,
           role: 'user' as const,
           content: toolProfile.formatToolResult({
             toolCallId: msg.tool_call_id,
@@ -453,30 +463,32 @@ export class GLMAdapter {
           break
         }
       }
-      
+
       if (lastUserIdx !== -1) {
         const lastUserMsg = processedMessages[lastUserIdx]
         let textContent = ''
         if (typeof lastUserMsg.content === 'string') {
           textContent = lastUserMsg.content
         } else if (Array.isArray(lastUserMsg.content)) {
-          textContent = lastUserMsg.content.filter((c) => c.type === 'text').map((c) => c.text).join('')
+          textContent = lastUserMsg.content
+            .filter((c) => c.type === 'text')
+            .map((c) => c.text)
+            .join('')
         }
-        
+
         // Include any tool results after the last user message
         for (let i = lastUserIdx + 1; i < processedMessages.length; i++) {
           if (processedMessages[i].role === 'user') {
-            const toolText = typeof processedMessages[i].content === 'string' 
-              ? processedMessages[i].content 
-              : ''
+            const toolText =
+              typeof processedMessages[i].content === 'string' ? processedMessages[i].content : ''
             textContent += '\n' + toolText
           }
         }
-        
+
         if (toolsPrompt) {
-          textContent = textContent.trim() + "\n\n" + toolsPrompt
+          textContent = textContent.trim() + '\n\n' + toolsPrompt
         }
-        
+
         content.push({ type: 'text', text: textContent })
         return [{ role: 'user', content }]
       }
@@ -496,7 +508,7 @@ export class GLMAdapter {
 
       // Inject tools prompt at the VERY END
       if (toolsPrompt) {
-        textContent = textContent.trim() + "\n\n" + toolsPrompt
+        textContent = textContent.trim() + '\n\n' + toolsPrompt
       }
 
       content.push({ type: 'text', text: textContent })
@@ -512,7 +524,10 @@ export class GLMAdapter {
       if (typeof msg.content === 'string') {
         return acc + `${role}: ${msg.content}\n\n`
       } else if (Array.isArray(msg.content)) {
-        const text = msg.content.filter((c) => c.type === 'text').map((c) => c.text).join('')
+        const text = msg.content
+          .filter((c) => c.type === 'text')
+          .map((c) => c.text)
+          .join('')
         return acc + `${role}: ${text}\n\n`
       }
       return acc
@@ -520,7 +535,7 @@ export class GLMAdapter {
 
     // Inject tools prompt at the VERY END
     if (toolsPrompt) {
-      textContent = textContent.trim() + "\n\n" + toolsPrompt
+      textContent = textContent.trim() + '\n\n' + toolsPrompt
     }
 
     content.push({ type: 'text', text: textContent + 'Assistant: ' })
@@ -624,9 +639,9 @@ GLM STRICT RULES:
     const modelLower = modelForDetection.toLowerCase()
     if (reasoningEffort === undefined) {
       if (
-        modelLower.includes('deepthink')
-        || modelLower.includes('deep-thinking')
-        || modelLower.includes('deep_thinking')
+        modelLower.includes('deepthink') ||
+        modelLower.includes('deep-thinking') ||
+        modelLower.includes('deep_thinking')
       ) {
         reasoningEffort = 'max'
       } else if (modelLower.includes('think') || modelLower.includes('zero')) {
@@ -643,37 +658,40 @@ GLM STRICT RULES:
     } else {
       console.log('[GLM] Using GLM-5.2 thinking mode:', chatMode || 'fast')
     }
-    
+
     // Check if model is an assistant ID (24+ alphanumeric characters)
     if (/^[a-z0-9]{24,}$/.test(request.model)) {
       assistantId = request.model
     }
 
     console.log('[GLM] Sending chat request...')
-    
+
     const response = await axios.post(
       `${GLM_API_BASE}/backend-api/assistant/stream`,
-      applyGLMGenerationControls({
-        assistant_id: assistantId,
-        conversation_id: '',
-        project_id: '',
-        chat_type: 'user_chat',
-        messages: preparedMessages,
-        meta_data: {
-          channel: '',
-          chat_mode: chatMode,
-          draft_id: '',
-          input_question_type: 'xxxx',
-          is_networking: isNetworking,
-          is_test: false,
-          platform: 'pc',
-          quote_log_id: '',
-          request_id: transportRequestId,
-          cogview: {
-            rm_label_watermark: false,
+      applyGLMGenerationControls(
+        {
+          assistant_id: assistantId,
+          conversation_id: '',
+          project_id: '',
+          chat_type: 'user_chat',
+          messages: preparedMessages,
+          meta_data: {
+            channel: '',
+            chat_mode: chatMode,
+            draft_id: '',
+            input_question_type: 'xxxx',
+            is_networking: isNetworking,
+            is_test: false,
+            platform: 'pc',
+            quote_log_id: '',
+            request_id: transportRequestId,
+            cogview: {
+              rm_label_watermark: false,
+            },
           },
         },
-      }, request.temperature),
+        request.temperature,
+      ),
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -688,7 +706,7 @@ GLM STRICT RULES:
         signal: options?.signal,
         validateStatus: () => true,
         responseType: 'stream',
-      }
+      },
     )
 
     return { response, conversationId: '' }
@@ -717,7 +735,7 @@ GLM STRICT RULES:
           },
           timeout: 1800000,
           validateStatus: () => true,
-        }
+        },
       )
       console.log('[GLM] Conversation deleted:', conversationId)
       return true
@@ -754,10 +772,15 @@ GLM STRICT RULES:
             },
             timeout: 1800000,
             validateStatus: () => true,
-          }
+          },
         )
 
-        console.log('[GLM] Get conversation list page', page, 'response:', JSON.stringify(listResponse.data, null, 2))
+        console.log(
+          '[GLM] Get conversation list page',
+          page,
+          'response:',
+          JSON.stringify(listResponse.data, null, 2),
+        )
 
         const { status, result } = listResponse.data || {}
         if (listResponse.status !== 200 || status !== 0) {
@@ -803,7 +826,7 @@ GLM STRICT RULES:
           },
           timeout: 1800000,
           validateStatus: () => true,
-        }
+        },
       )
 
       console.log('[GLM] Bulk delete response:', JSON.stringify(deleteResponse.data, null, 2))
@@ -833,12 +856,19 @@ export class GLMStreamHandler {
   private toolStreamParser?: ToolStreamParser
   private toolCallingPlan?: ToolCallingPlan
 
-  constructor(model: string, onEnd?: () => void, initialConversationId?: string, toolCallingPlan?: ToolCallingPlan) {
+  constructor(
+    model: string,
+    onEnd?: () => void,
+    initialConversationId?: string,
+    toolCallingPlan?: ToolCallingPlan,
+  ) {
     this.model = model
     this.created = Math.floor(Date.now() / 1000)
     this.onEnd = onEnd
     this.toolCallingPlan = toolCallingPlan
-    this.toolStreamParser = toolCallingPlan?.shouldParseResponse ? new ToolStreamParser(toolCallingPlan) : undefined
+    this.toolStreamParser = toolCallingPlan?.shouldParseResponse
+      ? new ToolStreamParser(toolCallingPlan)
+      : undefined
     if (initialConversationId) {
       this.conversationId = initialConversationId
     }
@@ -867,7 +897,7 @@ export class GLMStreamHandler {
         object: 'chat.completion.chunk',
         choices: [{ index: 0, delta: { role: 'assistant', content: '' }, finish_reason: null }],
         created: this.created,
-      })}\n\n`
+      })}\n\n`,
     )
 
     const parser = createParser({
@@ -879,7 +909,11 @@ export class GLMStreamHandler {
 
           const upstreamFailure = getGLMUpstreamFailure(result)
           if (upstreamFailure) {
-            failStream(new GLMUpstreamResponseError(`GLM upstream rejected the response: ${upstreamFailure}`))
+            failStream(
+              new GLMUpstreamResponseError(
+                `GLM upstream rejected the response: ${upstreamFailure}`,
+              ),
+            )
             return
           }
 
@@ -890,7 +924,6 @@ export class GLMStreamHandler {
           responseParts = mergeGLMResponseParts(responseParts, result.parts)
 
           if (result.status !== 'finish') {
-
             const searchMap = new Map<string, any>()
             responseParts.forEach((part) => {
               if (!part.content || !Array.isArray(part.content)) return
@@ -924,14 +957,17 @@ export class GLMStreamHandler {
                 if (type === 'text') {
                   let txt = text
                   if (searchMap.size > 0) {
-                    txt = txt.replace(/【?(turn\d+[a-zA-Z]+\d+)】?/g, (match: string, key: string) => {
-                      const searchInfo = searchMap.get(key)
-                      if (!searchInfo) return match
-                      if (!keyToIdMap.has(key)) {
-                        keyToIdMap.set(key, counter++)
-                      }
-                      return ` [${keyToIdMap.get(key)}](${searchInfo.url})`
-                    })
+                    txt = txt.replace(
+                      /【?(turn\d+[a-zA-Z]+\d+)】?/g,
+                      (match: string, key: string) => {
+                        const searchInfo = searchMap.get(key)
+                        if (!searchInfo) return match
+                        if (!keyToIdMap.has(key)) {
+                          keyToIdMap.set(key, counter++)
+                        }
+                        return ` [${keyToIdMap.get(key)}](${searchInfo.url})`
+                      },
+                    )
                   }
                   partText += txt
                 } else if (type === 'think') {
@@ -939,18 +975,26 @@ export class GLMStreamHandler {
                 } else if (type === 'image' && Array.isArray(image) && part.status === 'finish') {
                   const imageText =
                     image.reduce((imgs: string, v: any) => {
-                      return imgs + (/^(http|https):\/\//.test(v.image_url) ? `![image](${v.image_url})` : '')
+                      return (
+                        imgs +
+                        (/^(http|https):\/\//.test(v.image_url) ? `![image](${v.image_url})` : '')
+                      )
                     }, '') + '\n'
                   partText += imageText
                 } else if (type === 'code') {
                   partText += '```python\n' + code + (part.status === 'finish' ? '\n```\n' : '')
-                } else if (type === 'execution_output' && typeof innerContent === 'string' && part.status === 'finish') {
+                } else if (
+                  type === 'execution_output' &&
+                  typeof innerContent === 'string' &&
+                  part.status === 'finish'
+                ) {
                   partText += innerContent + '\n'
                 }
               })
 
               if (partText) fullText += (fullText.length > 0 ? '\n' : '') + partText
-              if (partReasoning) fullReasoning += (fullReasoning.length > 0 ? '\n' : '') + partReasoning
+              if (partReasoning)
+                fullReasoning += (fullReasoning.length > 0 ? '\n' : '') + partReasoning
             })
 
             const reasoningChunk = fullReasoning.substring(sentReasoning.length)
@@ -961,9 +1005,11 @@ export class GLMStreamHandler {
                   id: this.conversationId,
                   model: this.model,
                   object: 'chat.completion.chunk',
-                  choices: [{ index: 0, delta: { reasoning_content: reasoningChunk }, finish_reason: null }],
+                  choices: [
+                    { index: 0, delta: { reasoning_content: reasoningChunk }, finish_reason: null },
+                  ],
                   created: this.created,
-                })}\n\n`
+                })}\n\n`,
               )
             }
 
@@ -971,15 +1017,25 @@ export class GLMStreamHandler {
             if (chunk) {
               sentContent += chunk
             }
-            
+
             // Process tool call interception with shared parser buffering.
             const baseChunk = createBaseChunk(this.conversationId, this.model, this.created)
-            const outputChunks = this.toolStreamParser?.push(chunk, baseChunk, !sentRole) ?? (
-              chunk ? [{
-                ...baseChunk,
-                choices: [{ index: 0, delta: { ...(!sentRole ? { role: 'assistant' } : {}), content: chunk }, finish_reason: null }],
-              }] : []
-            )
+            const outputChunks =
+              this.toolStreamParser?.push(chunk, baseChunk, !sentRole) ??
+              (chunk
+                ? [
+                    {
+                      ...baseChunk,
+                      choices: [
+                        {
+                          index: 0,
+                          delta: { ...(!sentRole ? { role: 'assistant' } : {}), content: chunk },
+                          finish_reason: null,
+                        },
+                      ],
+                    },
+                  ]
+                : [])
 
             for (const outChunk of outputChunks) {
               transStream.write(`data: ${JSON.stringify(outChunk)}\n\n`)
@@ -1011,7 +1067,7 @@ export class GLMStreamHandler {
                   },
                 ],
                 created: this.created,
-              })}\n\n`
+              })}\n\n`,
             )
             transStream.end('data: [DONE]\n\n')
             this.onEnd?.()
@@ -1026,12 +1082,15 @@ export class GLMStreamHandler {
     stream.on('data', (buffer: Buffer) => parser.feed(decoder.decode(buffer, { stream: true })))
 
     stream.once('error', (err: Error) => {
-      failStream(new GLMUpstreamResponseError(`GLM upstream stream error: ${sanitizeGLMUpstreamMessage(err.message)}`))
+      failStream(
+        new GLMUpstreamResponseError(
+          `GLM upstream stream error: ${sanitizeGLMUpstreamMessage(err.message)}`,
+        ),
+      )
     })
 
-    const failIncompleteStream = (): void => failStream(
-      new GLMUpstreamResponseError('GLM upstream response ended before a finish event'),
-    )
+    const failIncompleteStream = (): void =>
+      failStream(new GLMUpstreamResponseError('GLM upstream response ended before a finish event'))
     stream.once('end', failIncompleteStream)
     stream.once('close', failIncompleteStream)
 
@@ -1045,15 +1104,18 @@ export class GLMStreamHandler {
       let timeoutHandle: ReturnType<typeof setTimeout> | undefined
 
       const decoder = new TextDecoder('utf-8')
-      const onData = (buffer: Buffer | string): void => parser.feed(
-        typeof buffer === 'string' ? buffer : decoder.decode(buffer, { stream: true }),
-      )
-      const onError = (error: Error): void => failResponse(
-        new GLMUpstreamResponseError(`GLM upstream stream error: ${sanitizeGLMUpstreamMessage(error.message)}`),
-      )
-      const onTransportEnd = (): void => failResponse(
-        new GLMUpstreamResponseError('GLM upstream response ended before a finish event'),
-      )
+      const onData = (buffer: Buffer | string): void =>
+        parser.feed(typeof buffer === 'string' ? buffer : decoder.decode(buffer, { stream: true }))
+      const onError = (error: Error): void =>
+        failResponse(
+          new GLMUpstreamResponseError(
+            `GLM upstream stream error: ${sanitizeGLMUpstreamMessage(error.message)}`,
+          ),
+        )
+      const onTransportEnd = (): void =>
+        failResponse(
+          new GLMUpstreamResponseError('GLM upstream response ended before a finish event'),
+        )
       const onAbort = (): void => {
         if (options?.signal) failResponse(getAbortReason(options.signal))
       }
@@ -1088,7 +1150,11 @@ export class GLMStreamHandler {
 
             const upstreamFailure = getGLMUpstreamFailure(result)
             if (upstreamFailure) {
-              failResponse(new GLMUpstreamResponseError(`GLM upstream rejected the response: ${upstreamFailure}`))
+              failResponse(
+                new GLMUpstreamResponseError(
+                  `GLM upstream rejected the response: ${upstreamFailure}`,
+                ),
+              )
               return
             }
 
@@ -1134,14 +1200,17 @@ export class GLMStreamHandler {
                   if (type === 'text') {
                     let txt = text
                     if (searchMap.size > 0) {
-                      txt = txt.replace(/【?(turn\d+[a-zA-Z]+\d+)】?/g, (match: string, key: string) => {
-                        const searchInfo = searchMap.get(key)
-                        if (!searchInfo) return match
-                        if (!keyToIdMap.has(key)) {
-                          keyToIdMap.set(key, counter++)
-                        }
-                        return ` [${keyToIdMap.get(key)}](${searchInfo.url})`
-                      })
+                      txt = txt.replace(
+                        /【?(turn\d+[a-zA-Z]+\d+)】?/g,
+                        (match: string, key: string) => {
+                          const searchInfo = searchMap.get(key)
+                          if (!searchInfo) return match
+                          if (!keyToIdMap.has(key)) {
+                            keyToIdMap.set(key, counter++)
+                          }
+                          return ` [${keyToIdMap.get(key)}](${searchInfo.url})`
+                        },
+                      )
                     }
                     partText += txt
                   } else if (type === 'think') {
@@ -1149,18 +1218,26 @@ export class GLMStreamHandler {
                   } else if (type === 'image' && Array.isArray(image) && part.status === 'finish') {
                     const imageText =
                       image.reduce((imgs: string, v: any) => {
-                        return imgs + (/^(http|https):\/\//.test(v.image_url) ? `![image](${v.image_url})` : '')
+                        return (
+                          imgs +
+                          (/^(http|https):\/\//.test(v.image_url) ? `![image](${v.image_url})` : '')
+                        )
                       }, '') + '\n'
                     partText += imageText
                   } else if (type === 'code') {
                     partText += '```python\n' + code + '\n```\n'
-                  } else if (type === 'execution_output' && typeof innerContent === 'string' && part.status === 'finish') {
+                  } else if (
+                    type === 'execution_output' &&
+                    typeof innerContent === 'string' &&
+                    part.status === 'finish'
+                  ) {
                     partText += innerContent + '\n'
                   }
                 })
 
                 if (partText) fullText += (fullText.length > 0 ? '\n' : '') + partText
-                if (partReasoning) fullReasoning += (fullReasoning.length > 0 ? '\n' : '') + partReasoning
+                if (partReasoning)
+                  fullReasoning += (fullReasoning.length > 0 ? '\n' : '') + partReasoning
               })
 
               const { content: cleanContent, toolCalls } = this.toolCallingPlan?.shouldParseResponse
@@ -1181,7 +1258,7 @@ export class GLMStreamHandler {
                       role: 'assistant',
                       content: toolCalls.length > 0 ? null : cleanContent.trim(),
                       reasoning_content: fullReasoning || null,
-                      ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {})
+                      ...(toolCalls.length > 0 ? { tool_calls: toolCalls } : {}),
                     },
                     finish_reason: toolCalls.length > 0 ? 'tool_calls' : 'stop',
                   },
@@ -1206,13 +1283,17 @@ export class GLMStreamHandler {
       stream.once('close', onTransportEnd)
 
       const timeoutMs = getGLMRequestTimeout(1800000, options)
-      timeoutHandle = setTimeout(() => failResponse(
-        new RequestTimeoutError(
-          options?.requestId ?? 'unknown',
-          timeoutMs,
-          'GLM upstream response',
-        ),
-      ), timeoutMs)
+      timeoutHandle = setTimeout(
+        () =>
+          failResponse(
+            new RequestTimeoutError(
+              options?.requestId ?? 'unknown',
+              timeoutMs,
+              'GLM upstream response',
+            ),
+          ),
+        timeoutMs,
+      )
 
       // Registering a data listener may synchronously start a custom Readable,
       // so install every settle/cleanup path before consumption begins.

@@ -3,7 +3,14 @@
  */
 
 export * from './tools'
-// 新的统一工具解析模块
+// Unified tool parsing module (canonical)
 export * from './toolParser/index'
-// 保留旧的 streamToolHandler 以保持向后兼容
-export * from './streamToolHandler'
+// Legacy stream tool handler. The unified parser above is the source of truth
+// for the conflicting flushToolCallBuffer / shouldBlockOutput exports, so only
+// the legacy-only helpers are surfaced from the deprecated module.
+export {
+  type ToolCallState,
+  createToolCallState,
+  processStreamContent,
+  createBaseChunk,
+} from './streamToolHandler'

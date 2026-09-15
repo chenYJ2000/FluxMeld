@@ -22,7 +22,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
   const { t } = useTranslation()
   const { proxyConfig, setProxyConfig, saveAppConfig, isLoading } = useProxyStore()
   const { toast } = useToast()
-  
+
   const initialFormDataRef = useRef({
     timeout: (proxyConfig.timeout / 1000).toString(),
     retryCount: proxyConfig.retryCount.toString(),
@@ -32,7 +32,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
     timeout: (proxyConfig.timeout / 1000).toString(),
     retryCount: proxyConfig.retryCount.toString(),
   })
-  
+
   const [errors, setErrors] = useState<FormErrors>({})
   const [hasChanges, setHasChanges] = useState(false)
 
@@ -60,17 +60,17 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
   }
 
   const handleTimeoutChange = (value: string) => {
-    setFormData(prev => ({ ...prev, timeout: value }))
+    setFormData((prev) => ({ ...prev, timeout: value }))
     const error = validateTimeout(value)
-    setErrors(prev => ({ ...prev, timeout: error }))
+    setErrors((prev) => ({ ...prev, timeout: error }))
     setHasChanges(true)
     onConfigChange?.()
   }
 
   const handleRetryCountChange = (value: string) => {
-    setFormData(prev => ({ ...prev, retryCount: value }))
+    setFormData((prev) => ({ ...prev, retryCount: value }))
     const error = validateRetryCount(value)
-    setErrors(prev => ({ ...prev, retryCount: error }))
+    setErrors((prev) => ({ ...prev, retryCount: error }))
     setHasChanges(true)
     onConfigChange?.()
   }
@@ -146,7 +146,7 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
       <CardContent className="space-y-6">
         <div className="space-y-4">
           <h4 className="text-sm font-medium">{t('proxy.requestConfig')}</h4>
-          
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="timeout" className="flex items-center gap-2">
@@ -169,11 +169,9 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
                 onChange={(e) => handleTimeoutChange(e.target.value)}
                 className={errors.timeout ? 'border-destructive' : ''}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('proxy.timeoutHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('proxy.timeoutHelp')}</p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="retryCount" className="flex items-center gap-2">
                 {t('proxy.retryCount')}
@@ -195,25 +193,16 @@ export function AdvancedConfig({ onConfigChange }: AdvancedConfigProps) {
                 onChange={(e) => handleRetryCountChange(e.target.value)}
                 className={errors.retryCount ? 'border-destructive' : ''}
               />
-              <p className="text-xs text-muted-foreground">
-                {t('proxy.retryCountHelp')}
-              </p>
+              <p className="text-xs text-muted-foreground">{t('proxy.retryCountHelp')}</p>
             </div>
           </div>
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
-          <Button
-            variant="outline"
-            onClick={handleReset}
-            disabled={!hasChanges || isLoading}
-          >
+          <Button variant="outline" onClick={handleReset} disabled={!hasChanges || isLoading}>
             {t('common.reset')}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!hasChanges || !isValid || isLoading}
-          >
+          <Button onClick={handleSave} disabled={!hasChanges || !isValid || isLoading}>
             {isLoading ? t('proxy.saving') : t('proxy.saveConfig')}
           </Button>
         </div>

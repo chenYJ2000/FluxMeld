@@ -13,7 +13,7 @@ import type {
   UpdateProviderRequest,
   ProviderStatusRequest,
   ManagementApiResponse,
-} from '../../../../../shared/types'
+} from '../../../../shared/types'
 
 const router = new Router({ prefix: '/v0/management/providers' })
 
@@ -215,7 +215,10 @@ router.patch('/:id/status', async (ctx: Context) => {
 
     if (request.enabled === undefined || typeof request.enabled !== 'boolean') {
       ctx.status = 400
-      ctx.body = createErrorResponse('invalid_request', 'Missing or invalid required field: enabled (must be boolean)')
+      ctx.body = createErrorResponse(
+        'invalid_request',
+        'Missing or invalid required field: enabled (must be boolean)',
+      )
       return
     }
 

@@ -35,7 +35,8 @@ router.post('/smoke', async (ctx: Context) => {
   const result = setLatestToolCallingSmokeResult({
     success: true,
     category: 'pass',
-    message: 'Smoke fixture generated. Send it through /v1/chat/completions with a mapped model to run a live provider smoke.',
+    message:
+      'Smoke fixture generated. Send it through /v1/chat/completions with a mapped model to run a live provider smoke.',
     clientAdapterId,
     timestamp: Date.now(),
   })

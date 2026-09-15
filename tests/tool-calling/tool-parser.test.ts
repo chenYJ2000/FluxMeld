@@ -89,13 +89,15 @@ test('managed xml merges explicit parameters with residual direct JSON', () => {
   const result = managedXmlProtocol.parse(
     '<tool_calls><invoke name="default_api:read_file"><parameter name="filePath">/tmp/explicit</parameter>{"encoding":"utf8"}</invoke></tool_calls>',
     {
-      tools: [{
-        ...tools[0],
-        parameters: {
-          type: 'object',
-          properties: { filePath: { type: 'string' }, encoding: { type: 'string' } },
+      tools: [
+        {
+          ...tools[0],
+          parameters: {
+            type: 'object',
+            properties: { filePath: { type: 'string' }, encoding: { type: 'string' } },
+          },
         },
-      }],
+      ],
       protocol: 'managed_xml',
     },
   )

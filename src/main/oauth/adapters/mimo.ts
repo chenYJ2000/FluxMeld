@@ -1,7 +1,7 @@
 /**
  * Mimo Authentication Adapter
  * Authentication method: Cookie-based authentication with in-app browser login
- * 
+ *
  * Mimo requires three tokens from cookies:
  * - serviceToken
  * - userId
@@ -40,7 +40,10 @@ export class MimoAdapter extends BaseOAuthAdapter {
     }
   }
 
-  async loginWithCookies(providerId: string, cookies: Record<string, string>): Promise<OAuthResult> {
+  async loginWithCookies(
+    providerId: string,
+    cookies: Record<string, string>,
+  ): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating cookies...')
 
     const serviceToken = cookies['serviceToken'] || cookies['service_token']

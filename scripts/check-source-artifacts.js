@@ -3,12 +3,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 
-const DEFAULT_SCAN_ROOTS = [
-  '.',
-  'src/main',
-  'src/preload',
-  'src/shared',
-]
+const DEFAULT_SCAN_ROOTS = ['.', 'src/main', 'src/preload', 'src/shared']
 
 const SKIP_DIRS = new Set([
   '.git',
@@ -42,7 +37,7 @@ function shouldSkipDirectory(root, directory) {
   if (!relative || relative === '.') {
     return false
   }
-  return SKIP_DIRS.has(relative) || relative.split('/').some(part => SKIP_DIRS.has(part))
+  return SKIP_DIRS.has(relative) || relative.split('/').some((part) => SKIP_DIRS.has(part))
 }
 
 function walkDirectory(root, directory, artifacts) {
@@ -62,7 +57,10 @@ function walkDirectory(root, directory, artifacts) {
       continue
     }
 
-    if ((entry.name.endsWith('.js') || entry.name.endsWith('.d.ts')) && hasTypeScriptSourceSibling(fullPath)) {
+    if (
+      (entry.name.endsWith('.js') || entry.name.endsWith('.d.ts')) &&
+      hasTypeScriptSourceSibling(fullPath)
+    ) {
       artifacts.push(toPosix(path.relative(root, fullPath)))
     }
   }
@@ -95,7 +93,9 @@ function main() {
   const artifacts = findSourceArtifacts(process.cwd())
 
   if (artifacts.length === 0) {
-    console.log('No generated JavaScript or declaration artifacts found next to TypeScript sources.')
+    console.log(
+      'No generated JavaScript or declaration artifacts found next to TypeScript sources.',
+    )
     return
   }
 
@@ -112,7 +112,9 @@ function main() {
   for (const artifact of artifacts) {
     console.error(`  - ${artifact}`)
   }
-  console.error('\nRemove these files before building; they can shadow the .ts source during bundling.')
+  console.error(
+    '\nRemove these files before building; they can shadow the .ts source during bundling.',
+  )
   process.exitCode = 1
 }
 

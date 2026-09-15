@@ -1,9 +1,9 @@
 /**
  * Tool Parser Module - Parse tool calls from text content
- * 
+ *
  * Supported format:
  * Bracket format: [function_calls][call:name]{args}[/call][/function_calls]
- * 
+ *
  * All formats are normalized to the standard OpenAI tool_calls format
  */
 
@@ -21,11 +21,19 @@ export interface ParsedToolCall {
 /**
  * Parse tool calls from text content
  */
-export function parseToolCallsFromText(text: string, modelType: string = 'default'): { 
+export function parseToolCallsFromText(
+  text: string,
+  modelType: string = 'default',
+): {
   content: string
-  toolCalls: ParsedToolCall[] 
+  toolCalls: ParsedToolCall[]
 } {
-  console.log('[ToolParser] parseToolCallsFromText called, modelType:', modelType, 'text length:', text?.length || 0)
+  console.log(
+    '[ToolParser] parseToolCallsFromText called, modelType:',
+    modelType,
+    'text length:',
+    text?.length || 0,
+  )
   if (!text) {
     return { content: '', toolCalls: [] }
   }
@@ -34,12 +42,11 @@ export function parseToolCallsFromText(text: string, modelType: string = 'defaul
   let cleanContent = text
 
   // Support both [function_calls] and function_calls] (missing opening bracket)
-  const hasFunctionCalls = text.includes('[function_calls]') || 
-                           text.includes('function_calls]') ||
-                           /\[call[:=]/.test(text)
-  
+  const hasFunctionCalls =
+    text.includes('[function_calls]') || text.includes('function_calls]') || /\[call[:=]/.test(text)
+
   console.log('[ToolParser] hasFunctionCalls:', hasFunctionCalls)
-  
+
   if (!hasFunctionCalls) {
     return { content: text, toolCalls: [] }
   }
@@ -53,7 +60,10 @@ export function parseToolCallsFromText(text: string, modelType: string = 'defaul
   if (!processedText.includes('[function_calls]') && missingBracketRegex.test(processedText)) {
     // Replace function_calls] with [function_calls] when not preceded by [ or /
     processedText = processedText.replace(/(^|[^\/\[])(function_calls\])/g, '$1[$2')
-    console.log('[ToolParser] Prepended opening bracket, processedText:', processedText.substring(0, 100))
+    console.log(
+      '[ToolParser] Prepended opening bracket, processedText:',
+      processedText.substring(0, 100),
+    )
   }
 
   // Extract the content inside [function_calls]...[/function_calls]
@@ -66,12 +76,18 @@ export function parseToolCallsFromText(text: string, modelType: string = 'defaul
     console.log('[ToolParser] blockContent:', blockContent?.substring(0, 200))
 
     // Parse individual [call:name]...[/call] inside the block
-    if (modelType === 'kimi' || modelType === 'glm' || modelType === 'minimax' || modelType === 'zai') {
+    if (
+      modelType === 'kimi' ||
+      modelType === 'glm' ||
+      modelType === 'minimax' ||
+      modelType === 'zai'
+    ) {
       // Legacy Regex-based Logic (Proven to work for these models)
       // Support [call:name], [call:=name], [call := name] formats
-      const callRegex = modelType === 'minimax' 
-        ? /\[(?:call\s*[:=]\s*([a-zA-Z0-9_:-]+)|invoke\s+name\s*=\s*"([a-zA-Z0-9_:-]+)")\]([\s\S]*?)\[\/call\]/g
-        : /\[call\s*[:=]?\s*([a-zA-Z0-9_:-]+)\]([\s\S]*?)\[\/call\]/g
+      const callRegex =
+        modelType === 'minimax'
+          ? /\[(?:call\s*[:=]\s*([a-zA-Z0-9_:-]+)|invoke\s+name\s*=\s*"([a-zA-Z0-9_:-]+)")\]([\s\S]*?)\[\/call\]/g
+          : /\[call\s*[:=]?\s*([a-zA-Z0-9_:-]+)\]([\s\S]*?)\[\/call\]/g
 
       let match
       while ((match = callRegex.exec(blockContent)) !== null) {
@@ -95,7 +111,7 @@ export function parseToolCallsFromText(text: string, modelType: string = 'defaul
             id: `call_${Date.now()}_${toolCalls.length}`,
             type: 'function',
             function: { name: functionName, arguments: JSON.stringify(parsed) },
-            rawText: match[0]
+            rawText: match[0],
           })
         }
       }
@@ -143,7 +159,7 @@ export function parseToolCallsFromText(text: string, modelType: string = 'defaul
             id: `call_${Date.now()}_${toolCalls.length}`,
             type: 'function',
             function: { name: functionName, arguments: JSON.stringify(parsed) },
-            rawText: blockContent.substring(callStartMatch.index, rawTextEndIndex)
+            rawText: blockContent.substring(callStartMatch.index, rawTextEndIndex),
           })
           callStartRegex.lastIndex = rawTextEndIndex
         }
@@ -167,7 +183,7 @@ export function parseToolCallsFromText(text: string, modelType: string = 'defaul
 
   return {
     content: cleanContent.trim(),
-    toolCalls
+    toolCalls,
   }
 }
 
@@ -346,7 +362,7 @@ function tryRegexFallback(str: string): any | null {
             const contentValue = str.substring(valueStart, valueEnd)
             return {
               filePath: filePathMatch[1],
-              content: contentValue.replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              content: contentValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
             }
           }
         }
@@ -374,16 +390,19 @@ function tryRegexFallback(str: string): any | null {
             return null
           }
 
-          if (oldStrValueStart !== 0 && oldStrValueEnd > oldStrValueStart && 
-              newStrValueStart !== 0 && newStrValueEnd > newStrValueStart) {
-
+          if (
+            oldStrValueStart !== 0 &&
+            oldStrValueEnd > oldStrValueStart &&
+            newStrValueStart !== 0 &&
+            newStrValueEnd > newStrValueStart
+          ) {
             const oldStrValue = str.substring(oldStrValueStart, oldStrValueEnd)
             const newStrValue = str.substring(newStrValueStart, newStrValueEnd)
 
             return {
               filePath: filePathMatch[1],
               old_str: oldStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
-              new_str: newStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              new_str: newStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
             }
           }
         }

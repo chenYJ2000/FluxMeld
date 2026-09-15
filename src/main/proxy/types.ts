@@ -41,10 +41,14 @@ export interface ChatCompletionTool {
 /**
  * Tool Choice Strategy
  */
-export type ChatCompletionToolChoice = 'none' | 'auto' | 'required' | {
-  type: 'function'
-  function: { name: string }
-}
+export type ChatCompletionToolChoice =
+  | 'none'
+  | 'auto'
+  | 'required'
+  | {
+      type: 'function'
+      function: { name: string }
+    }
 
 /**
  * Message Content (supports multimodal)
@@ -129,11 +133,14 @@ export interface ToolDefinition {
     description: string
     parameters?: {
       type: 'object'
-      properties: Record<string, {
-        type: string
-        description?: string
-        enum?: string[]
-      }>
+      properties: Record<
+        string,
+        {
+          type: string
+          description?: string
+          enum?: string[]
+        }
+      >
       required?: string[]
     }
   }
@@ -186,6 +193,8 @@ export interface ToolCall {
     name: string
     arguments: string
   }
+  /** Raw text matched during prompt-based parsing; stripped before emitting. */
+  rawText?: string
 }
 
 /**

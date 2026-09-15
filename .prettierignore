@@ -1,0 +1,8 @@
+node_modules
+out
+dist
+build
+package-lock.json
+*.md
+.idea
+.github

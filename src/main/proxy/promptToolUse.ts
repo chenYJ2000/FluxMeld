@@ -1,12 +1,12 @@
 /**
  * Prompt Tool Use - Tool Calling Parsing
  * Parses XML-style tool calling format from clients like Cherry Studio
- * 
+ *
  * For built-in providers (DeepSeek, GLM, Kimi, Qwen, etc.), use the new utils module:
  *   - utils/tools.ts: Convert OpenAI tools to system prompt
  *   - utils/toolParser.ts: Parse tool calls from model output
  *   - utils/streamToolHandler.ts: Handle tool calls in streaming responses
- * 
+ *
  * This module only handles parsing of legacy XML format from external clients.
  */
 
@@ -20,11 +20,14 @@ export interface ToolDefinition {
     description?: string
     parameters?: {
       type: 'object'
-      properties: Record<string, {
-        type: string
-        description?: string
-        enum?: string[]
-      }>
+      properties: Record<
+        string,
+        {
+          type: string
+          description?: string
+          enum?: string[]
+        }
+      >
       required?: string[]
     }
   }
@@ -48,22 +51,22 @@ export interface ToolCall {
  */
 export function parseToolUse(content: string): ToolCall[] {
   const toolCalls: ToolCall[] = []
-  
+
   // Regex to match <tool_use>...</tool_use> blocks (allow missing opening bracket)
   const toolUseRegex = /<?tool_use>\s*([\s\S]*?)\s*<\/tool_use>/gi
-  
+
   let match
   while ((match = toolUseRegex.exec(content)) !== null) {
     const toolUseContent = match[1]
-    
+
     // Extract name
     const nameMatch = /<name>\s*([^<]*)\s*<\/name>/i.exec(toolUseContent)
     const name = nameMatch ? nameMatch[1].trim() : ''
-    
+
     // Extract arguments
     const argsMatch = /<arguments>\s*([\s\S]*?)\s*<\/arguments>/i.exec(toolUseContent)
     const args = argsMatch ? argsMatch[1].trim() : '{}'
-    
+
     if (name) {
       toolCalls.push({
         id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -75,7 +78,7 @@ export function parseToolUse(content: string): ToolCall[] {
       })
     }
   }
-  
+
   return toolCalls
 }
 
@@ -130,7 +133,7 @@ export const NATIVE_FUNCTION_CALLING_MODELS = [
  */
 export function isNativeFunctionCallingModel(model: string): boolean {
   const lowerModel = model.toLowerCase()
-  return NATIVE_FUNCTION_CALLING_MODELS.some(m => lowerModel.includes(m.toLowerCase()))
+  return NATIVE_FUNCTION_CALLING_MODELS.some((m) => lowerModel.includes(m.toLowerCase()))
 }
 
 export default {

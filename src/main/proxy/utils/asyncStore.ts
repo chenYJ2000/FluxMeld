@@ -22,7 +22,7 @@ export class AsyncStore {
     options: {
       flushDelay?: number
       batchSize?: number
-    } = {}
+    } = {},
   ) {
     this.onFlush = onFlush
     this.flushDelay = options.flushDelay || 100
@@ -124,7 +124,7 @@ export class AsyncStoreManager {
     options?: {
       flushDelay?: number
       batchSize?: number
-    }
+    },
   ): AsyncStore {
     if (this.stores.has(name)) {
       console.warn(`[AsyncStoreManager] Store "${name}" already exists`)
@@ -141,12 +141,12 @@ export class AsyncStoreManager {
   }
 
   async flushAll(): Promise<void> {
-    const promises = Array.from(this.stores.values()).map(store => store.flush())
+    const promises = Array.from(this.stores.values()).map((store) => store.flush())
     await Promise.all(promises)
   }
 
   destroyAll(): void {
-    this.stores.forEach(store => store.destroy())
+    this.stores.forEach((store) => store.destroy())
     this.stores.clear()
   }
 }

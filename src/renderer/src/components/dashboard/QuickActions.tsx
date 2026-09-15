@@ -37,10 +37,8 @@ export function QuickActions({
       <CardContent className="relay-actions-list">
         <Button
           className={cn(
-            "relay-action-primary w-full justify-start",
-            proxyRunning 
-              ? "is-running"
-              : ""
+            'relay-action-primary w-full justify-start',
+            proxyRunning ? 'is-running' : '',
           )}
           variant={proxyRunning ? 'secondary' : 'default'}
           onClick={onToggleProxy}
@@ -56,8 +54,8 @@ export function QuickActions({
           {isLoading
             ? t('common.loading')
             : proxyRunning
-            ? t('quickActions.stopProxy')
-            : t('quickActions.startProxy')}
+              ? t('quickActions.stopProxy')
+              : t('quickActions.startProxy')}
           {proxyRunning && !isLoading && (
             <Badge variant="secondary" className="ml-auto">
               {t('dashboard.running')}

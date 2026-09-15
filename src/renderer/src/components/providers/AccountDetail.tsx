@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -17,10 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { 
-  User, 
-  Clock, 
-  Activity, 
+import {
+  User,
+  Clock,
+  Activity,
   AlertCircle,
   CheckCircle2,
   XCircle,
@@ -32,7 +32,7 @@ import {
   Trash2,
   ArrowLeft,
   TrendingUp,
-  Coins
+  Coins,
 } from 'lucide-react'
 import type { Account, AccountStatus, Provider } from '@/types/electron'
 import { cn } from '@/lib/utils'
@@ -64,7 +64,9 @@ export function AccountDetail({
     expiresAt?: number
   } | null>(null)
   const [isLoadingCredits, setIsLoadingCredits] = useState(false)
-  const [trendData, setTrendData] = useState<{ date: string; total: number; info: number; warn: number; error: number }[]>([])
+  const [trendData, setTrendData] = useState<
+    { date: string; total: number; info: number; warn: number; error: number }[]
+  >([])
 
   useEffect(() => {
     const fetchTrendData = async () => {
@@ -81,12 +83,15 @@ export function AccountDetail({
 
   const isMiniMaxProvider = provider?.id === 'minimax'
 
-  const statusConfig: Record<AccountStatus, { 
-    labelKey: string
-    color: string
-    bgColor: string
-    icon: typeof CheckCircle2
-  }> = {
+  const statusConfig: Record<
+    AccountStatus,
+    {
+      labelKey: string
+      color: string
+      bgColor: string
+      icon: typeof CheckCircle2
+    }
+  > = {
     active: {
       labelKey: 'providers.active',
       color: 'text-green-600',
@@ -141,7 +146,7 @@ export function AccountDetail({
     return `${days}d`
   }
 
-  const usagePercent = account.dailyLimit 
+  const usagePercent = account.dailyLimit
     ? Math.min(100, ((account.todayUsed || 0) / account.dailyLimit) * 100)
     : 0
 
@@ -161,7 +166,7 @@ export function AccountDetail({
 
   const handleGetCredits = async () => {
     if (!isMiniMaxProvider) return
-    
+
     setIsLoadingCredits(true)
     try {
       const result = await window.electronAPI.accounts.getCredits(account.id)
@@ -184,7 +189,9 @@ export function AccountDetail({
     {
       labelKey: 'providers.usedToday',
       value: account.todayUsed || 0,
-      subtitle: account.dailyLimit ? `${t('providers.dailyLimit')}: ${account.dailyLimit}` : undefined,
+      subtitle: account.dailyLimit
+        ? `${t('providers.dailyLimit')}: ${account.dailyLimit}`
+        : undefined,
       icon: Zap,
       color: 'text-amber-600',
       bgColor: 'bg-amber-100',
@@ -214,25 +221,15 @@ export function AccountDetail({
         <div className="flex-1">
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             {account.name}
-            <Badge 
-              variant="outline" 
-              className={cn('text-xs', config.color, config.bgColor)}
-            >
+            <Badge variant="outline" className={cn('text-xs', config.color, config.bgColor)}>
               <StatusIcon className="mr-1 h-3 w-3" />
               {t(config.labelKey)}
             </Badge>
           </h2>
-          <p className="text-muted-foreground">
-            {provider?.name || t('providers.unknown')}
-          </p>
+          <p className="text-muted-foreground">{provider?.name || t('providers.unknown')}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleValidate}
-            disabled={isValidating}
-          >
+          <Button variant="outline" size="sm" onClick={handleValidate} disabled={isValidating}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isValidating && 'animate-spin')} />
             {isValidating ? t('oauth.validating') : t('providers.validateCredentials')}
           </Button>
@@ -240,8 +237,8 @@ export function AccountDetail({
             <Edit className="mr-2 h-4 w-4" />
             {t('common.edit')}
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="text-destructive"
             onClick={() => setShowDeleteDialog(true)}
@@ -259,7 +256,12 @@ export function AccountDetail({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className={cn('h-10 w-10 rounded-full flex items-center justify-center', config.bgColor)}>
+              <div
+                className={cn(
+                  'h-10 w-10 rounded-full flex items-center justify-center',
+                  config.bgColor,
+                )}
+              >
                 <User className={cn('h-5 w-5', config.color)} />
               </div>
               <div>
@@ -276,10 +278,7 @@ export function AccountDetail({
                   <Activity className="h-4 w-4" />
                   <span className="text-sm">{t('providers.status')}</span>
                 </div>
-                <Badge 
-                  variant="outline" 
-                  className={cn('text-xs', config.color, config.bgColor)}
-                >
+                <Badge variant="outline" className={cn('text-xs', config.color, config.bgColor)}>
                   <StatusIcon className="mr-1 h-3 w-3" />
                   {t(config.labelKey)}
                 </Badge>
@@ -319,7 +318,12 @@ export function AccountDetail({
                 return (
                   <div key={stat.labelKey} className="p-3 rounded-lg bg-muted/50">
                     <div className="flex items-center gap-2 mb-2">
-                      <div className={cn('h-8 w-8 rounded-full flex items-center justify-center', stat.bgColor)}>
+                      <div
+                        className={cn(
+                          'h-8 w-8 rounded-full flex items-center justify-center',
+                          stat.bgColor,
+                        )}
+                      >
                         <Icon className={cn('h-4 w-4', stat.color)} />
                       </div>
                       <span className="text-sm text-muted-foreground">{t(stat.labelKey)}</span>
@@ -342,19 +346,20 @@ export function AccountDetail({
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
+                  <div
                     className={cn(
                       'h-full transition-all',
-                      usagePercent >= 90 ? 'bg-red-500' :
-                      usagePercent >= 70 ? 'bg-amber-500' : 'bg-green-500'
+                      usagePercent >= 90
+                        ? 'bg-red-500'
+                        : usagePercent >= 70
+                          ? 'bg-amber-500'
+                          : 'bg-green-500',
                     )}
                     style={{ width: `${usagePercent}%` }}
                   />
                 </div>
                 {usagePercent >= 90 && (
-                  <p className="text-xs text-red-500 mt-1">
-                    {t('providers.nearLimit')}
-                  </p>
+                  <p className="text-xs text-red-500 mt-1">{t('providers.nearLimit')}</p>
                 )}
               </div>
             )}
@@ -382,12 +387,16 @@ export function AccountDetail({
                 {isLoadingCredits ? t('common.loading') : t('minimax.getCredits')}
               </Button>
             </div>
-            
+
             {credits && (
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-muted/50 text-center">
-                  <p className="text-sm text-muted-foreground mb-1">{t('minimax.remainingCredits')}</p>
-                  <p className="text-3xl font-bold text-green-600">{credits.remainingCredits.toLocaleString()}</p>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    {t('minimax.remainingCredits')}
+                  </p>
+                  <p className="text-3xl font-bold text-green-600">
+                    {credits.remainingCredits.toLocaleString()}
+                  </p>
                   {credits.expiresAt && (
                     <p className="text-xs text-muted-foreground mt-2">
                       {t('minimax.creditResetsAt')}: {formatDate(credits.expiresAt)}
@@ -396,7 +405,7 @@ export function AccountDetail({
                 </div>
               </div>
             )}
-            
+
             {!credits && !isLoadingCredits && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 {t('minimax.getCredits')}
@@ -412,61 +421,53 @@ export function AccountDetail({
             <TrendingUp className="h-4 w-4" />
             {t('dashboard.requestsTrend')}
           </CardTitle>
-          <CardDescription>
-            {t('providers.last7days')}
-          </CardDescription>
+          <CardDescription>{t('providers.last7days')}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-end justify-between h-32 gap-2">
-            {trendData.length > 0 && trendData.some(d => d.total > 0) ? (
-              trendData.map((day, i) => {
-                const date = new Date(day.date)
-                const dayName = date.toLocaleDateString(i18n.language, { weekday: 'short' })
-                const maxTotal = Math.max(...trendData.map(d => d.total), 1)
-                const heightPercent = maxTotal > 0 ? (day.total / maxTotal) * 100 : 0
-                const displayHeight = day.total > 0 ? Math.max(heightPercent, 5) : 2
-                
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center h-full">
-                    <div className="flex-1 w-full flex items-end">
-                      <div 
-                        className={cn(
-                          "w-full rounded-t transition-all",
-                          day.total > 0 ? "bg-primary/20 hover:bg-primary/40" : "bg-muted/30"
-                        )}
-                        style={{ height: `${displayHeight}%` }}
-                        title={`${day.total} requests`}
-                      />
+            {trendData.length > 0 && trendData.some((d) => d.total > 0)
+              ? trendData.map((day, i) => {
+                  const date = new Date(day.date)
+                  const dayName = date.toLocaleDateString(i18n.language, { weekday: 'short' })
+                  const maxTotal = Math.max(...trendData.map((d) => d.total), 1)
+                  const heightPercent = maxTotal > 0 ? (day.total / maxTotal) * 100 : 0
+                  const displayHeight = day.total > 0 ? Math.max(heightPercent, 5) : 2
+
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center h-full">
+                      <div className="flex-1 w-full flex items-end">
+                        <div
+                          className={cn(
+                            'w-full rounded-t transition-all',
+                            day.total > 0 ? 'bg-primary/20 hover:bg-primary/40' : 'bg-muted/30',
+                          )}
+                          style={{ height: `${displayHeight}%` }}
+                          title={`${day.total} requests`}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">{dayName}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground mt-1">{dayName}</span>
-                  </div>
-                )
-              })
-            ) : (
-              Array.from({ length: 7 }).map((_, i) => {
-                const day = new Date()
-                day.setDate(day.getDate() - (6 - i))
-                const dayName = day.toLocaleDateString(i18n.language, { weekday: 'short' })
-                
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center h-full">
-                    <div className="flex-1 w-full flex items-end">
-                      <div 
-                        className="w-full bg-muted/30 rounded-t"
-                        style={{ height: '2%' }}
-                      />
+                  )
+                })
+              : Array.from({ length: 7 }).map((_, i) => {
+                  const day = new Date()
+                  day.setDate(day.getDate() - (6 - i))
+                  const dayName = day.toLocaleDateString(i18n.language, { weekday: 'short' })
+
+                  return (
+                    <div key={i} className="flex-1 flex flex-col items-center h-full">
+                      <div className="flex-1 w-full flex items-end">
+                        <div className="w-full bg-muted/30 rounded-t" style={{ height: '2%' }} />
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">{dayName}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground mt-1">{dayName}</span>
-                  </div>
-                )
-              })
-            )}
+                  )
+                })}
           </div>
           <p className="text-xs text-muted-foreground text-center mt-4">
-            {trendData.length > 0 && trendData.some(d => d.total > 0) 
+            {trendData.length > 0 && trendData.some((d) => d.total > 0)
               ? `${trendData.reduce((sum, d) => sum + d.total, 0)} ${t('dashboard.totalRequests')}`
-              : t('providers.sampleData')
-            }
+              : t('providers.sampleData')}
           </p>
         </CardContent>
       </Card>

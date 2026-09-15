@@ -5,7 +5,7 @@
 
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout | null = null
 
@@ -23,7 +23,7 @@ export function debounce<T extends (...args: any[]) => any>(
 
 export function throttle<T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle = false
 
@@ -41,7 +41,7 @@ export function throttle<T extends (...args: any[]) => any>(
 export function debounceWithLeading<T extends (...args: any[]) => any>(
   func: T,
   wait: number,
-  immediate: boolean = false
+  immediate: boolean = false,
 ): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout | null = null
 
@@ -67,7 +67,7 @@ export function debounceWithLeading<T extends (...args: any[]) => any>(
 
 export function throttleWithTrailing<T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): (...args: Parameters<T>) => void {
   let inThrottle = false
   let lastArgs: Parameters<T> | null = null
@@ -91,7 +91,7 @@ export function throttleWithTrailing<T extends (...args: any[]) => any>(
 
 export function useDebouncedCallback<T extends (...args: any[]) => any>(
   callback: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   return useMemo(() => debounce(callback, delay), [callback, delay])
 }

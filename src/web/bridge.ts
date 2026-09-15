@@ -58,7 +58,8 @@ const transport: ClientTransport = {
     }
 
     if (!response.ok || !payload || payload.ok === false) {
-      const message = payload?.error?.message || payload?.error || `Request failed (${response.status})`
+      const message =
+        payload?.error?.message || payload?.error || `Request failed (${response.status})`
       throw new Error(typeof message === 'string' ? message : 'Request failed')
     }
 

@@ -24,10 +24,12 @@ function installStoreFixture(t: TestContext) {
 
   ;(storeManager as any).getProviders = () => [provider]
   ;(storeManager as any).getAccountsByProviderId = () => accounts
-  ;(storeManager as any).getEffectiveModels = () => [{
-    displayName: 'Qwen3.6-Plus',
-    actualModelId: 'qwen3.6-plus',
-  }]
+  ;(storeManager as any).getEffectiveModels = () => [
+    {
+      displayName: 'Qwen3.6-Plus',
+      actualModelId: 'qwen3.6-plus',
+    },
+  ]
   ;(storeManager as any).getConfig = () => ({ modelMappings: {} })
 
   t.after(() => {

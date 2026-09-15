@@ -78,7 +78,10 @@ Use Anthropic-style tool invocation only when this protocol is enabled.`
 
   formatAssistantToolCalls(calls) {
     const body = calls
-      .map((call) => `<antml:invoke name="${call.name}"><antml:parameters>${call.arguments}</antml:parameters></antml:invoke>`)
+      .map(
+        (call) =>
+          `<antml:invoke name="${call.name}"><antml:parameters>${call.arguments}</antml:parameters></antml:invoke>`,
+      )
       .join('')
     return `<antml:function_calls>${body}</antml:function_calls>`
   },

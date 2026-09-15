@@ -18,9 +18,8 @@ interface RequestLogStatsProps {
 
 export function RequestLogStats({ stats }: RequestLogStatsProps) {
   const { t } = useTranslation()
-  const successRate = stats.todayTotal > 0 
-    ? Math.round((stats.todaySuccess / stats.todayTotal) * 100) 
-    : 0
+  const successRate =
+    stats.todayTotal > 0 ? Math.round((stats.todaySuccess / stats.todayTotal) * 100) : 0
 
   const statCards = [
     {

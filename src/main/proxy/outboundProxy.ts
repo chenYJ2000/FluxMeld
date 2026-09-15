@@ -118,7 +118,8 @@ export class OutboundProxyManager {
         available: false,
         controllerUrl: null,
         proxyPorts,
-        error: 'Clash controller not detected. Enable the external controller and set its address/secret in the outbound proxy settings.',
+        error:
+          'Clash controller not detected. Enable the external controller and set its address/secret in the outbound proxy settings.',
       }
     }
     return { available: true, controllerUrl: this.controllerUrl, proxyPorts }
@@ -184,9 +185,9 @@ export class OutboundProxyManager {
 
     const merged = [...fromEnv, ...fromLocal].filter(
       (candidate, index, values) =>
-        values.findIndex((other) =>
-          other.host === candidate.host && other.port === candidate.port
-        ) === index
+        values.findIndex(
+          (other) => other.host === candidate.host && other.port === candidate.port,
+        ) === index,
     )
 
     this.candidates = merged
@@ -195,7 +196,14 @@ export class OutboundProxyManager {
 
   private discoverFromEnv(): ProxyCandidate[] {
     const results: ProxyCandidate[] = []
-    const names = ['https_proxy', 'HTTPS_PROXY', 'http_proxy', 'HTTP_PROXY', 'all_proxy', 'ALL_PROXY']
+    const names = [
+      'https_proxy',
+      'HTTPS_PROXY',
+      'http_proxy',
+      'HTTP_PROXY',
+      'all_proxy',
+      'ALL_PROXY',
+    ]
     const seen = new Set<string>()
 
     for (const name of names) {
@@ -280,9 +288,10 @@ export class OutboundProxyManager {
     const trimmed = value.trim()
     if (!trimmed) return null
     try {
-      const url = trimmed.startsWith('http://') || trimmed.startsWith('https://')
-        ? new URL(trimmed)
-        : new URL(`http://${trimmed}`)
+      const url =
+        trimmed.startsWith('http://') || trimmed.startsWith('https://')
+          ? new URL(trimmed)
+          : new URL(`http://${trimmed}`)
       return `${url.protocol}//${url.host}`
     } catch {
       return null
@@ -298,7 +307,9 @@ export class OutboundProxyManager {
         headers: { ...this.controllerHeaders() },
         validateStatus: () => true,
       })
-      return response.status === 200 && /"meta"|"version"|"Path"/.test(JSON.stringify(response.data))
+      return (
+        response.status === 200 && /"meta"|"version"|"Path"/.test(JSON.stringify(response.data))
+      )
     } catch {
       return false
     }
@@ -330,13 +341,23 @@ export class OutboundProxyManager {
   }
 
   private async getClashMode(): Promise<ClashMode | null> {
-    const response = await this.controllerRequest('get', '/configs', undefined, this.config.probeTimeoutMs * 2)
+    const response = await this.controllerRequest(
+      'get',
+      '/configs',
+      undefined,
+      this.config.probeTimeoutMs * 2,
+    )
     const mode = response?.data?.mode
     return mode === 'rule' || mode === 'global' || mode === 'direct' ? mode : null
   }
 
   private async setClashMode(mode: ClashMode): Promise<boolean> {
-    const response = await this.controllerRequest('patch', '/configs', { mode }, this.config.probeTimeoutMs * 2)
+    const response = await this.controllerRequest(
+      'patch',
+      '/configs',
+      { mode },
+      this.config.probeTimeoutMs * 2,
+    )
     return !!response && response.status >= 200 && response.status < 300
   }
 
@@ -346,7 +367,12 @@ export class OutboundProxyManager {
    * just died are pushed to the back.
    */
   private async loadClashNodes(): Promise<string[]> {
-    const response = await this.controllerRequest('get', '/proxies', undefined, this.config.probeTimeoutMs * 2)
+    const response = await this.controllerRequest(
+      'get',
+      '/proxies',
+      undefined,
+      this.config.probeTimeoutMs * 2,
+    )
     if (!response) return []
     const allProxies: Record<string, ClashProxyEntry> = response.data?.proxies ?? {}
     this.clashNodes = filterRealClashNodes(allProxies)
@@ -354,7 +380,12 @@ export class OutboundProxyManager {
   }
 
   private async changeClashNode(name: string): Promise<boolean> {
-    const response = await this.controllerRequest('put', '/proxies/GLOBAL', { name }, this.config.probeTimeoutMs * 2)
+    const response = await this.controllerRequest(
+      'put',
+      '/proxies/GLOBAL',
+      { name },
+      this.config.probeTimeoutMs * 2,
+    )
     return !!response && response.status >= 200 && response.status < 300
   }
 
@@ -418,7 +449,12 @@ export class OutboundProxyManager {
 
   /** Current Clash GLOBAL node name (for diagnostics). */
   async getClashNode(): Promise<string | null> {
-    const response = await this.controllerRequest('get', '/proxies/GLOBAL', undefined, this.config.probeTimeoutMs * 2)
+    const response = await this.controllerRequest(
+      'get',
+      '/proxies/GLOBAL',
+      undefined,
+      this.config.probeTimeoutMs * 2,
+    )
     return response?.data?.now ?? null
   }
 
@@ -569,9 +605,10 @@ export class OutboundProxyManager {
     if (!value) return null
     let url: URL
     try {
-      url = value.startsWith('http://') || value.startsWith('https://')
-        ? new URL(value)
-        : new URL(`http://${value}`)
+      url =
+        value.startsWith('http://') || value.startsWith('https://')
+          ? new URL(value)
+          : new URL(`http://${value}`)
     } catch {
       return null
     }
@@ -608,9 +645,7 @@ export class OutboundProxyManager {
       socket.on('timeout', () => done(false))
       socket.on('error', () => done(false))
       socket.on('connect', () => {
-        socket.write(
-          `CONNECT www.gstatic.com:443 HTTP/1.1\r\nHost: www.gstatic.com:443\r\n\r\n`,
-        )
+        socket.write(`CONNECT www.gstatic.com:443 HTTP/1.1\r\nHost: www.gstatic.com:443\r\n\r\n`)
       })
       socket.on('data', (chunk) => {
         const head = chunk.toString('utf8').slice(0, 24)
@@ -618,7 +653,9 @@ export class OutboundProxyManager {
           done(true)
         }
       })
-      socket.on('close', () => { /* timeout or failure will resolve */ })
+      socket.on('close', () => {
+        /* timeout or failure will resolve */
+      })
     })
   }
 
@@ -626,9 +663,11 @@ export class OutboundProxyManager {
     if (this.logSuppressed) return
     console.log(`[OutboundProxy] ${message}`)
     // Record into app logs via storeManager; lazily imported to avoid cycles.
-    import('../store/store').then(({ storeManager }) => {
-      storeManager.addLog('info', `[OutboundProxy] ${message}`)
-    }).catch(() => {})
+    import('../store/store')
+      .then(({ storeManager }) => {
+        storeManager.addLog('info', `[OutboundProxy] ${message}`)
+      })
+      .catch(() => {})
   }
 }
 
@@ -649,9 +688,7 @@ export function filterRealClashNodes(
   allProxies: Record<string, ClashProxyEntry | undefined>,
 ): string[] {
   const policyGroupTypes = new Set(['selector', 'urltest', 'fallback', 'loadbalance'])
-  const nonNodeTypes = new Set([
-    'compatible', 'pass', 'reject', 'rejectdrop', 'direct',
-  ])
+  const nonNodeTypes = new Set(['compatible', 'pass', 'reject', 'rejectdrop', 'direct'])
   const nodes: Array<{ name: string; alive: boolean; delay: number }> = []
   for (const [name, entry] of Object.entries(allProxies)) {
     if (!entry) continue
@@ -662,9 +699,8 @@ export function filterRealClashNodes(
     if (name === 'DIRECT' || name === 'REJECT' || name === 'PASS') continue
     if (/^(剩余流量|套餐到期|过滤掉\d+条线路)/.test(name)) continue
     const alive = entry.alive !== false
-    const delay = entry.history && entry.history[0]?.delay
-      ? entry.history[0].delay
-      : Number.MAX_SAFE_INTEGER
+    const delay =
+      entry.history && entry.history[0]?.delay ? entry.history[0].delay : Number.MAX_SAFE_INTEGER
     nodes.push({ name, alive, delay })
   }
   nodes.sort((a, b) => {

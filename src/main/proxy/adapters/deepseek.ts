@@ -1,7 +1,7 @@
 /**
  * DeepSeek Adapter
  * Implements DeepSeek web API protocol
- * 
+ *
  * NOTE: Tool prompt injection is handled by Forwarder.transformRequestForPromptToolUse()
  * This adapter only handles message format conversion and API communication
  */
@@ -26,7 +26,8 @@ const FAKE_HEADERS = {
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36',
   'X-App-Version': '2.0.0',
   'X-Client-Locale': 'zh_CN',
   'X-Client-Platform': 'web',
@@ -62,7 +63,7 @@ interface ChatCompletionRequest {
   stream?: boolean
   temperature?: number
   web_search?: boolean
-  reasoning_effort?: 'low' | 'medium' | 'high'
+  reasoning_effort?: string | boolean
   tools?: any[]
   tool_choice?: any
 }
@@ -85,12 +86,13 @@ function generateRandomString(length: number, charset: string = 'alphanumeric'):
   return result
 }
 
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+function uuid(separator: boolean = true): string {
+  const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0
     const v = c === 'x' ? r : (r & 0x3) | 0x8
     return v.toString(16)
   })
+  return separator ? id : id.replace(/-/g, '')
 }
 
 function generateCookie(): string {
@@ -110,7 +112,11 @@ export class DeepSeekAdapter {
   constructor(provider: Provider, account: Account) {
     this.provider = provider
     this.account = account
-    this.token = account.credentials.token || account.credentials.apiKey || account.credentials.refreshToken || ''
+    this.token =
+      account.credentials.token ||
+      account.credentials.apiKey ||
+      account.credentials.refreshToken ||
+      ''
     console.log('[DeepSeek] Adapter initialized for account:', account.id)
   }
 
@@ -125,7 +131,7 @@ export class DeepSeekAdapter {
     }
 
     console.log('[DeepSeek] Acquiring token...')
-    
+
     const result = await axios.get(`${DEEPSEEK_API_BASE}/v0/users/current`, {
       headers: {
         Authorization: `Bearer ${this.token}`,
@@ -136,7 +142,7 @@ export class DeepSeekAdapter {
     })
 
     console.log('[DeepSeek] Token response status:', result.status)
-    
+
     if (result.status === 401 || result.status === 403) {
       throw new Error(`Token invalid or expired, please get a new Token`)
     }
@@ -187,7 +193,7 @@ export class DeepSeekAdapter {
         },
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     console.log('[DeepSeek] Create session response status:', result.status)
@@ -195,7 +201,9 @@ export class DeepSeekAdapter {
     // Response structure: { code: 0, data: { biz_code: 0, biz_data: { id: "..." } } }
     const bizData = result.data?.data?.biz_data || result.data?.biz_data
     if (result.status !== 200 || !bizData?.chat_session?.id) {
-      throw new Error(`Failed to create session: ${result.data?.msg || result.data?.data?.biz_msg || result.status}`)
+      throw new Error(
+        `Failed to create session: ${result.data?.msg || result.data?.data?.biz_msg || result.status}`,
+      )
     }
 
     const sessionId = bizData?.chat_session?.id
@@ -217,7 +225,7 @@ export class DeepSeekAdapter {
           },
           timeout: 1800000,
           validateStatus: () => true,
-        }
+        },
       )
 
       console.log('[DeepSeek] Delete session response status:', result.status)
@@ -248,13 +256,15 @@ export class DeepSeekAdapter {
         },
         timeout: 1800000,
         validateStatus: () => true,
-      }
+      },
     )
 
     // Response structure: { code: 0, data: { biz_code: 0, biz_data: { challenge: {...} } } }
     const bizData = result.data?.data?.biz_data || result.data?.biz_data
     if (result.status !== 200 || !bizData?.challenge) {
-      throw new Error(`Failed to get challenge: ${result.data?.msg || result.data?.data?.biz_msg || result.status}`)
+      throw new Error(
+        `Failed to get challenge: ${result.data?.msg || result.data?.data?.biz_msg || result.status}`,
+      )
     }
 
     return bizData.challenge
@@ -262,44 +272,48 @@ export class DeepSeekAdapter {
 
   private async calculateChallengeAnswer(challenge: ChallengeResponse): Promise<string> {
     const { algorithm, challenge: challengeStr, salt, difficulty, expire_at, signature } = challenge
-    
+
     if (algorithm !== 'DeepSeekHashV1') {
       throw new Error(`Unsupported algorithm: ${algorithm}`)
     }
-    
+
     console.log('[DeepSeek] Challenge parameters:', { difficulty })
-    
+
     const deepSeekHash = await getDeepSeekHash()
     const answer = deepSeekHash.calculateHash(algorithm, challengeStr, salt, difficulty, expire_at)
-    
+
     if (answer === undefined) {
       throw new Error('Challenge calculation failed')
     }
-    
+
     console.log('[DeepSeek] Challenge answer found:', answer)
 
-    return Buffer.from(JSON.stringify({
-      algorithm,
-      challenge: challengeStr,
-      salt,
-      answer,
-      signature,
-      target_path: '/api/v0/chat/completion',
-    })).toString('base64')
+    return Buffer.from(
+      JSON.stringify({
+        algorithm,
+        challenge: challengeStr,
+        salt,
+        answer,
+        signature,
+        target_path: '/api/v0/chat/completion',
+      }),
+    ).toString('base64')
   }
 
   private messagesToPrompt(messages: DeepSeekMessage[], isMultiTurn: boolean = false): string {
     const toolProfile = getProviderToolProfile('deepseek')
-    const processedMessages = messages.map(message => {
+    const processedMessages = messages.map((message) => {
       let text: string
 
       // Handle tool calls in assistant message
       if (message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0) {
-        text = toolProfile.formatAssistantToolCalls(message.tool_calls.map(tc => ({
-          id: tc.id,
-          name: tc.function.name,
-          arguments: tc.function.arguments,
-        })))
+        text = toolProfile.formatAssistantToolCalls(
+          message.tool_calls.map((tc) => ({
+            id: tc.id,
+            name: tc.function.name,
+            arguments: tc.function.arguments,
+          })),
+        )
       }
       // Handle tool response message
       else if (message.role === 'tool' && message.tool_call_id) {
@@ -307,8 +321,7 @@ export class DeepSeekAdapter {
           toolCallId: message.tool_call_id,
           content: String(message.content || ''),
         })
-      }
-      else if (Array.isArray(message.content)) {
+      } else if (Array.isArray(message.content)) {
         const texts = message.content
           .filter((item: any) => item.type === 'text')
           .map((item: any) => item.text)
@@ -330,7 +343,7 @@ export class DeepSeekAdapter {
           break
         }
       }
-      
+
       if (lastUserIdx !== -1) {
         const lastUserMsg = processedMessages[lastUserIdx]
         let text = lastUserMsg.text
@@ -374,12 +387,14 @@ export class DeepSeekAdapter {
       .replace(/!\[.+\]\(.+\)/g, '')
   }
 
-  async chatCompletion(request: ChatCompletionRequest): Promise<{ response: AxiosResponse; sessionId: string }> {
+  async chatCompletion(
+    request: ChatCompletionRequest,
+  ): Promise<{ response: AxiosResponse; sessionId: string }> {
     const token = await this.acquireToken()
-    
+
     const sessionId = await this.createSession()
     console.log('[DeepSeek] Created new session:', sessionId)
-    
+
     const challenge = await this.getChallenge('/api/v0/chat/completion')
     const challengeAnswer = await this.calculateChallengeAnswer(challenge)
 
@@ -389,7 +404,10 @@ export class DeepSeekAdapter {
 
     let prompt = this.messagesToPrompt(messages, false)
 
-    const { modelType, searchEnabled, thinkingEnabled } = resolveDeepSeekChatOptions(request, prompt)
+    const { modelType, searchEnabled, thinkingEnabled } = resolveDeepSeekChatOptions(
+      request,
+      prompt,
+    )
 
     if (request.web_search || request.model.toLowerCase().includes('search')) {
       console.log('[DeepSeek] Web search enabled')
@@ -422,7 +440,7 @@ export class DeepSeekAdapter {
         timeout: 1800000,
         validateStatus: () => true,
         responseType: 'stream',
-      }
+      },
     )
 
     return { response, sessionId }
@@ -441,7 +459,7 @@ export class DeepSeekAdapter {
           },
           timeout: 1800000,
           validateStatus: () => true,
-        }
+        },
       )
 
       console.log('[DeepSeek] Delete all chats response status:', result.status)

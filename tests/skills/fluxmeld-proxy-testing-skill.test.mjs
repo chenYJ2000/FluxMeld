@@ -35,7 +35,9 @@ const skillPaths = [
   },
 ]
 
-const focusedSkillFiles = skillPaths.filter(({ name }) => name !== 'fluxmeld-proxy-testing').map(({ file }) => file)
+const focusedSkillFiles = skillPaths
+  .filter(({ name }) => name !== 'fluxmeld-proxy-testing')
+  .map(({ file }) => file)
 const implementedScriptPaths = [
   'skills/fluxmeld-management-api/scripts/management-api.mjs',
   'skills/fluxmeld-har-tool-fixture/scripts/extract-har-fixtures.mjs',
@@ -47,11 +49,14 @@ const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 test('versioned FluxMeld testing skills exist and have trigger-only descriptions', () => {
   for (const { file, name, description } of skillPaths) {
-    const text = fs.readFileSync(file, 'utf8')
+    const text = fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')
     // Skill frontmatter is a discovery contract; keep exact names and descriptions stable.
     assert.match(
       text,
-      new RegExp(`^---\\nname: ${escapeRegExp(name)}\\ndescription: ${escapeRegExp(description)}\\n---`, 'm'),
+      new RegExp(
+        `^---\\nname: ${escapeRegExp(name)}\\ndescription: ${escapeRegExp(description)}\\n---`,
+        'm',
+      ),
       file,
     )
     assert.doesNotMatch(text, /T[B]D|FI[X]ME|deferred work/, file)

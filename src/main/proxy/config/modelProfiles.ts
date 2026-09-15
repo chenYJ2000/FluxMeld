@@ -23,35 +23,35 @@ export const MODEL_PROFILES: Record<string, ModelProfile> = {
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
   'gpt-4-turbo': {
     id: 'gpt-4-turbo',
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
   'gpt-4o': {
     id: 'gpt-4o',
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
   'gpt-4o-mini': {
     id: 'gpt-4o-mini',
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
   'gpt-3.5-turbo': {
     id: 'gpt-3.5-turbo',
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
 
   // Anthropic 模型
@@ -60,35 +60,35 @@ export const MODEL_PROFILES: Record<string, ModelProfile> = {
     nativeFunctionCalling: true,
     preferredFormat: 'anthropic',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'anthropic'
+    streamHandlerType: 'anthropic',
   },
   'claude-3.5': {
     id: 'claude-3.5',
     nativeFunctionCalling: true,
     preferredFormat: 'anthropic',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'anthropic'
+    streamHandlerType: 'anthropic',
   },
   'claude-sonnet': {
     id: 'claude-sonnet',
     nativeFunctionCalling: true,
     preferredFormat: 'anthropic',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'anthropic'
+    streamHandlerType: 'anthropic',
   },
   'claude-opus': {
     id: 'claude-opus',
     nativeFunctionCalling: true,
     preferredFormat: 'anthropic',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'anthropic'
+    streamHandlerType: 'anthropic',
   },
   'claude-haiku': {
     id: 'claude-haiku',
     nativeFunctionCalling: true,
     preferredFormat: 'anthropic',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'anthropic'
+    streamHandlerType: 'anthropic',
   },
 
   // Google Gemini 模型
@@ -97,129 +97,129 @@ export const MODEL_PROFILES: Record<string, ModelProfile> = {
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
   'gemini-2.0': {
     id: 'gemini-2.0',
     nativeFunctionCalling: true,
     preferredFormat: 'json',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'json'
+    streamHandlerType: 'json',
   },
 
   // DeepSeek 模型
-  'deepseek': {
+  deepseek: {
     id: 'deepseek',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
   'deepseek-v3.2': {
     id: 'deepseek-v3.2',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // GLM 模型
-  'glm': {
+  glm: {
     id: 'glm',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'legacy',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
   'glm-4': {
     id: 'glm-4',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'legacy',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
   'glm-4v': {
     id: 'glm-4v',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'legacy',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // Kimi 模型
-  'kimi': {
+  kimi: {
     id: 'kimi',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'legacy',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // Qwen 模型
-  'qwen': {
+  qwen: {
     id: 'qwen',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
   'qwen-turbo': {
     id: 'qwen-turbo',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
   'qwen-plus': {
     id: 'qwen-plus',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
   'qwen-max': {
     id: 'qwen-max',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // MiniMax 模型
-  'minimax': {
+  minimax: {
     id: 'minimax',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'legacy',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // Z.ai 模型
-  'zai': {
+  zai: {
     id: 'zai',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'legacy',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // Perplexity 模型
-  'perplexity': {
+  perplexity: {
     id: 'perplexity',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
+    streamHandlerType: 'bracket',
   },
 
   // 通用默认配置
-  'default': {
+  default: {
     id: 'default',
     nativeFunctionCalling: false,
     preferredFormat: 'bracket',
     parsingStrategy: 'balanced',
-    streamHandlerType: 'bracket'
-  }
+    streamHandlerType: 'bracket',
+  },
 }
 
 /**
@@ -297,7 +297,10 @@ export function getPreferredFormat(model: string, provider?: string): ToolCallFo
  * @param provider 提供商名称
  * @returns 流式处理类型
  */
-export function getStreamHandlerType(model: string, provider?: string): 'bracket' | 'xml' | 'anthropic' | 'json' {
+export function getStreamHandlerType(
+  model: string,
+  provider?: string,
+): 'bracket' | 'xml' | 'anthropic' | 'json' {
   const profile = getModelProfile(model, provider)
   return profile.streamHandlerType
 }
@@ -317,5 +320,5 @@ export function getParsingStrategy(model: string, provider?: string): 'legacy' |
  * 获取所有可用的模型ID
  */
 export function getAvailableModelIds(): string[] {
-  return Object.keys(MODEL_PROFILES).filter(key => key !== 'default')
+  return Object.keys(MODEL_PROFILES).filter((key) => key !== 'default')
 }

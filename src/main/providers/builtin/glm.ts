@@ -9,14 +9,14 @@ export const glmConfig: BuiltinProviderConfig = {
   chatPath: '/chatglm/backend-api/assistant/stream',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'text/event-stream',
+    Accept: 'text/event-stream',
     'Accept-Encoding': 'gzip, deflate, br, zstd',
     'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6',
     'App-Name': 'chatglm',
     'Cache-Control': 'no-cache',
-    'Origin': 'https://chatglm.cn',
-    'Pragma': 'no-cache',
-    'Priority': 'u=1, i',
+    Origin: 'https://chatglm.cn',
+    Pragma: 'no-cache',
+    Priority: 'u=1, i',
     'Sec-Ch-Ua': '"Microsoft Edge";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"Windows"',
@@ -31,10 +31,9 @@ export const glmConfig: BuiltinProviderConfig = {
     'X-Lang': 'zh',
   },
   enabled: true,
-  description: 'Zhipu Qingyan AI assistant, supports GLM-5.2 flagship model, graded reasoning and web search',
-  supportedModels: [
-    'GLM-5.2',
-  ],
+  description:
+    'Zhipu Qingyan AI assistant, supports GLM-5.2 flagship model, graded reasoning and web search',
+  supportedModels: ['GLM-5.2'],
   modelMappings: {
     'GLM-5.2': 'glm-5.2',
   },
@@ -45,7 +44,8 @@ export const glmConfig: BuiltinProviderConfig = {
       type: 'password',
       required: true,
       placeholder: 'Enter GLM refresh token',
-      helpText: 'Get refresh_token from Zhipu Qingyan web version, found in browser DevTools Application -> Local Storage -> chatglm_refresh_token',
+      helpText:
+        'Get refresh_token from Zhipu Qingyan web version, found in browser DevTools Application -> Local Storage -> chatglm_refresh_token',
     },
   ],
   tokenCheckEndpoint: '/chatglm/user-api/user/refresh',

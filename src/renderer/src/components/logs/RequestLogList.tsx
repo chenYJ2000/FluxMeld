@@ -3,7 +3,13 @@ import { useTranslation } from 'react-i18next'
 import { List, type RowComponentProps } from 'react-window'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   Dialog,
   DialogContent,
@@ -159,16 +165,17 @@ export function RequestLogList() {
   }, [])
 
   const RowComponent = useCallback(
-    ({ index, style, logs: rowLogs, onSelectLog }: RowComponentProps<RowProps>): ReactElement | null => {
+    ({
+      index,
+      style,
+      logs: rowLogs,
+      onSelectLog,
+    }: RowComponentProps<RowProps>): ReactElement | null => {
       const log = rowLogs[index]
       if (!log) return null
 
       return (
-        <div
-          style={style}
-          className="px-2 pb-2"
-          onClick={() => onSelectLog(log)}
-        >
+        <div style={style} className="px-2 pb-2" onClick={() => onSelectLog(log)}>
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors h-[68px]">
             <Badge variant="outline" className={getStatusColor(log.status, log.statusCode)}>
               {log.statusCode}
@@ -200,20 +207,26 @@ export function RequestLogList() {
         </div>
       )
     },
-    []
+    [],
   )
 
-  const rowProps = useMemo<RowProps>(() => ({
-    logs,
-    onSelectLog: handleSelectLog,
-  }), [logs, handleSelectLog])
+  const rowProps = useMemo<RowProps>(
+    () => ({
+      logs,
+      onSelectLog: handleSelectLog,
+    }),
+    [logs, handleSelectLog],
+  )
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">{t('logs.requestLogs')}</h2>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as 'all' | 'success' | 'error')}>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => setStatusFilter(v as 'all' | 'success' | 'error')}
+          >
             <SelectTrigger className="w-32">
               <SelectValue placeholder={t('logs.filter')} />
             </SelectTrigger>
@@ -260,9 +273,7 @@ export function RequestLogList() {
         )}
       </div>
 
-      {selectedLog && (
-        <RequestLogDetail log={selectedLog} onClose={() => setSelectedLog(null)} />
-      )}
+      {selectedLog && <RequestLogDetail log={selectedLog} onClose={() => setSelectedLog(null)} />}
 
       <Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
         <DialogContent>
@@ -273,9 +284,7 @@ export function RequestLogList() {
               </div>
               {t('logs.clearConfirm')}
             </DialogTitle>
-            <DialogDescription>
-              {t('logs.clearConfirmDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('logs.clearConfirmDesc')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowClearDialog(false)}>

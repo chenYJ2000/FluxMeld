@@ -1,10 +1,10 @@
-export { 
-  createWindow, 
-  getMainWindow, 
-  showWindow, 
-  hideWindow, 
-  minimizeWindow, 
-  maximizeWindow, 
+export {
+  createWindow,
+  getMainWindow,
+  showWindow,
+  hideWindow,
+  minimizeWindow,
+  maximizeWindow,
   closeWindow,
   isWindowVisible,
   isWindowMaximized,

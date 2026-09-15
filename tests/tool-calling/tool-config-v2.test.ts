@@ -56,37 +56,36 @@ test('legacy never mode disables v2 managed tool calling', () => {
 })
 
 test('invalid values fall back to safe managed defaults', () => {
-  assert.deepEqual(normalizeToolCallingConfig({
-    enabled: 'yes',
-    mode: 'native',
-    clientAdapterId: 'auto',
-    diagnosticsEnabled: 'no',
-    advanced: { promptPreviewEnabled: 'yes', customPromptTemplate: 123 },
-  }), DEFAULT_TOOL_CALLING_CONFIG)
+  assert.deepEqual(
+    normalizeToolCallingConfig({
+      enabled: 'yes',
+      mode: 'native',
+      clientAdapterId: 'auto',
+      diagnosticsEnabled: 'no',
+      advanced: { promptPreviewEnabled: 'yes', customPromptTemplate: 123 },
+    }),
+    DEFAULT_TOOL_CALLING_CONFIG,
+  )
 })
 
 test('P0 metadata exposes only approved clients and providers', () => {
-  assert.deepEqual(P0_TOOL_CLIENT_ADAPTERS.map((adapter) => adapter.id), [
-    'standard-openai-tools',
-    'cherry-studio-mcp',
+  assert.deepEqual(
+    P0_TOOL_CLIENT_ADAPTERS.map((adapter) => adapter.id),
+    ['standard-openai-tools', 'cherry-studio-mcp', 'opencode'],
+  )
+
+  assert.equal(
+    normalizeToolCallingConfig({ clientAdapterId: 'opencode' }).clientAdapterId,
     'opencode',
-  ])
+  )
 
-  assert.equal(normalizeToolCallingConfig({ clientAdapterId: 'opencode' }).clientAdapterId, 'opencode')
+  assert.deepEqual(
+    P0_TOOL_PROVIDER_SUPPORT.map((provider) => provider.providerId),
+    ['deepseek', 'kimi', 'glm', 'qwen', 'mimo'],
+  )
 
-  assert.deepEqual(P0_TOOL_PROVIDER_SUPPORT.map((provider) => provider.providerId), [
-    'deepseek',
-    'kimi',
-    'glm',
-    'qwen',
-    'mimo',
-  ])
-
-  assert.deepEqual(P0_TOOL_PROVIDER_SUPPORT.map((provider) => provider.label), [
-    'DEEPSEEK',
-    'KIMI',
-    'GLM',
-    'QWEN',
-    'MIMO',
-  ])
+  assert.deepEqual(
+    P0_TOOL_PROVIDER_SUPPORT.map((provider) => provider.label),
+    ['DEEPSEEK', 'KIMI', 'GLM', 'QWEN', 'MIMO'],
+  )
 })

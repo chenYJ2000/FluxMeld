@@ -35,7 +35,7 @@ export interface StreamParseResult {
  */
 export function parseToolCalls(content: string): ToolParseResult {
   if (!content) {
-    return { content: '', toolCalls: [], format: 'unknown', rawMatches: [] }
+    return { content: '', toolCalls: [], format: 'bracket', rawMatches: [] }
   }
 
   // 检测格式
@@ -59,7 +59,7 @@ export function parseToolCalls(content: string): ToolParseResult {
       result = parseJsonFormat(content)
       break
     default:
-      return { content, toolCalls: [], format: 'unknown', rawMatches: [] }
+      return { content, toolCalls: [], format: 'bracket', rawMatches: [] }
   }
 
   return { ...result, format }
@@ -69,10 +69,7 @@ export function parseToolCalls(content: string): ToolParseResult {
  * 统一流式处理入口
  * 用于处理流式响应中的工具调用
  */
-export function parseToolCallsStream(
-  content: string,
-  state: StreamState
-): StreamParseResult {
+export function parseToolCallsStream(content: string, state: StreamState): StreamParseResult {
   const result: any[] = []
   const marker = '[function_calls]'
 
@@ -92,9 +89,9 @@ export function parseToolCallsStream(
         if (!state.hasEmittedToolCall) {
           result.push({
             delta: {
-              content: textBefore
+              content: textBefore,
             },
-            finish_reason: null
+            finish_reason: null,
           })
         }
         state.contentBuffer = state.contentBuffer.substring(markerIdx)
@@ -112,9 +109,9 @@ export function parseToolCallsStream(
               if (!state.hasEmittedToolCall) {
                 result.push({
                   delta: {
-                    content: textBefore
+                    content: textBefore,
                   },
-                  finish_reason: null
+                  finish_reason: null,
                 })
               }
               state.contentBuffer = potentialMarker
@@ -139,9 +136,9 @@ export function parseToolCallsStream(
       if (state.contentBuffer && !state.hasEmittedToolCall) {
         result.push({
           delta: {
-            content: state.contentBuffer
+            content: state.contentBuffer,
           },
-          finish_reason: null
+          finish_reason: null,
         })
       }
       state.contentBuffer = ''
@@ -160,9 +157,9 @@ export function parseToolCallsStream(
 
         const toolCallData = {
           delta: {
-            tool_calls: [tc]
+            tool_calls: [tc],
           },
-          finish_reason: null
+          finish_reason: null,
         }
         result.push(toolCallData)
 
@@ -190,9 +187,9 @@ export function parseToolCallsStream(
         if (!state.hasEmittedToolCall) {
           result.push({
             delta: {
-              content: state.contentBuffer
+              content: state.contentBuffer,
             },
-            finish_reason: null
+            finish_reason: null,
           })
         }
         state.contentBuffer = ''
@@ -206,9 +203,9 @@ export function parseToolCallsStream(
     if (!state.hasEmittedToolCall) {
       result.push({
         delta: {
-          content: state.contentBuffer
+          content: state.contentBuffer,
         },
-        finish_reason: null
+        finish_reason: null,
       })
     }
     state.contentBuffer = ''
@@ -220,9 +217,7 @@ export function parseToolCallsStream(
 /**
  * 刷新流式缓冲区
  */
-export function flushToolCallBuffer(
-  state: StreamState
-): any[] {
+export function flushToolCallBuffer(state: StreamState): any[] {
   const result: any[] = []
 
   if (!state.contentBuffer) {
@@ -238,7 +233,7 @@ export function flushToolCallBuffer(
       delete tc.rawText
       result.push({
         delta: { tool_calls: [tc] },
-        finish_reason: null
+        finish_reason: null,
       })
     }
     state.hasEmittedToolCall = true
@@ -247,17 +242,20 @@ export function flushToolCallBuffer(
     if (cleanContent && cleanContent.trim()) {
       result.push({
         delta: { content: cleanContent },
-        finish_reason: null
+        finish_reason: null,
       })
     }
   } else {
     if (state.contentBuffer && !state.hasEmittedToolCall) {
       result.push({
         delta: { content: state.contentBuffer },
-        finish_reason: null
+        finish_reason: null,
       })
     } else if (state.contentBuffer && state.hasEmittedToolCall) {
-      console.warn('[StreamHandler] Discarding remaining buffer because tool calls were emitted:', state.contentBuffer.substring(0, 200) + '...')
+      console.warn(
+        '[StreamHandler] Discarding remaining buffer because tool calls were emitted:',
+        state.contentBuffer.substring(0, 200) + '...',
+      )
     }
   }
 
@@ -291,7 +289,11 @@ function detectToolCallFormat(content: string): ToolCallFormat {
 /**
  * 解析 bracket 格式: [function_calls][call:name]{args}[/call][/function_calls]
  */
-function parseBracketFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseBracketFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
   let cleanContent = content
@@ -365,12 +367,17 @@ function parseBracketFormat(content: string): { content: string; toolCalls: Tool
 /**
  * 解析 XML 格式: <tool_use><name>tool_name</name><arguments>{...}</arguments></tool_use>
  */
-function parseXmlFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseXmlFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
   let cleanContent = content
 
-  const toolUseRegex = /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
+  const toolUseRegex =
+    /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
 
   let match
   let index = 0
@@ -410,7 +417,11 @@ function parseXmlFormat(content: string): { content: string; toolCalls: ToolCall
 /**
  * 解析 Anthropic 格式: <antml:function_calls>...</antml:function_calls>
  */
-function parseAnthropicFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseAnthropicFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
   let cleanContent = content
@@ -422,7 +433,8 @@ function parseAnthropicFormat(content: string): { content: string; toolCalls: To
     const blockContent = blockMatch[1]
     rawMatches.push(blockMatch[0])
 
-    const invokeRegex = /<antml:invoke name="([^"]+)">\s*<antml:parameters>([\s\S]*?)<\/antml:parameters>\s*<\/antml:invoke>/g
+    const invokeRegex =
+      /<antml:invoke name="([^"]+)">\s*<antml:parameters>([\s\S]*?)<\/antml:parameters>\s*<\/antml:invoke>/g
     let invokeMatch
     let index = 0
 
@@ -456,7 +468,11 @@ function parseAnthropicFormat(content: string): { content: string; toolCalls: To
 /**
  * 解析 JSON 格式: Standard OpenAI tool_calls JSON
  */
-function parseJsonFormat(content: string): { content: string; toolCalls: ToolCall[]; rawMatches: string[] } {
+function parseJsonFormat(content: string): {
+  content: string
+  toolCalls: ToolCall[]
+  rawMatches: string[]
+} {
   const toolCalls: ToolCall[] = []
   const rawMatches: string[] = []
 
@@ -473,9 +489,10 @@ function parseJsonFormat(content: string): { content: string; toolCalls: ToolCal
             type: 'function',
             function: {
               name: tc.function.name,
-              arguments: typeof tc.function.arguments === 'string'
-                ? tc.function.arguments
-                : JSON.stringify(tc.function.arguments),
+              arguments:
+                typeof tc.function.arguments === 'string'
+                  ? tc.function.arguments
+                  : JSON.stringify(tc.function.arguments),
             },
           })
         }
@@ -505,9 +522,10 @@ function parseJsonFormat(content: string): { content: string; toolCalls: ToolCal
             type: 'function',
             function: {
               name: tc.function.name,
-              arguments: typeof tc.function.arguments === 'string'
-                ? tc.function.arguments
-                : JSON.stringify(tc.function.arguments),
+              arguments:
+                typeof tc.function.arguments === 'string'
+                  ? tc.function.arguments
+                  : JSON.stringify(tc.function.arguments),
             },
           })
         }
@@ -700,7 +718,7 @@ export function tryRegexFallback(str: string): any | null {
             const contentValue = str.substring(valueStart, valueEnd)
             return {
               filePath: filePathMatch[1],
-              content: contentValue.replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              content: contentValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
             }
           }
         }
@@ -728,16 +746,19 @@ export function tryRegexFallback(str: string): any | null {
             return null
           }
 
-          if (oldStrValueStart !== 0 && oldStrValueEnd > oldStrValueStart &&
-              newStrValueStart !== 0 && newStrValueEnd > newStrValueStart) {
-
+          if (
+            oldStrValueStart !== 0 &&
+            oldStrValueEnd > oldStrValueStart &&
+            newStrValueStart !== 0 &&
+            newStrValueEnd > newStrValueStart
+          ) {
             const oldStrValue = str.substring(oldStrValueStart, oldStrValueEnd)
             const newStrValue = str.substring(newStrValueStart, newStrValueEnd)
 
             return {
               filePath: filePathMatch[1],
               old_str: oldStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
-              new_str: newStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"')
+              new_str: newStrValue.replace(/\\n/g, '\n').replace(/\\"/g, '"'),
             }
           }
         }
@@ -758,7 +779,7 @@ export function createStreamState(): StreamState {
     contentBuffer: '',
     isBufferingToolCall: false,
     toolCallIndex: 0,
-    hasEmittedToolCall: false
+    hasEmittedToolCall: false,
   }
 }
 

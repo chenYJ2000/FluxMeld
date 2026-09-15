@@ -41,7 +41,7 @@ export function SessionManagement() {
   }
 
   const handleConfigChange = (updates: Partial<typeof config>) => {
-    setConfig(prev => ({ ...prev, ...updates }))
+    setConfig((prev) => ({ ...prev, ...updates }))
     setHasChanges(true)
   }
 
@@ -75,9 +75,7 @@ export function SessionManagement() {
           <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
             <div className="space-y-0.5">
               <Label htmlFor="delete-after-chat">{t('session.deleteAfterChat')}</Label>
-              <p className="text-sm text-muted-foreground">
-                {t('session.deleteAfterChatHint')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('session.deleteAfterChatHint')}</p>
             </div>
             <Switch
               id="delete-after-chat"
@@ -88,9 +86,7 @@ export function SessionManagement() {
 
           {hasChanges && (
             <div className="flex justify-end pt-4 border-t">
-              <Button onClick={saveConfig}>
-                {t('common.save')}
-              </Button>
+              <Button onClick={saveConfig}>{t('common.save')}</Button>
             </div>
           )}
         </CardContent>

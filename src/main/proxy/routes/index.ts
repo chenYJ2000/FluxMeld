@@ -7,14 +7,6 @@ import chatRouter from './chat'
 import modelsRouter from './models'
 import completionsRouter from './completions'
 
-export {
-  chatRouter,
-  modelsRouter,
-  completionsRouter,
-}
+export { chatRouter, modelsRouter, completionsRouter }
 
-export default [
-  chatRouter,
-  modelsRouter,
-  completionsRouter,
-]
+export default [chatRouter, modelsRouter, completionsRouter]

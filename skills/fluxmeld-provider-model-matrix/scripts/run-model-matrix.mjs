@@ -113,7 +113,9 @@ function providerCandidates(model) {
 
 function matchesProvider(model, provider) {
   const requested = normalizeProvider(provider)
-  const accepted = new Set([requested, ...(providerAliases.get(requested) || [])].map(normalizeProvider))
+  const accepted = new Set(
+    [requested, ...(providerAliases.get(requested) || [])].map(normalizeProvider),
+  )
   return providerCandidates(model).some((candidate) => {
     if (accepted.has(candidate)) return true
     const aliases = providerAliases.get(candidate)
@@ -148,13 +150,19 @@ async function main() {
   fs.mkdirSync('backup/har', { recursive: true })
   const reportPath = `backup/har/fluxmeld-model-matrix-${runId}.json`
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2))
-  console.log(JSON.stringify({
-    modelSource,
-    modelsEndpoint,
-    reportPath,
-    discoveredModelCount: report.discoveredModelCount,
-    selectedModelCount: report.selectedModelCount,
-  }, null, 2))
+  console.log(
+    JSON.stringify(
+      {
+        modelSource,
+        modelsEndpoint,
+        reportPath,
+        discoveredModelCount: report.discoveredModelCount,
+        selectedModelCount: report.selectedModelCount,
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 main().catch((error) => {

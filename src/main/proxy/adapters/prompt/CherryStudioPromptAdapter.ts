@@ -4,7 +4,13 @@
  */
 
 import { ChatMessage, ChatCompletionTool, ToolCall } from '../../types'
-import { BasePromptAdapter, PromptVariant, TransformResult, ParseResult, ToolCallFormat } from './BasePromptAdapter'
+import {
+  BasePromptAdapter,
+  PromptVariant,
+  TransformResult,
+  ParseResult,
+  ToolCallFormat,
+} from './BasePromptAdapter'
 import { ClientType } from '../../utils/promptSignatures'
 import { parseToolCallsFromText } from '../../utils/toolParser'
 
@@ -70,14 +76,14 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
 
   hasPromptInjected(messages: ChatMessage[]): boolean {
     const allContent = this.extractAllContent(messages)
-    
+
     for (const sig of this.detectSignatures) {
       if (allContent.includes(sig)) {
         console.log('[CherryStudioAdapter] Detected existing tool prompt injection, skipping')
         return true
       }
     }
-    
+
     return false
   }
 
@@ -86,13 +92,13 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
       return ''
     }
 
-    const toolDefinitions = tools.map(tool => {
-      const params = tool.function.parameters
-        ? JSON.stringify(tool.function.parameters)
-        : '{}'
+    const toolDefinitions = tools
+      .map((tool) => {
+        const params = tool.function.parameters ? JSON.stringify(tool.function.parameters) : '{}'
 
-      return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
-    }).join('\n')
+        return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
+      })
+      .join('\n')
 
     const template = variant?.toolPromptTemplate || CHERRY_STUDIO_VARIANT.toolPromptTemplate
     return template.replace('{{TOOL_DEFINITIONS}}', toolDefinitions)
@@ -108,7 +114,7 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
     } else if (content.includes('[function_calls]')) {
       format = 'bracket'
       const result = parseToolCallsFromText(content, 'default')
-      toolCalls = result.toolCalls.map(tc => ({
+      toolCalls = result.toolCalls.map((tc) => ({
         index: tc.index,
         id: tc.id,
         type: tc.type,
@@ -125,20 +131,21 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
 
   private parseXmlToolCalls(content: string): ToolCall[] {
     const toolCalls: ToolCall[] = []
-    
-    const toolUseRegex = /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
-    
+
+    const toolUseRegex =
+      /<tool_use>\s*<name>([^<]+)<\/name>\s*<arguments>([\s\S]*?)<\/arguments>\s*<\/tool_use>/g
+
     let match
     let index = 0
-    
+
     while ((match = toolUseRegex.exec(content)) !== null) {
       const name = match[1].trim()
       let argsStr = match[2].trim()
-      
+
       if (argsStr.startsWith('```')) {
         argsStr = argsStr.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
       }
-      
+
       try {
         const parsed = JSON.parse(argsStr)
         toolCalls.push({
@@ -154,7 +161,7 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
         console.warn('[CherryStudioAdapter] Failed to parse XML tool arguments:', argsStr)
       }
     }
-    
+
     return toolCalls
   }
 
@@ -166,7 +173,7 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
     messages: ChatMessage[],
     tools: ChatCompletionTool[] | undefined,
     model: string,
-    _provider?: string
+    _provider?: string,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       return { messages, tools: undefined, injected: false }
@@ -176,7 +183,7 @@ export class CherryStudioPromptAdapter extends BasePromptAdapter {
       return { messages, tools: undefined, injected: false }
     }
 
-    const variant = this.getPromptVariant(model)
+    const variant = this.getPromptVariant(model) ?? undefined
     const toolsPrompt = this.toolsToPrompt(tools, variant)
     const transformedMessages = this.injectPrompt(messages, toolsPrompt)
 

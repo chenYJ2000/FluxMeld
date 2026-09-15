@@ -9,10 +9,7 @@ export const GLM_VARIANT: PromptVariant = {
   id: 'glm',
   name: 'GLM',
   description: 'Optimized prompt variant for GLM models (Zhipu Qingyan)',
-  modelPatterns: [
-    'glm',
-    'chatglm',
-  ],
+  modelPatterns: ['glm', 'chatglm'],
   providerPatterns: ['glm'],
   systemPrompt: 'You are a helpful AI assistant.',
   toolPromptTemplate: `## Available Tools

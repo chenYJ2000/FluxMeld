@@ -22,8 +22,14 @@ test('preload and renderer types expose updater status for checkUpdate', () => {
 
   assert.match(preloadApi, /checkUpdate:\s*\(\): Promise<UpdateStatus>/)
   assert.match(electronTypes, /checkUpdate:\s*\(\) => Promise<UpdateStatus>/)
-  assert.doesNotMatch(preloadApi, /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/)
-  assert.doesNotMatch(electronTypes, /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/)
+  assert.doesNotMatch(
+    preloadApi,
+    /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/,
+  )
+  assert.doesNotMatch(
+    electronTypes,
+    /hasUpdate: boolean; currentVersion: string; latestVersion: string; releaseUrl/,
+  )
 })
 
 test('about page state is driven by updater events, not manual release URLs', () => {

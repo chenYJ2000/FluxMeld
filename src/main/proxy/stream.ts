@@ -136,11 +136,7 @@ export class StreamHandler {
    * Create SSE transform stream
    * Converts upstream response to OpenAI compatible format
    */
-  createTransformStream(
-    model: string,
-    responseId: string,
-    onEnd?: () => void
-  ): Transform {
+  createTransformStream(model: string, responseId: string, onEnd?: () => void): Transform {
     let isFirstChunk = true
     const created = Math.floor(Date.now() / 1000)
     // Parser state contains a partial-line buffer, so it must be scoped to one
@@ -165,7 +161,13 @@ export class StreamHandler {
             if (event.data === '[DONE]') {
               // Flush any remaining buffer before done
               if (contentBuffer) {
-                const finalData = transformChunk({ content: contentBuffer }, model, responseId, created, isFirstChunk)
+                const finalData = transformChunk(
+                  { content: contentBuffer },
+                  model,
+                  responseId,
+                  created,
+                  isFirstChunk,
+                )
                 if (finalData) {
                   isFirstChunk = false
                   this.push(formatter.formatJSON(finalData))
@@ -184,7 +186,13 @@ export class StreamHandler {
               continue
             }
 
-            const transformedData = transformChunk(parsedData, model, responseId, created, isFirstChunk)
+            const transformedData = transformChunk(
+              parsedData,
+              model,
+              responseId,
+              created,
+              isFirstChunk,
+            )
             if (!transformedData) continue
 
             // Handle tool call buffering
@@ -206,11 +214,13 @@ export class StreamHandler {
                     const textBefore = contentBuffer.substring(0, markerIdx)
                     const textData = {
                       ...transformedData,
-                      choices: [{
-                        index: 0,
-                        delta: { content: textBefore },
-                        finish_reason: null
-                      }]
+                      choices: [
+                        {
+                          index: 0,
+                          delta: { content: textBefore },
+                          finish_reason: null,
+                        },
+                      ],
                     }
                     this.push(formatter.formatJSON(textData))
                   }
@@ -226,11 +236,13 @@ export class StreamHandler {
                           const textBefore = contentBuffer.substring(0, i)
                           const textData = {
                             ...transformedData,
-                            choices: [{
-                              index: 0,
-                              delta: { content: textBefore },
-                              finish_reason: null
-                            }]
+                            choices: [
+                              {
+                                index: 0,
+                                delta: { content: textBefore },
+                                finish_reason: null,
+                              },
+                            ],
                           }
                           this.push(formatter.formatJSON(textData))
                         }
@@ -252,14 +264,16 @@ export class StreamHandler {
                     tc.index = toolCallIndex++
                     const toolCallData = {
                       ...transformedData,
-                      choices: [{
-                        index: 0,
-                        delta: {
-                          role: isFirstChunk ? 'assistant' : undefined,
-                          tool_calls: [tc]
+                      choices: [
+                        {
+                          index: 0,
+                          delta: {
+                            role: isFirstChunk ? 'assistant' : undefined,
+                            tool_calls: [tc],
+                          },
+                          finish_reason: null,
                         },
-                        finish_reason: null
-                      }]
+                      ],
                     }
                     isFirstChunk = false
                     this.push(formatter.formatJSON(toolCallData))
@@ -272,11 +286,13 @@ export class StreamHandler {
                   if (contentBuffer && !isBufferingToolCall) {
                     const textData = {
                       ...transformedData,
-                      choices: [{
-                        index: 0,
-                        delta: { content: contentBuffer },
-                        finish_reason: null
-                      }]
+                      choices: [
+                        {
+                          index: 0,
+                          delta: { content: contentBuffer },
+                          finish_reason: null,
+                        },
+                      ],
                     }
                     this.push(formatter.formatJSON(textData))
                     contentBuffer = ''
@@ -330,19 +346,27 @@ export class StreamHandler {
                 object: 'chat.completion.chunk',
                 created,
                 model,
-                choices: [{
-                  index: 0,
-                  delta: {
-                    tool_calls: [tc]
+                choices: [
+                  {
+                    index: 0,
+                    delta: {
+                      tool_calls: [tc],
+                    },
+                    finish_reason: null,
                   },
-                  finish_reason: null
-                }]
+                ],
               }
               this.push(formatter.formatJSON(toolCallData))
             }
           } else {
             // No tool calls, just flush content
-            const finalData = transformChunk({ content: contentBuffer }, model, responseId, created, isFirstChunk)
+            const finalData = transformChunk(
+              { content: contentBuffer },
+              model,
+              responseId,
+              created,
+              isFirstChunk,
+            )
             if (finalData) {
               this.push(formatter.formatJSON(finalData))
             }
@@ -363,7 +387,7 @@ export class StreamHandler {
     model: string,
     responseId: string,
     created: number,
-    isFirstChunk: boolean
+    isFirstChunk: boolean,
   ): ChatCompletionResponse | null {
     if (!data) return null
 
@@ -400,7 +424,12 @@ export class StreamHandler {
     const finishReason = data.choices?.[0]?.finish_reason || data.finish_reason || null
 
     // Allow null content when there are tool_calls or finish_reason
-    if (delta.content === undefined && !delta.reasoning_content && !delta.tool_calls && !finishReason) {
+    if (
+      delta.content === undefined &&
+      !delta.reasoning_content &&
+      !delta.tool_calls &&
+      !finishReason
+    ) {
       return null
     }
 
@@ -409,11 +438,13 @@ export class StreamHandler {
       object: 'chat.completion.chunk',
       created,
       model,
-      choices: [{
-        index: 0,
-        delta,
-        finish_reason: finishReason,
-      }],
+      choices: [
+        {
+          index: 0,
+          delta,
+          finish_reason: finishReason,
+        },
+      ],
     }
   }
 
@@ -423,7 +454,7 @@ export class StreamHandler {
   async streamToResponse(
     stream: NodeJS.ReadableStream,
     model: string,
-    responseId: string
+    responseId: string,
   ): Promise<ChatCompletionResponse> {
     return new Promise((resolve, reject) => {
       const parser = new SSEParser()
@@ -462,7 +493,7 @@ export class StreamHandler {
             if (data.choices?.[0]?.delta?.tool_calls) {
               const deltaToolCalls = data.choices[0].delta.tool_calls
               for (const tc of deltaToolCalls) {
-                const existing = toolCalls.find(t => t.index === tc.index)
+                const existing = toolCalls.find((t) => t.index === tc.index)
                 if (existing) {
                   if (tc.id) existing.id = tc.id
                   if (tc.type) existing.type = tc.type
@@ -475,8 +506,8 @@ export class StreamHandler {
                     type: tc.type || 'function',
                     function: {
                       name: tc.function?.name || '',
-                      arguments: tc.function?.arguments || ''
-                    }
+                      arguments: tc.function?.arguments || '',
+                    },
                   })
                 }
               }
@@ -498,8 +529,8 @@ export class StreamHandler {
         // Merge parsed tool calls with any native tool calls
         const finalToolCalls = [...toolCalls]
         if (parsedToolCalls.length > 0) {
-          parsedToolCalls.forEach(ptc => {
-            ptc.index += finalToolCalls.length
+          parsedToolCalls.forEach((ptc) => {
+            ptc.index = (ptc.index ?? 0) + finalToolCalls.length
             finalToolCalls.push(ptc)
           })
         }
@@ -511,7 +542,7 @@ export class StreamHandler {
           message.reasoning_content = reasoningContent.trim()
         }
         // If we have tool calls, force content to null to avoid client confusion
-        message.content = finalToolCalls.length > 0 ? null : (cleanContent || null)
+        message.content = finalToolCalls.length > 0 ? null : cleanContent || null
 
         if (finalToolCalls.length > 0) {
           // Remove index field and sort by original index
@@ -530,11 +561,13 @@ export class StreamHandler {
           object: 'chat.completion',
           created,
           model,
-          choices: [{
-            index: 0,
-            message,
-            finish_reason: finishReason || 'stop',
-          }],
+          choices: [
+            {
+              index: 0,
+              message,
+              finish_reason: finishReason || 'stop',
+            },
+          ],
           usage: {
             prompt_tokens: 0,
             completion_tokens: 0,
@@ -576,20 +609,24 @@ export class StreamHandler {
     const stream = new PassThrough()
     const created = Math.floor(Date.now() / 1000)
 
-    stream.write(this.formatter.formatJSON({
-      id: responseId,
-      object: 'chat.completion.chunk',
-      created,
-      model,
-      choices: [{
-        index: 0,
-        delta: {
-          role: 'assistant',
-          content: error,
-        },
-        finish_reason: 'stop',
-      }],
-    }))
+    stream.write(
+      this.formatter.formatJSON({
+        id: responseId,
+        object: 'chat.completion.chunk',
+        created,
+        model,
+        choices: [
+          {
+            index: 0,
+            delta: {
+              role: 'assistant',
+              content: error,
+            },
+            finish_reason: 'stop',
+          },
+        ],
+      }),
+    )
 
     stream.write(this.formatter.formatDone())
     stream.end()

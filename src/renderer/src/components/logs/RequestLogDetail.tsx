@@ -1,15 +1,21 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Copy, Check, Clock, Zap, Server, User, FileJson, AlertCircle, Globe, Brain } from 'lucide-react'
+import {
+  Copy,
+  Check,
+  Clock,
+  Zap,
+  Server,
+  User,
+  FileJson,
+  AlertCircle,
+  Globe,
+  Brain,
+} from 'lucide-react'
 
 interface RequestLogEntry {
   id: string
@@ -146,15 +152,16 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
   }
 
   const renderJsonViewer = (jsonString: string | undefined) => {
-    if (!jsonString) return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <FileJson className="h-12 w-12 mb-3 opacity-30" />
-        <p className="text-sm">{t('logs.noRequestData')}</p>
-        <p className="mt-2 max-w-md text-center text-xs leading-relaxed">
-          {t('logs.noBodyDataHelp')}
-        </p>
-      </div>
-    )
+    if (!jsonString)
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+          <FileJson className="h-12 w-12 mb-3 opacity-30" />
+          <p className="text-sm">{t('logs.noRequestData')}</p>
+          <p className="mt-2 max-w-md text-center text-xs leading-relaxed">
+            {t('logs.noBodyDataHelp')}
+          </p>
+        </div>
+      )
 
     try {
       const parsed = JSON.parse(jsonString)
@@ -179,8 +186,8 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-4 shrink-0 border-b border-border/50">
           <DialogTitle className="flex items-center gap-3 flex-wrap text-base">
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={`${getStatusColor(log.status)} font-semibold px-2.5 py-0.5`}
             >
               {log.statusCode}
@@ -195,7 +202,11 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
         </DialogHeader>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col min-h-0 overflow-hidden"
+        >
           <div className="px-6 pt-4 shrink-0 overflow-hidden">
             <TabsList className="grid w-full grid-cols-5 bg-muted/50 p-1 rounded-lg">
               <TabsTrigger
@@ -241,47 +252,48 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
             {/* Info Tab */}
             <TabsContent value="info" className="mt-0">
               <div className="grid grid-cols-2 gap-3">
-                <InfoItem 
-                  label={t('logs.timestamp')} 
+                <InfoItem
+                  label={t('logs.timestamp')}
                   value={formatTime(log.timestamp)}
                   icon={<Clock className="h-3 w-3" />}
                 />
-                <InfoItem 
-                  label={t('logs.latency')} 
+                <InfoItem
+                  label={t('logs.latency')}
                   value={formatLatency(log.latency)}
                   icon={<Zap className="h-3 w-3" />}
                 />
-                <InfoItem 
-                  label={t('logs.method')} 
-                  value={<span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">{log.method}</span>}
+                <InfoItem
+                  label={t('logs.method')}
+                  value={
+                    <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">
+                      {log.method}
+                    </span>
+                  }
                 />
-                <InfoItem 
-                  label={t('logs.url')} 
+                <InfoItem
+                  label={t('logs.url')}
                   value={<span className="font-mono text-xs break-all">{log.url}</span>}
                 />
-                <InfoItem 
-                  label={t('logs.provider')} 
+                <InfoItem
+                  label={t('logs.provider')}
                   value={log.providerName || log.providerId || '-'}
                 />
-                <InfoItem 
-                  label={t('logs.account')} 
+                <InfoItem
+                  label={t('logs.account')}
                   value={log.accountName || log.accountId || '-'}
                 />
-                <InfoItem 
-                  label={t('logs.stream')} 
+                <InfoItem
+                  label={t('logs.stream')}
                   value={log.isStream ? t('common.yes') : t('common.no')}
                 />
-                <InfoItem 
-                  label={t('logs.responseStatus')} 
-                  value={log.responseStatus}
-                />
-                <InfoItem 
-                  label={t('logs.webSearch')} 
+                <InfoItem label={t('logs.responseStatus')} value={log.responseStatus} />
+                <InfoItem
+                  label={t('logs.webSearch')}
                   value={log.webSearch ? t('common.enabled') : t('common.disabled')}
                   icon={<Globe className="h-3 w-3" />}
                 />
-                <InfoItem 
-                  label={t('logs.reasoningEffort')} 
+                <InfoItem
+                  label={t('logs.reasoningEffort')}
                   value={log.reasoningEffort === undefined ? '-' : String(log.reasoningEffort)}
                   icon={<Brain className="h-3 w-3" />}
                 />
@@ -312,8 +324,8 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
             <TabsContent value="user" className="mt-0">
               {log.userInput ? (
                 <div>
-                  <SectionHeader 
-                    title={t('logs.userInput')} 
+                  <SectionHeader
+                    title={t('logs.userInput')}
                     icon={<User className="h-4 w-4" />}
                     copyText={log.userInput}
                   />
@@ -337,8 +349,8 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
                 <div className="space-y-4">
                   {/* Error Message */}
                   <div>
-                    <SectionHeader 
-                      title={t('logs.errorMessage')} 
+                    <SectionHeader
+                      title={t('logs.errorMessage')}
                       icon={<AlertCircle className="h-4 w-4 text-red-500" />}
                       copyText={log.errorMessage}
                     />
@@ -352,8 +364,8 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
                   {/* Stack Trace */}
                   {log.errorStack && (
                     <div>
-                      <SectionHeader 
-                        title={t('logs.stackTrace')} 
+                      <SectionHeader
+                        title={t('logs.stackTrace')}
                         icon={<FileJson className="h-4 w-4" />}
                         copyText={log.errorStack}
                       />

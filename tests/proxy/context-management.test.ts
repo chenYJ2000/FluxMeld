@@ -118,25 +118,29 @@ test('stateful session helpers merge full history and restore streamed tool call
   assert.deepEqual(mergeSessionMessages(history, fullHistory), fullHistory)
   assert.deepEqual(mergeSessionMessages(history, suffix), fullHistory)
 
-  const streamed = assistantMessageFromSSE([
-    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"get_","arguments":"{\\"city\\":"}}]}}]}',
-    '',
-    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"weather","arguments":"\\"Shanghai\\"}"}}]}}]}',
-    '',
-    'data: [DONE]',
-    '',
-  ].join('\n'))
+  const streamed = assistantMessageFromSSE(
+    [
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"get_","arguments":"{\\"city\\":"}}]}}]}',
+      '',
+      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"weather","arguments":"\\"Shanghai\\"}"}}]}}]}',
+      '',
+      'data: [DONE]',
+      '',
+    ].join('\n'),
+  )
 
   assert.deepEqual(streamed, {
     role: 'assistant',
     content: null,
-    tool_calls: [{
-      id: 'call_1',
-      type: 'function',
-      function: {
-        name: 'get_weather',
-        arguments: '{"city":"Shanghai"}',
+    tool_calls: [
+      {
+        id: 'call_1',
+        type: 'function',
+        function: {
+          name: 'get_weather',
+          arguments: '{"city":"Shanghai"}',
+        },
       },
-    }],
+    ],
   })
 })

@@ -31,7 +31,10 @@ test('provider support matrix shows display labels instead of provider ids', () 
   const panel = readFileSync('src/renderer/src/components/models/ToolCallingPanel.tsx', 'utf8')
 
   assert.match(panel, /provider\.label/)
-  assert.doesNotMatch(panel, /<span className="text-sm font-medium">\{provider\.providerId\}<\/span>/)
+  assert.doesNotMatch(
+    panel,
+    /<span className="text-sm font-medium">\{provider\.providerId\}<\/span>/,
+  )
 })
 
 test('Models page delegates tool settings to ToolCallingPanel', () => {

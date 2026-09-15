@@ -1,6 +1,7 @@
-import { BrowserWindow, app, shell } from 'electron'
+import { BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { storeManager } from '../store/store'
+import { isAppQuitting } from '../lib/appLifecycle'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -72,7 +73,7 @@ export function createWindow(options: WindowOptions = {}): BrowserWindow {
   })
 
   mainWindow.on('close', (event) => {
-    if (!app.isQuitting) {
+    if (!isAppQuitting()) {
       try {
         const config = storeManager.getConfig()
         if (config.minimizeToTray) {

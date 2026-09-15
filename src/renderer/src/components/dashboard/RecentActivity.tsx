@@ -94,9 +94,7 @@ export function RecentActivity({
       </CardHeader>
       <CardContent className="flex-1 min-h-0 p-4 pt-0">
         {activities.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            {t('dashboard.noActivity')}
-          </div>
+          <div className="text-center text-muted-foreground py-8">{t('dashboard.noActivity')}</div>
         ) : (
           <ScrollArea className="pr-2" style={{ height: scrollHeight }}>
             <div className="space-y-2">
@@ -106,26 +104,22 @@ export function RecentActivity({
                   className={cn(
                     'p-3 rounded-lg transition-all duration-200',
                     'bg-muted/30 hover:bg-muted/50 hover:-translate-y-0.5',
-                    onItemClick && 'cursor-pointer'
+                    onItemClick && 'cursor-pointer',
                   )}
                   onClick={() => onItemClick?.(item)}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          'h-2 w-2 rounded-full',
-                          getTypeColor(item.type)
-                        )}
-                      />
-                      <span className="font-medium text-sm truncate">
-                        {item.title}
-                      </span>
+                      <div className={cn('h-2 w-2 rounded-full', getTypeColor(item.type))} />
+                      <span className="font-medium text-sm truncate">{item.title}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       {item.statusCode && (
                         <Badge
-                          variant={getTypeBadge(item.type) as "default" | "secondary" | "destructive" | "outline"}
+                          variant={
+                            getTypeBadge(item.type) as
+                              'default' | 'secondary' | 'destructive' | 'outline'
+                          }
                           className="text-xs"
                         >
                           {item.statusCode}

@@ -20,7 +20,7 @@ export interface CredentialField {
 
 export function mapOAuthCredentials(
   credentials: OAuthCredentials,
-  provider: Provider
+  provider: Provider,
 ): Record<string, string> {
   const mappedCredentials: Record<string, string> = {}
 
@@ -34,7 +34,9 @@ export function mapOAuthCredentials(
     if (value !== undefined && value !== null && value !== '') {
       mappedCredentials[field.name] = value
     } else if (field.required) {
-      console.warn(`[AccountUtils] Missing required field ${field.name} for provider ${provider.id}`)
+      console.warn(
+        `[AccountUtils] Missing required field ${field.name} for provider ${provider.id}`,
+      )
     }
   }
 
@@ -43,7 +45,7 @@ export function mapOAuthCredentials(
 
 export function validateCredentials(
   credentials: OAuthCredentials,
-  provider: Provider
+  provider: Provider,
 ): { valid: boolean; errors: string[] } {
   const errors: string[] = []
 
@@ -53,7 +55,7 @@ export function validateCredentials(
 
   for (const field of provider.credentialFields) {
     const value = credentials[field.name]
-    
+
     if (field.required && (!value || value.trim() === '')) {
       errors.push(`Field "${field.label}" is required`)
     }
@@ -72,18 +74,15 @@ export function createAccount(
     name?: string
     email?: string
     userId?: string
-  }
+  },
 ): Omit<Account, 'id' | 'createdAt' | 'updatedAt'> {
   return {
     providerId,
     credentials,
-    name: accountInfo?.name,
+    name: accountInfo?.name || accountInfo?.email || providerId,
     email: accountInfo?.email,
-    userId: accountInfo?.userId,
     status: 'active',
     lastUsed: undefined,
-    usageCount: 0,
-    metadata: {},
   }
 }
 
@@ -115,12 +114,12 @@ export function maskCredential(value: string, visibleChars: number = 4): string 
 
 export function getMaskedCredentials(
   credentials: Record<string, string>,
-  provider: Provider
+  provider: Provider,
 ): Record<string, string> {
   const masked: Record<string, string> = {}
 
   for (const [key, value] of Object.entries(credentials)) {
-    const field = provider.credentialFields?.find(f => f.name === key)
+    const field = provider.credentialFields?.find((f) => f.name === key)
     if (field?.type === 'password') {
       masked[key] = maskCredential(value)
     } else {

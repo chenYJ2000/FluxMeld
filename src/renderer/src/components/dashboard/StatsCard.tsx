@@ -15,7 +15,6 @@ export interface StatsCardProps {
 }
 
 export function StatsCard({ title, value, icon: Icon, trend, className }: StatsCardProps) {
-
   const getTrendIcon = () => {
     if (!trend) return null
     if (trend.value > 0) return <TrendingUp className="h-3 w-3" />
@@ -49,11 +48,7 @@ export function StatsCard({ title, value, icon: Icon, trend, className }: StatsC
               {trend.value > 0 ? '+' : ''}
               {trend.value}%
             </span>
-            {trend.label && (
-              <span className="text-muted-foreground ml-1">
-                {trend.label}
-              </span>
-            )}
+            {trend.label && <span className="text-muted-foreground ml-1">{trend.label}</span>}
           </div>
         )}
       </CardContent>

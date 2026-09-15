@@ -115,7 +115,7 @@ export const useSettingsStore = create<SettingsState>()(
       updateConfig: async (updates) => {
         const currentConfig = get().config
         if (!currentConfig) return
-        
+
         const newConfig = {
           ...currentConfig,
           ...updates,
@@ -127,7 +127,7 @@ export const useSettingsStore = create<SettingsState>()(
             : currentConfig.requestLogConfig,
         }
         set({ config: newConfig })
-        
+
         try {
           await window.electronAPI.config.update(updates)
         } catch (error) {
@@ -138,7 +138,7 @@ export const useSettingsStore = create<SettingsState>()(
       fetchConfig: async () => {
         try {
           const config = await window.electronAPI.config.get()
-          set({ 
+          set({
             config,
             autoStart: config.autoStart,
             autoStartProxy: config.autoStartProxy,
@@ -157,6 +157,6 @@ export const useSettingsStore = create<SettingsState>()(
           i18n.changeLanguage(state.language)
         }
       },
-    }
-  )
+    },
+  ),
 )

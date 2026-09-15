@@ -17,11 +17,13 @@ test('Kimi ignores done=false frames and waits for the final done=true frame', a
   const responsePromise = handler.handleNonStream(upstream)
 
   upstream.write(frame({ done: false }))
-  upstream.write(frame({
-    op: 'append',
-    mask: 'block.text',
-    block: { text: { content: 'OK' } },
-  }))
+  upstream.write(
+    frame({
+      op: 'append',
+      mask: 'block.text',
+      block: { text: { content: 'OK' } },
+    }),
+  )
   upstream.end(frame({ done: true }))
 
   const response = await responsePromise
@@ -34,19 +36,23 @@ test('Kimi maps structured capacity errors to a safe HTTP 429 error', async () =
   const handler = new KimiStreamHandler('Kimi-K3', 'conversation-test')
   const responsePromise = handler.handleNonStream(upstream)
 
-  upstream.end(frame({
-    error: {
-      code: 'resource_exhausted',
-      details: [{
-        debug: {
-          localizedMessage: {
-            message: 'The Kimi service is at capacity.',
+  upstream.end(
+    frame({
+      error: {
+        code: 'resource_exhausted',
+        details: [
+          {
+            debug: {
+              localizedMessage: {
+                message: 'The Kimi service is at capacity.',
+              },
+              secretInternalValue: 'must-not-be-returned',
+            },
           },
-          secretInternalValue: 'must-not-be-returned',
-        },
-      }],
-    },
-  }))
+        ],
+      },
+    }),
+  )
 
   await assert.rejects(responsePromise, (error: any) => {
     assert.equal(error.status, 429)

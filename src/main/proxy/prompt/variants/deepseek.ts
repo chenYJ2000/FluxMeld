@@ -9,9 +9,7 @@ export const DEEPSEEK_VARIANT: PromptVariant = {
   id: 'deepseek',
   name: 'DeepSeek',
   description: 'Optimized prompt variant for DeepSeek models',
-  modelPatterns: [
-    'deepseek',
-  ],
+  modelPatterns: ['deepseek'],
   providerPatterns: ['deepseek'],
   systemPrompt: 'You are a helpful AI assistant.',
   toolPromptTemplate: `## Available Tools

@@ -28,9 +28,22 @@ test('matrix runner defaults to /v1/models discovery', () => {
 })
 
 test('matrix runner dry-run does not require secrets and reports filters', () => {
-  const result = spawnSync('node', [script, '--fixture', 'fixture.json', '--profile', 'cherry-studio', '--provider', 'deepseek', '--dry-run'], {
-    encoding: 'utf8',
-  })
+  const result = spawnSync(
+    'node',
+    [
+      script,
+      '--fixture',
+      'fixture.json',
+      '--profile',
+      'cherry-studio',
+      '--provider',
+      'deepseek',
+      '--dry-run',
+    ],
+    {
+      encoding: 'utf8',
+    },
+  )
 
   assert.equal(result.status, 0, result.stderr)
   assert.match(result.stdout, /v1\/models/)
@@ -56,7 +69,9 @@ test('matrix runner dry-run does not leak configured secrets', () => {
 test('matrix runner selects provider id when /v1/models uses display owned_by', () => {
   const cwd = makeTempRunDir()
   const capture = path.join(cwd, 'fetch.json')
-  const nodeOptions = writeMockFetch(cwd, `
+  const nodeOptions = writeMockFetch(
+    cwd,
+    `
 import fs from 'node:fs'
 
 globalThis.fetch = async (url, options) => {
@@ -68,18 +83,23 @@ globalThis.fetch = async (url, options) => {
     ]
   }), { status: 200, headers: { 'Content-Type': 'application/json' } })
 }
-`)
-  const result = spawnSync('node', [scriptPath, '--fixture', 'fixture.json', '--provider', 'deepseek'], {
-    cwd,
-    env: {
-      ...process.env,
-      NODE_OPTIONS: nodeOptions,
-      FLUXMELD_BASE_URL: 'http://127.0.0.1:8080',
-      FLUXMELD_API_KEY: 'sk_super_secret_value',
-      FLUXMELD_MGMT_SECRET: 'mgmt_super_secret_value',
+`,
+  )
+  const result = spawnSync(
+    'node',
+    [scriptPath, '--fixture', 'fixture.json', '--provider', 'deepseek'],
+    {
+      cwd,
+      env: {
+        ...process.env,
+        NODE_OPTIONS: nodeOptions,
+        FLUXMELD_BASE_URL: 'http://127.0.0.1:8080',
+        FLUXMELD_API_KEY: 'sk_super_secret_value',
+        FLUXMELD_MGMT_SECRET: 'mgmt_super_secret_value',
+      },
+      encoding: 'utf8',
     },
-    encoding: 'utf8',
-  })
+  )
 
   assert.equal(result.status, 0, result.stderr)
   assert.doesNotMatch(result.stdout, /sk_super_secret_value/)
@@ -102,12 +122,15 @@ globalThis.fetch = async (url, options) => {
 
 test('matrix runner exits nonzero when /v1/models fails', () => {
   const cwd = makeTempRunDir()
-  const nodeOptions = writeMockFetch(cwd, `
+  const nodeOptions = writeMockFetch(
+    cwd,
+    `
 globalThis.fetch = async () => new Response(JSON.stringify({ error: 'failed' }), {
   status: 500,
   headers: { 'Content-Type': 'application/json' }
 })
-`)
+`,
+  )
   const result = spawnSync('node', [scriptPath, '--fixture', 'fixture.json'], {
     cwd,
     env: {

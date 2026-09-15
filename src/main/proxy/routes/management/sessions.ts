@@ -53,7 +53,7 @@ router.get('/sessions', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const sessions = sessionManager.getAllActiveSessions()
     const transformedSessions = sessions.map(transformSession)
-    
+
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse(transformedSessions)
   } catch (error) {
@@ -71,13 +71,13 @@ router.get('/sessions/:id', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const id = ctx.params.id
     const session = sessionManager.getSession(id)
-    
+
     if (!session) {
       ctx.status = 404
       ctx.body = createErrorResponse('session_not_found', `Session not found: ${id}`)
       return
     }
-    
+
     const transformedSession = transformSession(session)
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse(transformedSession)
@@ -96,21 +96,21 @@ router.delete('/sessions/:id', managementAuthMiddleware, async (ctx: Context) =>
   try {
     const id = ctx.params.id
     const session = sessionManager.getSession(id)
-    
+
     if (!session) {
       ctx.status = 404
       ctx.body = createErrorResponse('session_not_found', `Session not found: ${id}`)
       return
     }
-    
+
     const deleted = sessionManager.deleteSession(id)
-    
+
     if (!deleted) {
       ctx.status = 500
       ctx.body = createErrorResponse('delete_failed', `Failed to delete session: ${id}`)
       return
     }
-    
+
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse({ id, deleted: true })
   } catch (error) {
@@ -128,15 +128,18 @@ router.delete('/sessions/:id', managementAuthMiddleware, async (ctx: Context) =>
 router.delete('/sessions', managementAuthMiddleware, async (ctx: Context) => {
   try {
     const body = ctx.request.body as { confirm?: boolean } | undefined
-    
+
     if (!body || body.confirm !== true) {
       ctx.status = 400
-      ctx.body = createErrorResponse('confirmation_required', 'Request body must include { confirm: true } to clear all sessions')
+      ctx.body = createErrorResponse(
+        'confirmation_required',
+        'Request body must include { confirm: true } to clear all sessions',
+      )
       return
     }
-    
+
     sessionManager.clearAllSessions()
-    
+
     ctx.set('Content-Type', 'application/json')
     ctx.body = createSuccessResponse({ cleared: true })
   } catch (error) {

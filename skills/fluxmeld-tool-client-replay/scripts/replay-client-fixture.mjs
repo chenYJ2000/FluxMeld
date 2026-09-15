@@ -88,14 +88,20 @@ async function main() {
 
   if (args['dry-run']) {
     const fixturePreflight = getFixturePreflight(args.fixture)
-    console.log(JSON.stringify({
-      fixture: args.fixture,
-      ...fixturePreflight,
-      profile: profile.id,
-      model,
-      baseUrl,
-      apiKey: mask(apiKey),
-    }, null, 2))
+    console.log(
+      JSON.stringify(
+        {
+          fixture: args.fixture,
+          ...fixturePreflight,
+          profile: profile.id,
+          model,
+          baseUrl,
+          apiKey: mask(apiKey),
+        },
+        null,
+        2,
+      ),
+    )
     return
   }
 
@@ -128,7 +134,7 @@ async function main() {
   console.log(JSON.stringify({ profile: profile.id, model, results }, null, 2))
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error))
   process.exit(1)
 })

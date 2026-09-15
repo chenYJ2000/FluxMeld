@@ -44,16 +44,20 @@ interface LogRowProps {
 
 interface ListImperativeHandle {
   readonly element: HTMLDivElement | null
-  scrollToRow(config: { align?: 'auto' | 'center' | 'end' | 'smart' | 'start'; behavior?: 'auto' | 'instant' | 'smooth'; index: number }): void
+  scrollToRow(config: {
+    align?: 'auto' | 'center' | 'end' | 'smart' | 'start'
+    behavior?: 'auto' | 'instant' | 'smooth'
+    index: number
+  }): void
 }
 
-function LogRow({ 
-  index, 
-  style, 
-  logs, 
-  selectedLogId, 
-  onLogClick 
-}: { 
+function LogRow({
+  index,
+  style,
+  logs,
+  selectedLogId,
+  onLogClick,
+}: {
   index: number
   style: React.CSSProperties
   ariaAttributes: { 'aria-posinset': number; 'aria-setsize': number; role: 'listitem' }
@@ -66,9 +70,9 @@ function LogRow({
       style={style}
       className={cn(
         'flex items-start gap-3 px-4 py-2 border-b border-[var(--glass-border)] cursor-pointer transition-all duration-200',
-        isSelected 
-          ? 'bg-[var(--accent-primary)]/10 border-l-2 border-l-[var(--accent-primary)]' 
-          : 'hover:bg-[var(--glass-bg-hover)] hover:-translate-x-0.5'
+        isSelected
+          ? 'bg-[var(--accent-primary)]/10 border-l-2 border-l-[var(--accent-primary)]'
+          : 'hover:bg-[var(--glass-bg-hover)] hover:-translate-x-0.5',
       )}
       onClick={() => onLogClick?.(log)}
     >
@@ -77,18 +81,12 @@ function LogRow({
       </span>
       <Badge
         variant="outline"
-        className={cn(
-          'text-white text-xs shrink-0 px-2 py-0.5',
-          levelColors[log.level]
-        )}
+        className={cn('text-white text-xs shrink-0 px-2 py-0.5', levelColors[log.level])}
       >
         {log.level.toUpperCase()}
       </Badge>
       <span
-        className={cn(
-          'text-sm font-mono break-all flex-1',
-          levelTextColors[log.level]
-        )}
+        className={cn('text-sm font-mono break-all flex-1', levelTextColors[log.level])}
         title={log.message}
       >
         {log.message}
@@ -114,15 +112,11 @@ export function LogList({ height = 500, onLogClick }: LogListProps) {
 
   const handleRowsRendered = useCallback(
     ({ stopIndex }: { startIndex: number; stopIndex: number }) => {
-      if (
-        stopIndex >= filteredLogs.length - 10 &&
-        hasMore &&
-        !isLoading
-      ) {
+      if (stopIndex >= filteredLogs.length - 10 && hasMore && !isLoading) {
         loadMore()
       }
     },
-    [filteredLogs.length, hasMore, isLoading, loadMore]
+    [filteredLogs.length, hasMore, isLoading, loadMore],
   )
 
   const rowProps: LogRowProps = {
@@ -133,10 +127,7 @@ export function LogList({ height = 500, onLogClick }: LogListProps) {
 
   if (filteredLogs.length === 0) {
     return (
-      <div
-        className="flex items-center justify-center text-muted-foreground"
-        style={{ height }}
-      >
+      <div className="flex items-center justify-center text-muted-foreground" style={{ height }}>
         <div className="text-center">
           <p className="text-lg">No logs yet</p>
           <p className="text-sm mt-1">Logs will be displayed here in real-time</p>
@@ -148,7 +139,16 @@ export function LogList({ height = 500, onLogClick }: LogListProps) {
   return (
     <div className="relative">
       <List<LogRowProps>
-        listRef={listRef as React.Ref<{ readonly element: HTMLDivElement | null; scrollToRow(config: { align?: 'auto' | 'center' | 'end' | 'smart' | 'start'; behavior?: 'auto' | 'instant' | 'smooth'; index: number }): void }>}
+        listRef={
+          listRef as React.Ref<{
+            readonly element: HTMLDivElement | null
+            scrollToRow(config: {
+              align?: 'auto' | 'center' | 'end' | 'smart' | 'start'
+              behavior?: 'auto' | 'instant' | 'smooth'
+              index: number
+            }): void
+          }>
+        }
         rowComponent={LogRow}
         rowCount={filteredLogs.length}
         rowHeight={48}

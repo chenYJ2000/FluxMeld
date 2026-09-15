@@ -320,7 +320,9 @@ export function createClientApi(
     duplicate: (id: string): Promise<Provider> => transport.invoke('providers:duplicate', id),
     export: (id: string): Promise<string> => transport.invoke('providers:export', id),
     import: (jsonData: string): Promise<Provider> => transport.invoke('providers:import', jsonData),
-    updateModels: (providerId: string): Promise<{
+    updateModels: (
+      providerId: string,
+    ): Promise<{
       success: boolean
       modelsCount?: number
       error?: string
@@ -389,7 +391,8 @@ export function createClientApi(
       providerId: string,
       providerType: ProviderType,
       token: string,
-    ): Promise<OAuthResult> => transport.invoke('oauth:loginWithToken', { providerId, providerType, token }),
+    ): Promise<OAuthResult> =>
+      transport.invoke('oauth:loginWithToken', { providerId, providerType, token }),
     validateToken: (
       providerId: string,
       providerType: ProviderType,
@@ -466,7 +469,8 @@ export function createClientApi(
     downloadUpdate: (): Promise<void> => transport.invoke('app:downloadUpdate'),
     installUpdate: (): Promise<void> => transport.invoke('app:installUpdate'),
     getUpdateStatus: (): Promise<UpdateStatus> => transport.invoke('app:getUpdateStatus'),
-    onUpdateChecking: (callback: () => void) => transport.on('app:updateChecking', () => callback()),
+    onUpdateChecking: (callback: () => void) =>
+      transport.on('app:updateChecking', () => callback()),
     onUpdateAvailable: (callback: (info: any) => void) =>
       transport.on('app:updateAvailable', (info) => callback(info)),
     onUpdateNotAvailable: (callback: (info: any) => void) =>
@@ -481,7 +485,8 @@ export function createClientApi(
 
   const configAPI = {
     get: (): Promise<AppConfig> => transport.invoke('config:get'),
-    update: (updates: Partial<AppConfig>): Promise<boolean> => transport.invoke('config:update', updates),
+    update: (updates: Partial<AppConfig>): Promise<boolean> =>
+      transport.invoke('config:update', updates),
     onConfigChanged: (callback: (config: AppConfig) => void) =>
       transport.on('config:changed', (config) => callback(config)),
   }

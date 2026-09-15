@@ -4,13 +4,7 @@
  */
 
 import { storeManager } from './store'
-import {
-  AppConfig,
-  LoadBalanceStrategy,
-  Theme,
-  ModelMapping,
-  DEFAULT_CONFIG,
-} from './types'
+import { AppConfig, LoadBalanceStrategy, Theme, ModelMapping, DEFAULT_CONFIG } from './types'
 import { normalizeToolCallingConfig } from '../../shared/toolCalling'
 
 /**
@@ -33,13 +27,13 @@ export class ConfigManager {
   static update(updates: Partial<AppConfig>): AppConfig {
     const current = this.get()
     const newConfig = { ...current, ...updates }
-    
+
     const updated = storeManager.updateConfig(updates)
-    
+
     storeManager.addLog('info', 'Update app configuration', {
       data: { updates },
     })
-    
+
     return updated
   }
 
@@ -49,9 +43,9 @@ export class ConfigManager {
    */
   static reset(): AppConfig {
     storeManager.resetConfig()
-    
+
     storeManager.addLog('info', 'Reset app configuration to default values')
-    
+
     return DEFAULT_CONFIG
   }
 
@@ -73,7 +67,7 @@ export class ConfigManager {
     if (port < 1 || port > 65535) {
       throw new Error('Port number must be between 1-65535')
     }
-    
+
     this.update({ proxyPort: port })
   }
 
@@ -120,10 +114,13 @@ export class ConfigManager {
     const config = this.get()
     const mappings = { ...config.modelMappings }
     mappings[mapping.requestModel] = mapping
-    
+
     this.update({ modelMappings: mappings })
-    
-    storeManager.addLog('info', `Set model mapping: ${mapping.requestModel} -> ${mapping.actualModel}`)
+
+    storeManager.addLog(
+      'info',
+      `Set model mapping: ${mapping.requestModel} -> ${mapping.actualModel}`,
+    )
   }
 
   /**
@@ -133,16 +130,16 @@ export class ConfigManager {
   static removeModelMapping(model: string): boolean {
     const config = this.get()
     const mappings = { ...config.modelMappings }
-    
+
     if (!(model in mappings)) {
       return false
     }
-    
+
     delete mappings[model]
     this.update({ modelMappings: mappings })
-    
+
     storeManager.addLog('info', `Delete model mapping: ${model}`)
-    
+
     return true
   }
 
@@ -152,13 +149,13 @@ export class ConfigManager {
    */
   static setModelMappings(mappings: ModelMapping[]): void {
     const mappingRecord: Record<string, ModelMapping> = {}
-    
+
     for (const mapping of mappings) {
       mappingRecord[mapping.requestModel] = mapping
     }
-    
+
     this.update({ modelMappings: mappingRecord })
-    
+
     storeManager.addLog('info', `Batch set model mappings: ${mappings.length} items`)
   }
 
@@ -256,7 +253,7 @@ export class ConfigManager {
     if (days < 1 || days > 365) {
       throw new Error('Log retention days must be between 1-365')
     }
-    
+
     this.update({ logRetentionDays: days })
   }
 
@@ -278,7 +275,7 @@ export class ConfigManager {
     if (timeout < 1000 || timeout > 1800000) {
       throw new Error('Request timeout must be between 1000-1800000 milliseconds')
     }
-    
+
     this.update({ requestTimeout: timeout })
   }
 
@@ -298,7 +295,7 @@ export class ConfigManager {
     if (count < 0 || count > 10) {
       throw new Error('Retry count must be between 0-10')
     }
-    
+
     this.update({ retryCount: count })
   }
 
@@ -311,25 +308,25 @@ export class ConfigManager {
    */
   static validate(config: Partial<AppConfig>): { valid: boolean; errors: string[] } {
     const errors: string[] = []
-    
+
     if (config.proxyPort !== undefined) {
       if (config.proxyPort < 1 || config.proxyPort > 65535) {
         errors.push('Proxy port must be between 1-65535')
       }
     }
-    
+
     if (config.logRetentionDays !== undefined) {
       if (config.logRetentionDays < 1 || config.logRetentionDays > 365) {
         errors.push('Log retention days must be between 1-365')
       }
     }
-    
+
     if (config.requestTimeout !== undefined) {
       if (config.requestTimeout < 1000 || config.requestTimeout > 1800000) {
         errors.push('Request timeout must be between 1000-1800000 milliseconds')
       }
     }
-    
+
     if (config.retryCount !== undefined) {
       if (config.retryCount < 0 || config.retryCount > 10) {
         errors.push('Retry count must be between 0-10')
@@ -346,12 +343,16 @@ export class ConfigManager {
       }
       if (
         config.toolCallingConfig.clientAdapterId !== undefined &&
-        !['standard-openai-tools', 'cherry-studio-mcp', 'opencode'].includes(String(config.toolCallingConfig.clientAdapterId))
+        !['standard-openai-tools', 'cherry-studio-mcp', 'opencode'].includes(
+          String(config.toolCallingConfig.clientAdapterId),
+        )
       ) {
-        errors.push('toolCallingConfig.clientAdapterId must be one of: standard-openai-tools, cherry-studio-mcp, opencode')
+        errors.push(
+          'toolCallingConfig.clientAdapterId must be one of: standard-openai-tools, cherry-studio-mcp, opencode',
+        )
       }
     }
-    
+
     if (config.outboundProxy?.controllerUrl) {
       const controllerUrl = String(config.outboundProxy.controllerUrl).trim()
       if (controllerUrl) {
@@ -385,13 +386,13 @@ export class ConfigManager {
   static getDiff(newConfig: Partial<AppConfig>): Partial<AppConfig> {
     const diff: Partial<AppConfig> = {}
     const current = this.get()
-    
+
     for (const key of Object.keys(newConfig) as (keyof AppConfig)[]) {
       if (JSON.stringify(current[key]) !== JSON.stringify(newConfig[key])) {
-        (diff as Record<string, unknown>)[key] = newConfig[key]
+        ;(diff as Record<string, unknown>)[key] = newConfig[key]
       }
     }
-    
+
     return diff
   }
 
@@ -408,15 +409,15 @@ export class ConfigManager {
    */
   static import(config: Partial<AppConfig>): { success: boolean; errors: string[] } {
     const validation = this.validate(config)
-    
+
     if (!validation.valid) {
       return { success: false, errors: validation.errors }
     }
-    
+
     this.update(config)
-    
+
     storeManager.addLog('info', 'Import app configuration')
-    
+
     return { success: true, errors: [] }
   }
 }

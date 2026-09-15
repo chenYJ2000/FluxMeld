@@ -30,7 +30,7 @@ export interface UpdaterEvents {
   'update-not-available': (info: UpdateInfo) => void
   'download-progress': (progress: DownloadProgress) => void
   'update-downloaded': (info: UpdateInfo) => void
-  'error': (error: Error) => void
+  error: (error: Error) => void
 }
 
 export class UpdaterManager extends EventEmitter {
@@ -111,7 +111,7 @@ export class UpdaterManager extends EventEmitter {
         total: progress.total,
       }
       console.log(
-        `[Updater] Download progress: ${progress.percent.toFixed(2)}% (${(progress.transferred / 1024 / 1024).toFixed(2)}MB / ${(progress.total / 1024 / 1024).toFixed(2)}MB)`
+        `[Updater] Download progress: ${progress.percent.toFixed(2)}% (${(progress.transferred / 1024 / 1024).toFixed(2)}MB / ${(progress.total / 1024 / 1024).toFixed(2)}MB)`,
       )
       this.updateStatus({ progress: downloadProgress })
       this.sendToRenderer(IpcChannels.APP_UPDATE_PROGRESS, downloadProgress)

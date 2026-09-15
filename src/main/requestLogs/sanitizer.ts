@@ -87,14 +87,20 @@ export function trimRequestLogsToMaxEntries(
   return entries.slice(entries.length - maxEntries)
 }
 
-function sanitizeRequestLogBody(value: string | undefined, config: RequestLogConfig): string | undefined {
+function sanitizeRequestLogBody(
+  value: string | undefined,
+  config: RequestLogConfig,
+): string | undefined {
   if (!value) return value
 
   const redacted = config.redactSensitiveData ? redactSensitiveText(value) : value
   return truncateText(redacted, config.maxBodyChars)
 }
 
-function sanitizeUserInput(value: string | undefined, config: RequestLogConfig): string | undefined {
+function sanitizeUserInput(
+  value: string | undefined,
+  config: RequestLogConfig,
+): string | undefined {
   if (!value) return value
   const redacted = config.redactSensitiveData ? redactSensitiveText(value) : value
   return truncateText(redacted, 500)

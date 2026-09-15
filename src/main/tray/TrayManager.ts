@@ -5,11 +5,13 @@ import {
   app,
   BrowserWindow,
   ipcMain,
+  type NativeImage,
   MenuItemConstructorOptions,
 } from 'electron'
 import path from 'path'
 import { TrayWindow } from './TrayWindow'
 import { ConfigManager } from '../store/config'
+import { markAppQuitting } from '../lib/appLifecycle'
 
 const isWindows = process.platform === 'win32'
 const isLinux = process.platform === 'linux'
@@ -21,9 +23,9 @@ function getIconPath(): string {
   return path.join(__dirname, '../../build/icon.png')
 }
 
-function loadAppIcon(): nativeImage {
+function loadAppIcon(): NativeImage {
   const iconPath = getIconPath()
-  
+
   try {
     let icon = nativeImage.createFromPath(iconPath)
     if (!icon.isEmpty()) {
@@ -35,21 +37,21 @@ function loadAppIcon(): nativeImage {
   } catch (error) {
     console.error('Failed to load app icon:', error)
   }
-  
+
   return createFallbackIcon()
 }
 
-function createFallbackIcon(): nativeImage {
+function createFallbackIcon(): NativeImage {
   const size = 22
   const canvas = Buffer.alloc(size * size * 4)
-  
+
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const index = (y * size + x) * 4
       const centerX = size / 2
       const centerY = size / 2
       const distance = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2)
-      
+
       if (distance < size / 2 - 1) {
         canvas[index] = 59
         canvas[index + 1] = 130
@@ -60,7 +62,7 @@ function createFallbackIcon(): nativeImage {
       }
     }
   }
-  
+
   return nativeImage.createFromBuffer(canvas, { width: size, height: size })
 }
 
@@ -144,7 +146,7 @@ export class TrayManager {
 
     ipcMain.on('tray:quit-app', () => {
       this.destroy()
-      ;(app as any).isQuitting = true
+      markAppQuitting()
       app.quit()
     })
   }
@@ -198,7 +200,7 @@ export class TrayManager {
         label: isZh ? '退出 FluxMeld' : 'Quit FluxMeld',
         click: () => {
           this.destroy()
-          ;(app as any).isQuitting = true
+          markAppQuitting()
           app.quit()
         },
       },

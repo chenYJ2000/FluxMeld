@@ -1,7 +1,7 @@
 /**
  * Kilo Code Prompt Adapter
  * Handles tool prompt injection for Kilo Code client
- * 
+ *
  * Kilo Code injects its own tool prompt format, but some models (like DeepSeek)
  * may not understand it. This adapter:
  * 1. Detects Kilo Code's injected prompts
@@ -9,7 +9,13 @@
  */
 
 import { ChatMessage, ChatCompletionTool, ToolCall } from '../../types'
-import { BasePromptAdapter, PromptVariant, TransformResult, ParseResult, ToolCallFormat } from './BasePromptAdapter'
+import {
+  BasePromptAdapter,
+  PromptVariant,
+  TransformResult,
+  ParseResult,
+  ToolCallFormat,
+} from './BasePromptAdapter'
 import { ClientType } from '../../utils/promptSignatures'
 import { parseToolCallsFromText } from '../../utils/toolParser'
 
@@ -74,14 +80,14 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
 
   hasPromptInjected(messages: ChatMessage[]): boolean {
     const allContent = this.extractAllContent(messages)
-    
+
     for (const sig of this.detectSignatures) {
       if (allContent.includes(sig)) {
         console.log('[KiloCodeAdapter] Detected Kilo Code prompt injection')
         return true
       }
     }
-    
+
     return false
   }
 
@@ -90,13 +96,13 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
       return ''
     }
 
-    const toolDefinitions = tools.map(tool => {
-      const params = tool.function.parameters
-        ? JSON.stringify(tool.function.parameters)
-        : '{}'
+    const toolDefinitions = tools
+      .map((tool) => {
+        const params = tool.function.parameters ? JSON.stringify(tool.function.parameters) : '{}'
 
-      return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
-    }).join('\n')
+        return `Tool \`${tool.function.name}\`: ${tool.function.description || 'No description'}. Arguments JSON schema: ${params}`
+      })
+      .join('\n')
 
     const template = variant?.toolPromptTemplate || KILOCODE_VARIANT.toolPromptTemplate
     return template.replace('{{TOOL_DEFINITIONS}}', toolDefinitions)
@@ -104,10 +110,10 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
 
   parseToolCalls(content: string): ParseResult {
     const { toolCalls } = parseToolCallsFromText(content, 'default')
-    
+
     return {
       content,
-      toolCalls: toolCalls.map(tc => ({
+      toolCalls: toolCalls.map((tc) => ({
         index: tc.index,
         id: tc.id,
         type: tc.type,
@@ -125,7 +131,7 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
     messages: ChatMessage[],
     tools: ChatCompletionTool[] | undefined,
     model: string,
-    provider?: string
+    provider?: string,
   ): TransformResult {
     if (!tools || tools.length === 0) {
       return { messages, tools: undefined, injected: false }
@@ -134,7 +140,7 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
     if (this.hasPromptInjected(messages)) {
       console.log('[KiloCodeAdapter] Kilo Code prompt detected, replacing with standard format')
       const cleanedMessages = this.cleanKiloCodePrompt(messages)
-      const variant = this.getPromptVariant(model, provider)
+      const variant = this.getPromptVariant(model, provider) ?? undefined
       const toolsPrompt = this.toolsToPrompt(tools, variant)
       const transformedMessages = this.injectPrompt(cleanedMessages, toolsPrompt)
 
@@ -146,7 +152,7 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
       }
     }
 
-    const variant = this.getPromptVariant(model, provider)
+    const variant = this.getPromptVariant(model, provider) ?? undefined
     const toolsPrompt = this.toolsToPrompt(tools, variant)
     const transformedMessages = this.injectPrompt(messages, toolsPrompt)
 
@@ -159,7 +165,7 @@ export class KiloCodePromptAdapter extends BasePromptAdapter {
   }
 
   private cleanKiloCodePrompt(messages: ChatMessage[]): ChatMessage[] {
-    return messages.map(msg => {
+    return messages.map((msg) => {
       if (msg.role === 'system') {
         if (typeof msg.content === 'string') {
           const cleanedContent = this.removeKiloCodeToolSection(msg.content)

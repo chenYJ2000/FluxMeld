@@ -32,7 +32,8 @@ const FAKE_HEADERS = {
   'Sec-Fetch-Dest': 'empty',
   'Sec-Fetch-Mode': 'cors',
   'Sec-Fetch-Site': 'same-origin',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'User-Agent':
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
   Priority: 'u=1, i',
   'X-Msh-Platform': 'web',
 }
@@ -119,37 +120,32 @@ export class KimiAdapter extends BaseOAuthAdapter {
       'X-Msh-Session-Id': this.sessionId,
       'Connect-Protocol-Version': '1',
     }
-    
+
     if (token) {
       for (const [key, value] of Object.entries(buildKimiAuthHeaders(token))) {
         headers[key] = value
       }
     }
-    
+
     return headers
   }
 
-  
   private async callGrpcApi(token: string, service: string, body: object): Promise<any> {
-    const response = await axios.post(
-      `${KIMI_API_BASE}${service}`,
-      body,
-      {
-        headers: {
-          ...buildKimiAuthHeaders(token),
-          'Content-Type': 'application/json',
-          'Connect-Protocol-Version': '1',
-          ...FAKE_HEADERS,
-        },
-        timeout: 15000,
-        validateStatus: () => true,
-      }
-    )
-    
+    const response = await axios.post(`${KIMI_API_BASE}${service}`, body, {
+      headers: {
+        ...buildKimiAuthHeaders(token),
+        'Content-Type': 'application/json',
+        'Connect-Protocol-Version': '1',
+        ...FAKE_HEADERS,
+      },
+      timeout: 15000,
+      validateStatus: () => true,
+    })
+
     if (response.status !== 200) {
       return null
     }
-    
+
     return response.data
   }
 
@@ -158,11 +154,11 @@ export class KimiAdapter extends BaseOAuthAdapter {
    */
   async startLogin(options: OAuthOptions): Promise<OAuthResult> {
     this.emitProgress('pending', 'Opening browser...')
-    
+
     try {
       await shell.openExternal(KIMI_API_BASE)
       this.emitProgress('pending', 'Please log in via browser and enter Token manually')
-      
+
       return {
         success: false,
         providerId: options.providerId,
@@ -172,7 +168,7 @@ export class KimiAdapter extends BaseOAuthAdapter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to open browser'
       this.emitProgress('error', errorMessage)
-      
+
       return {
         success: false,
         providerId: options.providerId,
@@ -187,27 +183,34 @@ export class KimiAdapter extends BaseOAuthAdapter {
    */
   async loginWithToken(providerId: string, token: string): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating Token...')
-    
+
     const tokenType = this.detectTokenType(token)
-    this.emitProgress('pending', `Detected token type: ${tokenType === 'jwt' ? 'JWT Access Token' : 'Opaque Session Token (kimi-auth cookie)'}`)
-    
+    this.emitProgress(
+      'pending',
+      `Detected token type: ${tokenType === 'jwt' ? 'JWT Access Token' : 'Opaque Session Token (kimi-auth cookie)'}`,
+    )
+
     try {
       const credentials: Record<string, string> = { accessToken: token }
       let accountInfo: Record<string, string> = {}
-      
+
       if (tokenType === 'jwt') {
         const userId = this.extractUserIdFromJWT(token)
         const deviceId = this.extractDeviceIdFromJWT(token)
-        
+
         if (deviceId) {
           this.deviceId = deviceId
         }
-        
+
         accountInfo = { userId: userId || '' }
       }
-      
-      const userResponse = await this.callGrpcApi(token, '/apiv2/kimi.gateway.order.v1.SubscriptionService/GetSubscription', {})
-      
+
+      const userResponse = await this.callGrpcApi(
+        token,
+        '/apiv2/kimi.gateway.order.v1.SubscriptionService/GetSubscription',
+        {},
+      )
+
       if (!userResponse || !userResponse.subscription) {
         return {
           success: false,
@@ -216,15 +219,15 @@ export class KimiAdapter extends BaseOAuthAdapter {
           error: 'Token is invalid or expired',
         }
       }
-      
+
       accountInfo = {
         ...accountInfo,
         userId: userResponse.subscription?.userId || '',
         name: userResponse.subscription?.userName || '',
       }
-      
+
       this.emitProgress('success', 'Token validation successful')
-      
+
       return {
         success: true,
         providerId,
@@ -235,7 +238,7 @@ export class KimiAdapter extends BaseOAuthAdapter {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       this.emitProgress('error', `Token validation failed: ${errorMessage}`)
-      
+
       return {
         success: false,
         providerId,
@@ -257,27 +260,36 @@ export class KimiAdapter extends BaseOAuthAdapter {
    */
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
     // Support multiple key variations for flexibility
-    const accessToken = credentials.accessToken || credentials.token || credentials.access_token || credentials.apiKey || credentials.api_key
-    
+    const accessToken =
+      credentials.accessToken ||
+      credentials.token ||
+      credentials.access_token ||
+      credentials.apiKey ||
+      credentials.api_key
+
     if (!accessToken) {
       return {
         valid: false,
         error: 'Token cannot be empty',
       }
     }
-    
+
     const tokenType = this.detectTokenType(accessToken)
-    
+
     try {
-      const result = await this.callGrpcApi(accessToken, '/apiv2/kimi.gateway.order.v1.SubscriptionService/GetSubscription', {})
-      
+      const result = await this.callGrpcApi(
+        accessToken,
+        '/apiv2/kimi.gateway.order.v1.SubscriptionService/GetSubscription',
+        {},
+      )
+
       if (!result || !result.subscription) {
         return {
           valid: false,
           error: 'Token is invalid or expired',
         }
       }
-      
+
       return {
         valid: true,
         tokenType,
@@ -305,18 +317,20 @@ export class KimiAdapter extends BaseOAuthAdapter {
   /**
    * Get research version usage
    */
-  async getResearchUsage(token: string): Promise<{ remain: number; total: number; used: number } | null> {
+  async getResearchUsage(
+    token: string,
+  ): Promise<{ remain: number; total: number; used: number } | null> {
     try {
       const response = await axios.get(`${KIMI_API_BASE}/api/chat/research/usage`, {
         headers: this.getHeaders(token),
         timeout: 15000,
         validateStatus: () => true,
       })
-      
+
       if (response.status !== 200 || !response.data) {
         return null
       }
-      
+
       return response.data
     } catch {
       return null

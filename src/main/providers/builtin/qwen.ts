@@ -9,9 +9,9 @@ export const qwenConfig: BuiltinProviderConfig = {
   chatPath: '/api/v2/chat',
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json, text/event-stream, text/plain, */*',
-    'Origin': 'https://www.qianwen.com',
-    'Referer': 'https://www.qianwen.com/',
+    Accept: 'application/json, text/event-stream, text/plain, */*',
+    Origin: 'https://www.qianwen.com',
+    Referer: 'https://www.qianwen.com/',
   },
   enabled: true,
   description: 'Qwen AI assistant by Alibaba Cloud (www.qianwen.com)',
@@ -38,7 +38,8 @@ export const qwenConfig: BuiltinProviderConfig = {
       type: 'password',
       required: true,
       placeholder: 'Enter tongyi_sso_ticket',
-      helpText: 'SSO ticket obtained from www.qianwen.com, found in browser DevTools Application -> Cookies as tongyi_sso_ticket',
+      helpText:
+        'SSO ticket obtained from www.qianwen.com, found in browser DevTools Application -> Cookies as tongyi_sso_ticket',
     },
   ],
 }

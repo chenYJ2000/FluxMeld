@@ -32,13 +32,15 @@ function maskSecret(value) {
 
 function redact(value) {
   if (Array.isArray(value)) {
-    return value.map(item => redact(item))
+    return value.map((item) => redact(item))
   }
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => {
-      if (isSensitiveKey(key)) return [key, '[REDACTED]']
-      return [key, redact(entry)]
-    }))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => {
+        if (isSensitiveKey(key)) return [key, '[REDACTED]']
+        return [key, redact(entry)]
+      }),
+    )
   }
   if (typeof value === 'string') {
     return value
@@ -58,12 +60,18 @@ function bodyPreview(body) {
 }
 
 function dryRun(label, extra = {}) {
-  console.log(JSON.stringify({
-    command: label,
-    baseUrl,
-    managementSecret: maskSecret(managementSecret),
-    ...extra,
-  }, null, 2))
+  console.log(
+    JSON.stringify(
+      {
+        command: label,
+        baseUrl,
+        managementSecret: maskSecret(managementSecret),
+        ...extra,
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 async function request(path, options = {}) {
@@ -89,7 +97,10 @@ async function request(path, options = {}) {
 async function snapshot() {
   if (args['dry-run']) return dryRun('snapshot')
   const [health, proxy, config, providers, accounts, sessions] = await Promise.all([
-    fetch(`${baseUrl}/health`).then(async response => ({ status: response.status, body: await response.text() })),
+    fetch(`${baseUrl}/health`).then(async (response) => ({
+      status: response.status,
+      body: await response.text(),
+    })),
     request('/v0/management/proxy/status'),
     request('/v0/management/config'),
     request('/v0/management/providers/'),
@@ -113,17 +124,27 @@ async function createApiKey() {
     }),
   })
   if (!result.ok) throw new Error(`create-api-key failed: ${result.status}`)
-  console.error('Warning: create-api-key prints a one-time API key. Do not write this output to durable logs.')
-  console.log(JSON.stringify({
-    id: result.body.data.id,
-    key: result.body.data.key,
-  }, null, 2))
+  console.error(
+    'Warning: create-api-key prints a one-time API key. Do not write this output to durable logs.',
+  )
+  console.log(
+    JSON.stringify(
+      {
+        id: result.body.data.id,
+        key: result.body.data.key,
+      },
+      null,
+      2,
+    ),
+  )
 }
 
 async function deleteApiKey() {
   if (!args.id) throw new Error('--id is required')
   if (args['dry-run']) return dryRun('delete-api-key', { id: args.id })
-  const result = await request(`/v0/management/api-keys/${encodeURIComponent(args.id)}`, { method: 'DELETE' })
+  const result = await request(`/v0/management/api-keys/${encodeURIComponent(args.id)}`, {
+    method: 'DELETE',
+  })
   console.log(JSON.stringify(result, null, 2))
 }
 
@@ -149,7 +170,7 @@ async function main() {
   console.log('Commands: snapshot, create-api-key, delete-api-key, restore-tool-config')
 }
 
-main().catch(error => {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : String(error))
   process.exit(1)
 })

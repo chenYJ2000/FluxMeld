@@ -16,7 +16,11 @@ export function buildToolCallingRuntimePlan(input: {
   const toolNames = new Set(tools.map((tool) => tool.name))
   const forcedName = input.clientRequest.toolChoice.forcedName
 
-  if (input.clientRequest.toolChoice.mode === 'forced' && forcedName && !toolNames.has(forcedName)) {
+  if (
+    input.clientRequest.toolChoice.mode === 'forced' &&
+    forcedName &&
+    !toolNames.has(forcedName)
+  ) {
     throw new Error(`Forced tool ${forcedName} is not declared`)
   }
 
@@ -29,9 +33,10 @@ export function buildToolCallingRuntimePlan(input: {
     profile.managedSupport,
   )
   const mode = disabledReason ? 'disabled' : 'managed'
-  const protocol = input.clientRequest.preferredProtocolByProvider?.[input.providerId]
-    ?? input.clientRequest.preferredProtocol
-    ?? profile.preferredManagedProtocol
+  const protocol =
+    input.clientRequest.preferredProtocolByProvider?.[input.providerId] ??
+    input.clientRequest.preferredProtocol ??
+    profile.preferredManagedProtocol
   const shouldInjectPrompt = mode === 'managed'
   const shouldParseResponse = mode === 'managed'
 

@@ -1,5 +1,10 @@
 # FluxMeld 项目代码文档
 
+> 注意：本文件部分内容可能滞后于代码。权威架构说明见
+> [`docs/architecture/overview.md`](docs/architecture/overview.md) 与
+> [`docs/architecture/provider-plugin.md`](docs/architecture/provider-plugin.md)，
+> 质量门禁见 [`TESTING.md`](TESTING.md)。
+
 ## 1. 项目概述
 
 FluxMeld 是一个多平台 AI 服务统一管理工具，通过利用官方 Web UI 实现零成本访问领先的 AI 模型。它支持 DeepSeek、GLM、Kimi、MiniMax、Qwen、Z.ai 等提供商，并与 openlcaw、Cline、Roo-Code 等工具无缝集成，使任何 OpenAI 兼容客户端都能开箱即用。

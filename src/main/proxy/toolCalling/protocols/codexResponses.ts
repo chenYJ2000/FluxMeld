@@ -64,7 +64,9 @@ When Codex Responses compatibility is enabled, emit response items with type "fu
             ? record.id
             : `call_${toolCalls.length}`
 
-      toolCalls.push(buildToolCall(id, toolCalls.length, name, normalizeArguments(record.arguments), parseable))
+      toolCalls.push(
+        buildToolCall(id, toolCalls.length, name, normalizeArguments(record.arguments), parseable),
+      )
     }
 
     if (toolCalls.length > 0) rawMatches.push(parseable)

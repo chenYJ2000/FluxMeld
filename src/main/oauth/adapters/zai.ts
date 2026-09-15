@@ -16,7 +16,8 @@ import {
 
 const ZAI_API_BASE = 'https://chat.z.ai'
 const X_FE_VERSION = 'prod-fe-1.1.37'
-const ZAI_USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
+const ZAI_USER_AGENT =
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36'
 
 const FAKE_HEADERS = {
   Accept: '*/*',
@@ -52,10 +53,10 @@ export class ZaiAdapter extends BaseOAuthAdapter {
    */
   async loginWithToken(providerId: string, token: string): Promise<OAuthResult> {
     this.emitProgress('pending', 'Validating Token...')
-    
+
     try {
       const validation = await this.validateToken({ token })
-      
+
       if (!validation.valid) {
         return {
           success: false,
@@ -64,9 +65,9 @@ export class ZaiAdapter extends BaseOAuthAdapter {
           error: validation.error || 'Token validation failed',
         }
       }
-      
+
       this.emitProgress('success', 'Token validation successful')
-      
+
       return {
         success: true,
         providerId,
@@ -96,19 +97,19 @@ export class ZaiAdapter extends BaseOAuthAdapter {
    */
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
     const token = credentials.token
-    
+
     if (!token) {
       return {
         valid: false,
         error: 'Token cannot be empty',
       }
     }
-    
+
     if (token.startsWith('eyJ') && token.split('.').length === 3) {
       try {
         const parts = token.split('.')
         const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
-        
+
         // Reject guest accounts
         if (payload.email && payload.email.includes('@guest.com')) {
           return {
@@ -116,7 +117,7 @@ export class ZaiAdapter extends BaseOAuthAdapter {
             error: 'Guest account not allowed, please login with a real account',
           }
         }
-        
+
         if (payload && payload.id) {
           return {
             valid: true,
@@ -135,7 +136,7 @@ export class ZaiAdapter extends BaseOAuthAdapter {
         }
       }
     }
-    
+
     return {
       valid: false,
       error: 'Token is invalid',
