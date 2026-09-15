@@ -30,14 +30,7 @@ import {
 } from 'lucide-react'
 import type { BuiltinProviderConfig, ProviderVendor } from '@/types/electron'
 import { cn } from '@/lib/utils'
-import deepseekIcon from '@/assets/providers/deepseek.svg'
-import glmIcon from '@/assets/providers/glm.svg'
-import kimiIcon from '@/assets/providers/kimi.svg'
-import mimoIcon from '@/assets/providers/mimo.svg'
-import minimaxIcon from '@/assets/providers/minimax.svg'
-import perplexityIcon from '@/assets/providers/perplexity.svg'
-import qwenIcon from '@/assets/providers/qwen.svg'
-import zaiIcon from '@/assets/providers/zai.svg'
+import { getProviderIcon } from '@/lib/providerIcon'
 
 interface AddProviderDialogProps {
   open: boolean
@@ -58,122 +51,6 @@ interface AddProviderDialogProps {
       used?: number
     }
   }>
-}
-
-const providerIcons: Record<string, string> = {
-  deepseek: deepseekIcon,
-  glm: glmIcon,
-  kimi: kimiIcon,
-  mimo: mimoIcon,
-  minimax: minimaxIcon,
-  perplexity: perplexityIcon,
-  qwen: qwenIcon,
-  'qwen-ai': qwenIcon,
-  zai: zaiIcon,
-}
-
-function mapOAuthCredentials(
-  providerId: string | undefined,
-  credentials: Record<string, string>,
-): Record<string, string> {
-  console.log(
-    '[mapOAuthCredentials] Input providerId:',
-    providerId,
-    'credentials:',
-    JSON.stringify(credentials, null, 2),
-  )
-
-  if (!providerId) {
-    console.log('[mapOAuthCredentials] No providerId, returning as-is')
-    return credentials
-  }
-
-  const credentialKeyMap: Record<string, string> = {
-    glm: 'chatglm_refresh_token',
-    deepseek: 'userToken',
-    qwen: 'tongyi_sso_ticket',
-    'qwen-ai': 'tongyi_sso_ticket',
-    zai: 'tongyi_sso_ticket',
-    perplexity: '__Secure-next-auth.session-token',
-  }
-
-  const providerFieldNames: Record<string, string> = {
-    glm: 'refresh_token',
-    deepseek: 'token',
-    qwen: 'ticket',
-    'qwen-ai': 'ticket',
-    zai: 'ticket',
-    perplexity: 'sessionToken',
-  }
-
-  const oauthKey = credentialKeyMap[providerId]
-  if (oauthKey && credentials[oauthKey]) {
-    const fieldName = providerFieldNames[providerId]
-    if (fieldName) {
-      let tokenValue = credentials[oauthKey]
-      if (
-        providerId === 'deepseek' &&
-        tokenValue &&
-        tokenValue.startsWith('{') &&
-        tokenValue.endsWith('}')
-      ) {
-        try {
-          const parsed = JSON.parse(tokenValue)
-          if (parsed.value) {
-            tokenValue = parsed.value
-          }
-        } catch (e) {
-          console.error('[mapOAuthCredentials] Error parsing JSON token:', e)
-        }
-      }
-      console.log('[mapOAuthCredentials] Mapped', oauthKey, 'to', fieldName)
-      return { [fieldName]: tokenValue }
-    }
-  }
-
-  if (providerId === 'perplexity' && credentials['__Secure-next-auth.session-token']) {
-    console.log('[mapOAuthCredentials] Mapped Perplexity secure token')
-    return { sessionToken: credentials['__Secure-next-auth.session-token'] }
-  }
-  if (providerId === 'perplexity' && credentials['next-auth.session-token']) {
-    console.log('[mapOAuthCredentials] Mapped Perplexity session token')
-    return { sessionToken: credentials['next-auth.session-token'] }
-  }
-
-  if (providerId === 'mimo') {
-    console.log('[mapOAuthCredentials] Processing Mimo credentials')
-    const result: Record<string, string> = {}
-
-    if (credentials['serviceToken']) {
-      result['service_token'] = credentials['serviceToken']
-      console.log('[mapOAuthCredentials] Mapped serviceToken -> service_token')
-    } else if (credentials['service_token']) {
-      result['service_token'] = credentials['service_token']
-      console.log('[mapOAuthCredentials] Using existing service_token')
-    }
-
-    if (credentials['userId']) {
-      result['user_id'] = credentials['userId']
-      console.log('[mapOAuthCredentials] Mapped userId -> user_id')
-    } else if (credentials['user_id']) {
-      result['user_id'] = credentials['user_id']
-      console.log('[mapOAuthCredentials] Using existing user_id')
-    }
-
-    if (credentials['xiaomichatbot_ph']) {
-      result['ph_token'] = credentials['xiaomichatbot_ph']
-      console.log('[mapOAuthCredentials] Mapped xiaomichatbot_ph -> ph_token')
-    } else if (credentials['ph_token']) {
-      result['ph_token'] = credentials['ph_token']
-      console.log('[mapOAuthCredentials] Using existing ph_token')
-    }
-
-    console.log('[mapOAuthCredentials] Mimo result:', JSON.stringify(result, null, 2))
-    return result
-  }
-
-  console.log('[mapOAuthCredentials] No special mapping needed, returning as-is')
-  return credentials
 }
 
 export function AddProviderDialog({
@@ -381,7 +258,8 @@ export function AddProviderDialog({
           JSON.stringify(result.credentials, null, 2),
         )
 
-        const mappedCredentials = mapOAuthCredentials(selectedProviderData?.id, result.credentials)
+        // Main process normalizes OAuth credentials to canonical field names.
+        const mappedCredentials = result.credentials
         console.log(
           '[AddProviderDialog] Mapped credentials:',
           JSON.stringify(mappedCredentials, null, 2),
@@ -710,9 +588,9 @@ export function AddProviderDialog({
                 >
                   <div className="flex items-start gap-3 flex-1 min-w-0">
                     <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                      {providerIcons[provider.id] ? (
+                      {getProviderIcon(provider.id) ? (
                         <img
-                          src={providerIcons[provider.id]}
+                          src={getProviderIcon(provider.id)}
                           alt={provider.name}
                           className="h-8 w-8 object-contain"
                         />
@@ -730,10 +608,10 @@ export function AddProviderDialog({
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {getProviderDescription(provider)}
                       </p>
-                      {provider.id === 'perplexity' && (
+                      {provider.ui?.noticeKey && (
                         <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-1">
                           <Info className="h-3 w-3 flex-shrink-0" />
-                          <span>{t('perplexity.freeUserNotice')}</span>
+                          <span>{t(provider.ui.noticeKey)}</span>
                         </p>
                       )}
                       <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -803,9 +681,9 @@ export function AddProviderDialog({
     <div className="mt-4 space-y-4">
       <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
         <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center overflow-hidden">
-          {providerIcons[selectedProviderData?.id || ''] ? (
+          {getProviderIcon(selectedProviderData?.id) ? (
             <img
-              src={providerIcons[selectedProviderData?.id || '']}
+              src={getProviderIcon(selectedProviderData?.id)}
               alt={selectedProviderData?.name || ''}
               className="h-8 w-8 object-contain"
             />

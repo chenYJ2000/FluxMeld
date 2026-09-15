@@ -13,7 +13,6 @@ import type {
   Account,
   AppConfig,
   ContextManagementConfig,
-  CredentialField,
   LogEntry,
   ManagementApiConfig,
   ModelMapping,
@@ -56,20 +55,11 @@ export type { LegacyToolPromptConfig, ToolCallingConfig }
 
 /**
  * Built-in Provider Configuration Interface
- * Extends Provider interface, adds credential field configuration
+ *
+ * Defined alongside the provider plugin contracts (`providers/types.ts`) and
+ * re-exported here for backwards compatibility with existing store imports.
  */
-export interface BuiltinProviderConfig extends Omit<Provider, 'createdAt' | 'updatedAt'> {
-  /** Credential field configuration */
-  credentialFields: CredentialField[]
-  /** Token check endpoint */
-  tokenCheckEndpoint?: string
-  /** Token check method */
-  tokenCheckMethod?: 'GET' | 'POST'
-  /** Models list API endpoint for dynamic model fetching */
-  modelsApiEndpoint?: string
-  /** Additional headers for models API request */
-  modelsApiHeaders?: Record<string, string>
-}
+export type { BuiltinProviderConfig } from '../providers/types.ts'
 
 /**
  * Session Status Enum

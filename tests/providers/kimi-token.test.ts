@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildKimiAuthHeaders, isKimiOpaqueToken } from '../../src/main/providers/kimiToken'
+import { buildKimiAuthHeaders, isKimiOpaqueToken } from '../../src/main/providers/kimi/token'
 
 const JWT_TOKEN =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcHBfaWQiOiJraW1pIiwidHlwIjoiYWNjZXNzIn0.sig'

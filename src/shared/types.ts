@@ -34,6 +34,28 @@ export interface CredentialField {
   required: boolean
   placeholder?: string
   helpText?: string
+  /** Optional i18n keys so the renderer can localize without provider-specific branches */
+  labelKey?: string
+  placeholderKey?: string
+  helpTextKey?: string
+}
+
+/** Serializable capability flags a provider may expose to the UI. */
+export interface ProviderCapabilities {
+  /** Account-level "delete all chats" support */
+  clearChats?: boolean
+  /** Provider usage credits support */
+  credits?: boolean
+}
+
+/** Serializable UI metadata for a provider. */
+export interface ProviderUiMeta {
+  /** Asset key under `renderer/src/assets/providers/<iconKey>.svg` */
+  iconKey?: string
+  /** i18n namespace prefix for provider-specific strings */
+  i18nPrefix?: string
+  /** Optional i18n key for a provider-specific notice shown in the card */
+  noticeKey?: string
 }
 
 export type LoadBalanceStrategy =
@@ -118,6 +140,10 @@ export interface Provider {
   lastStatusCheck?: number
   /** Credential field configuration (present on built-in providers) */
   credentialFields?: CredentialField[]
+  /** Serializable capability flags surfaced to the UI */
+  capabilities?: ProviderCapabilities
+  /** Serializable UI metadata (icon key, i18n prefix, notices) */
+  ui?: ProviderUiMeta
 }
 
 export interface ModelMapping {

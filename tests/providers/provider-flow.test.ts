@@ -4,15 +4,15 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
-import { deepseekConfig } from '../../src/main/providers/builtin/deepseek.ts'
-import { glmConfig } from '../../src/main/providers/builtin/glm.ts'
-import { kimiConfig } from '../../src/main/providers/builtin/kimi.ts'
-import { minimaxConfig } from '../../src/main/providers/builtin/minimax.ts'
-import { mimoConfig } from '../../src/main/providers/builtin/mimo.ts'
-import { perplexityConfig } from '../../src/main/providers/builtin/perplexity.ts'
-import { qwenConfig } from '../../src/main/providers/builtin/qwen.ts'
-import { qwenAiConfig } from '../../src/main/providers/builtin/qwen-ai.ts'
-import { zaiConfig } from '../../src/main/providers/builtin/zai.ts'
+import { deepseekConfig } from '../../src/main/providers/deepseek/config.ts'
+import { glmConfig } from '../../src/main/providers/glm/config.ts'
+import { kimiConfig } from '../../src/main/providers/kimi/config.ts'
+import { minimaxConfig } from '../../src/main/providers/minimax/config.ts'
+import { mimoConfig } from '../../src/main/providers/mimo/config.ts'
+import { perplexityConfig } from '../../src/main/providers/perplexity/config.ts'
+import { qwenConfig } from '../../src/main/providers/qwen/config.ts'
+import { qwenAiConfig } from '../../src/main/providers/qwen-ai/config.ts'
+import { zaiConfig } from '../../src/main/providers/zai/config.ts'
 import {
   DEEPSEEK_PRIMARY_MODELS,
   DEFAULT_DEEPSEEK_MODEL_MAPPINGS,
@@ -21,14 +21,14 @@ import {
   normalizeModelMappingsWithDefaults,
   sanitizeDeepSeekModelOverrides,
 } from '../../src/main/store/types.ts'
+import { resolveDeepSeekChatOptions } from '../../src/main/providers/deepseek/modelOptions.ts'
+import { resolveGLMChatMode } from '../../src/main/providers/glm/modelOptions.ts'
 import {
   createKimiChatPayload,
   encodeKimiGrpcFrame,
-  resolveDeepSeekChatOptions,
-  resolveGLMChatMode,
   resolveKimiReasoningEffort,
   resolveKimiScenario,
-} from '../../src/main/proxy/adapters/providerModelOptions.ts'
+} from '../../src/main/providers/kimi/modelOptions.ts'
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))))
 
@@ -207,7 +207,7 @@ test('GLM, Kimi, and MiniMax built-in default models match current web providers
   })
 
   const minimaxAdapterSource = readFileSync(
-    join(root, 'src/main/proxy/adapters/minimax.ts'),
+    join(root, 'src/main/providers/minimax/adapter.ts'),
     'utf8',
   )
   assert.match(minimaxAdapterSource, /this\.model = 'MiniMax-M2\.7'/)
@@ -231,7 +231,7 @@ test('GLM-5.2 reasoning effort maps to the current Qingyan web modes', () => {
   assert.equal(resolveGLMChatMode('deep'), 'deep_thinking')
   assert.throws(() => resolveGLMChatMode('turbo'), /Unsupported GLM reasoning_effort/)
 
-  const glmAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/glm.ts'), 'utf8')
+  const glmAdapterSource = readFileSync(join(root, 'src/main/providers/glm/adapter.ts'), 'utf8')
   assert.match(glmAdapterSource, /chat_mode: chatMode/)
   assert.doesNotMatch(glmAdapterSource, /if_plus_model/)
 })
@@ -295,21 +295,23 @@ test('Kimi and domestic Qwen support account-level chat cleanup', () => {
     join(root, 'src/renderer/src/components/providers/AccountList.tsx'),
     'utf8',
   )
-  const kimiAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/kimi.ts'), 'utf8')
-  const qwenAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/qwen.ts'), 'utf8')
+  const kimiModuleSource = readFileSync(join(root, 'src/main/providers/kimi/index.ts'), 'utf8')
+  const qwenModuleSource = readFileSync(join(root, 'src/main/providers/qwen/index.ts'), 'utf8')
+  const kimiAdapterSource = readFileSync(join(root, 'src/main/providers/kimi/adapter.ts'), 'utf8')
+  const qwenAdapterSource = readFileSync(join(root, 'src/main/providers/qwen/adapter.ts'), 'utf8')
 
-  assert.match(handlersSource, /import \{ KimiAdapter \} from '\.\.\/proxy\/adapters\/kimi'/)
-  assert.match(handlersSource, /import \{ QwenAdapter \} from '\.\.\/proxy\/adapters\/qwen'/)
+  // Providers are dispatched through the registry, not hard-coded in the IPC layer.
+  assert.match(handlersSource, /import \{ getProviderModule \} from '\.\.\/providers\/registry'/)
+  assert.match(handlersSource, /getProviderModule\(provider\.id\)\?\.capabilities\?\.clearChats/)
   assert.match(
-    handlersSource,
-    /kimi: async \(provider, account\) => new KimiAdapter\(provider, account\)\.deleteAllChats\(\)/,
+    kimiModuleSource,
+    /new KimiAdapter\(provider, account\)\.deleteAllChats\(\)/,
   )
   assert.match(
-    handlersSource,
-    /qwen: async \(provider, account\) => new QwenAdapter\(provider, account\)\.deleteAllChats\(\)/,
+    qwenModuleSource,
+    /new QwenAdapter\(provider, account\)\.deleteAllChats\(\)/,
   )
-  assert.match(accountListSource, /providerId === 'kimi'/)
-  assert.match(accountListSource, /providerId === 'qwen'/)
+  assert.match(accountListSource, /provider\?\.capabilities\?\.clearChats/)
 
   assert.match(kimiAdapterSource, /async deleteAllChats\(\): Promise<boolean>/)
   assert.match(kimiAdapterSource, /kimi\.chat\.v1\.ChatService\/ListChats/)
@@ -345,7 +347,7 @@ test('domestic Qwen models match the web chat model ids captured from HAR', () =
   assert.deepEqual(qwenConfig.supportedModels, expectedModels)
   assert.deepEqual(qwenConfig.modelMappings, expectedMappings)
 
-  const qwenAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/qwen.ts'), 'utf8')
+  const qwenAdapterSource = readFileSync(join(root, 'src/main/providers/qwen/adapter.ts'), 'utf8')
   const zh = JSON.parse(
     readFileSync(join(root, 'src/renderer/src/i18n/locales/zh-CN.json'), 'utf8'),
   )
@@ -397,7 +399,7 @@ test('Qwen AI defaults keep only the filtered current web model set', () => {
     assert.equal(qwenAiConfig.modelMappings?.[removedModel], undefined, removedModel)
   }
 
-  const qwenAiAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/qwen-ai.ts'), 'utf8')
+  const qwenAiAdapterSource = readFileSync(join(root, 'src/main/providers/qwen-ai/adapter.ts'), 'utf8')
   assert.match(qwenAiAdapterSource, /qwen:\s*'qwen3\.7-max'/)
   assert.match(qwenAiAdapterSource, /qwen3:\s*'qwen3\.7-max'/)
   assert.match(qwenAiAdapterSource, /'qwen3\.7':\s*'qwen3\.7-max'/)
@@ -426,7 +428,7 @@ test('Z.ai default models match the latest chat.z.ai HAR model ids', () => {
     assert.equal(zaiConfig.modelMappings?.[removedModel], undefined, removedModel)
   }
 
-  const zaiAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/zai.ts'), 'utf8')
+  const zaiAdapterSource = readFileSync(join(root, 'src/main/providers/zai/adapter.ts'), 'utf8')
   assert.match(zaiAdapterSource, /'glm-5\.1': 'GLM-5\.1'/)
   assert.match(zaiAdapterSource, /'glm-5v-turbo': 'GLM-5v-Turbo'/)
   assert.match(zaiAdapterSource, /'GLM-5V-Turbo': 'GLM-5v-Turbo'/)
@@ -563,7 +565,7 @@ test('Mimo model names and conversation flow match Xiaomi AI Studio web requests
   assert.equal(mimoConfig.modelMappings?.['MiMo-V2.5'], 'mimo-v2.5')
   assert.equal(mimoConfig.modelMappings?.['MiMo-V2-Flash'], 'mimo-v2-flash')
 
-  const forwarderSource = readFileSync(join(root, 'src/main/proxy/forwarders/mimo.ts'), 'utf8')
+  const forwarderSource = readFileSync(join(root, 'src/main/providers/mimo/forwarder.ts'), 'utf8')
   const forwardMimoSource = forwarderSource
 
   assert.match(forwardMimoSource, /model:\s*actualModel/)
@@ -579,7 +581,7 @@ test('Mimo model names and conversation flow match Xiaomi AI Studio web requests
   )
   assert.match(forwardMimoSource, /services\.applyToolCallsToResponse\(.*transformed/s)
 
-  const mimoAdapterSource = readFileSync(join(root, 'src/main/proxy/adapters/mimo.ts'), 'utf8')
+  const mimoAdapterSource = readFileSync(join(root, 'src/main/providers/mimo/adapter.ts'), 'utf8')
 
   assert.match(mimoAdapterSource, /open-apis\/chat\/conversation\/save/)
   assert.match(mimoAdapterSource, /open-apis\/chat\/conversation\/genTitle/)
@@ -668,7 +670,7 @@ test('built-in provider sync keeps credential field updates on existing provider
 })
 
 test('DeepSeek forwarder preserves requested model aliases for response parsing semantics', () => {
-  const source = readFileSync(join(root, 'src/main/proxy/forwarders/deepseek.ts'), 'utf8')
+  const source = readFileSync(join(root, 'src/main/providers/deepseek/forwarder.ts'), 'utf8')
 
   assert.match(
     source,

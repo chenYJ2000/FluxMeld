@@ -1,13 +1,23 @@
-import deepseekConfig from './deepseek.ts'
-import glmConfig from './glm.ts'
-import kimiConfig from './kimi.ts'
-import minimaxConfig from './minimax.ts'
-import mimoConfig from './mimo.ts'
-import perplexityConfig from './perplexity.ts'
-import qwenConfig from './qwen.ts'
-import qwenAiConfig from './qwen-ai.ts'
-import zaiConfig from './zai.ts'
-import type { BuiltinProviderConfig } from '../../store/types.ts'
+/**
+ * Built-in provider config aggregation.
+ *
+ * This module intentionally imports only static provider configs (no adapters),
+ * so the store/config layer stays free of proxy runtime dependencies. Provider
+ * behaviour is registered separately in `providers/registry.ts`.
+ *
+ * NOTE: models/config lists are derived from `builtinProviders`; add a provider
+ * by appending its config module to the array below.
+ */
+import deepseekConfig from '../deepseek/config.ts'
+import glmConfig from '../glm/config.ts'
+import kimiConfig from '../kimi/config.ts'
+import minimaxConfig from '../minimax/config.ts'
+import mimoConfig from '../mimo/config.ts'
+import perplexityConfig from '../perplexity/config.ts'
+import qwenConfig from '../qwen/config.ts'
+import qwenAiConfig from '../qwen-ai/config.ts'
+import zaiConfig from '../zai/config.ts'
+import type { BuiltinProviderConfig } from '../types.ts'
 
 export const builtinProviders: BuiltinProviderConfig[] = [
   deepseekConfig,
@@ -21,17 +31,9 @@ export const builtinProviders: BuiltinProviderConfig[] = [
   zaiConfig,
 ]
 
-export const builtinProviderMap: Record<string, BuiltinProviderConfig> = {
-  deepseek: deepseekConfig,
-  glm: glmConfig,
-  kimi: kimiConfig,
-  minimax: minimaxConfig,
-  mimo: mimoConfig,
-  perplexity: perplexityConfig,
-  qwen: qwenConfig,
-  'qwen-ai': qwenAiConfig,
-  zai: zaiConfig,
-}
+export const builtinProviderMap: Record<string, BuiltinProviderConfig> = Object.fromEntries(
+  builtinProviders.map((config) => [config.id, config]),
+)
 
 export function getBuiltinProvider(id: string): BuiltinProviderConfig | undefined {
   return builtinProviderMap[id]
@@ -39,18 +41,6 @@ export function getBuiltinProvider(id: string): BuiltinProviderConfig | undefine
 
 export function getBuiltinProviders(): BuiltinProviderConfig[] {
   return builtinProviders
-}
-
-export {
-  deepseekConfig,
-  glmConfig,
-  kimiConfig,
-  minimaxConfig,
-  mimoConfig,
-  perplexityConfig,
-  qwenConfig,
-  qwenAiConfig,
-  zaiConfig,
 }
 
 export default builtinProviders

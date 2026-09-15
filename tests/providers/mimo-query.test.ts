@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { Readable } from 'node:stream'
 
-import { buildMimoQuery, MimoStreamHandler } from '../../src/main/proxy/adapters/mimo.ts'
+import { buildMimoQuery, MimoStreamHandler } from '../../src/main/providers/mimo/adapter.ts'
 import { ToolCallingEngine } from '../../src/main/proxy/toolCalling/ToolCallingEngine.ts'
 
 test('Mimo query includes injected tool prompt and the user request', () => {

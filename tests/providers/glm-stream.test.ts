@@ -7,7 +7,7 @@ import {
   applyGLMGenerationControls,
   GLMStreamHandler,
   GLMUpstreamResponseError,
-} from '../../src/main/proxy/adapters/glm.ts'
+} from '../../src/main/providers/glm/adapter.ts'
 import {
   ClientDisconnectedError,
   RequestTimeoutError,

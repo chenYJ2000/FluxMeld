@@ -33,17 +33,19 @@ src/
 │   ├── ipc/                # IPC handlers (main ↔ renderer communication)
 │   ├── proxy/              # Proxy server (Koa)
 │   │   ├── server.ts       # HTTP server with middleware
-│   │   ├── forwarder.ts    # Request forwarding logic & auth
-│   │   ├── adapters/       # Provider-specific adapters
-│   │   ├── routes.ts       # Proxy routes registration
+│   │   ├── forwarder.ts    # Generic forwarding orchestration
+│   │   ├── forwarders/     # Forwarder contracts, shared errors, registry facade
+│   │   ├── routes/         # Proxy + management routes
 │   │   ├── sessionManager.ts # Multi-turn conversation management
 │   │   └── services/       # Prompt injection & prompt generation
-│   ├── oauth/              # OAuth authentication
+│   ├── oauth/              # OAuth authentication framework
 │   │   ├── manager.ts      # OAuth flow orchestration
 │   │   ├── inAppLogin.ts   # In-app browser login with token auto-extraction
-│   │   └── adapters/       # Provider-specific OAuth adapters
-│   ├── providers/          # Provider configurations
-│   │   ├── builtin/        # Built-in provider configs (one file per provider)
+│   │   └── adapters/       # BaseOAuthAdapter + registry facade
+│   ├── providers/          # Provider plugin modules (the extension point)
+│   │   ├── <id>/           # One self-contained folder per provider
+│   │   ├── registry.ts     # Single registration point
+│   │   ├── builtin/        # Config-only aggregation for the store
 │   │   └── custom.ts       # Custom provider support
 │   ├── store/              # Persistent storage (electron-store)
 │   │   ├── store.ts        # Main store manager with IPC bridge
@@ -61,19 +63,15 @@ src/
 
 ## Key Concepts
 
-### Provider Adapters
-Each AI provider has a dedicated adapter in `src/main/proxy/adapters/` that handles:
-- Message format conversion (OpenAI format → provider-specific format)
-- Authentication header construction
-- Stream response parsing
-- Multi-turn conversation context
+### Provider Modules
 
-To add a new provider:
-1. Create config in `src/main/providers/builtin/<provider>.ts`
-2. Create OAuth adapter in `src/main/oauth/adapters/<provider>.ts`
-3. Create proxy adapter in `src/main/proxy/adapters/<provider>.ts`
-4. Create stream handler in `src/main/proxy/adapters/<provider>-stream.ts`
-5. Register in `src/main/providers/builtin/index.ts` and `src/main/proxy/adapters/index.ts`
+Each AI provider is a self-contained plugin under `src/main/providers/<id>/`
+(config, adapter, forwarder, oauth, token check, model options, ...) exposed
+through a single entry point (`index.ts`). `src/main/providers/registry.ts` is
+the one registration point; shared orchestrators dispatch via the registry and
+never branch on a provider id.
+
+To add or modify a provider, see `docs/architecture/provider-plugin.md`.
 
 ### IPC Communication
 All main-renderer communication uses IPC channels defined in `src/main/ipc/channels.ts`. The naming convention is `domain:action` (e.g., `proxy:start`, `accounts:add`).
@@ -144,29 +142,27 @@ This trades some performance for stability.
 
 ## Adding a New Provider
 
-Provider support is organized around a registry so adding a provider is an
+Provider support is organized around provider modules so adding a provider is an
 additive change. See `docs/architecture/provider-plugin.md` for the full guide.
 
 Touch points:
 
-1. `src/main/providers/builtin/<provider>.ts` and `providers/builtin/index.ts` -
-   provider configuration.
-2. `src/main/proxy/adapters/<provider>.ts` - OpenAI <-> provider request/response
-   conversion (stream handlers may be co-located).
-3. `src/main/proxy/forwarders/<provider>.ts` plus `forwarders/index.ts` -
-   provider forwarding strategy.
-4. `src/main/oauth/adapters/<provider>.ts` plus `oauth/adapters/index.ts` - auth
-   adapter factory.
-5. `src/main/ipc/handlers.ts` - optional capability entries (e.g. clear chats).
-6. Renderer i18n + `ProviderCard.tsx` icon mapping +
-   `src/assets/providers/<provider>.svg`.
+1. `src/main/providers/<id>/` - create the module (`index.ts` + config/adapter/
+   forwarder/oauth/tokenCheck/modelOptions as needed).
+2. `src/main/providers/registry.ts` - add the module to `providerModules`.
+3. `src/main/providers/builtin/index.ts` - append the config to
+   `builtinProviders` (config-only aggregation used by the store).
+4. `src/shared/types.ts` - add the id to the `ProviderVendor` union.
+5. Renderer assets/i18n only: `src/renderer/src/assets/providers/<iconKey>.svg`
+   and `src/renderer/src/i18n/locales/{zh-CN,en-US}.json`. Provider capability
+   flags and credential-field i18n keys live in the provider's `config.ts`, so
+   no renderer component needs a provider-specific branch.
 
 `src/main/store/types.ts` re-exports `builtinProviders` as `BUILTIN_PROVIDERS`,
 so the model list has a single source of truth (do not duplicate it).
 
 > `RequestForwarder` in `src/main/proxy/forwarder.ts` must NOT be edited to add a
-> provider. It dispatches via `createProviderForwarders()`
-> (`src/main/proxy/forwarders/index.ts`). Extension happens in the registry.
+> provider. It dispatches via `createProviderForwarders()` (registry-backed).
 
 ### AuthType Reference
 
@@ -189,20 +185,21 @@ Three ways to enable optional modes (see provider adapters): model-name mapping
 
 ## Updating Provider Configuration
 
-When updating provider configuration (e.g., model list, description, help text), you MUST update **both** locations:
+Provider configuration has a **single source of truth**: the provider module's
+`config.ts` (e.g. `src/main/providers/zai/config.ts`). `builtin/index.ts`
+aggregates those configs and `store/types.ts` re-exports them as
+`BUILTIN_PROVIDERS`.
 
-1. **`src/main/providers/builtin/<provider>.ts`** - Provider config module
-2. **`src/main/store/types.ts`** - `BUILTIN_PROVIDERS` array
+The `initializeDefaultProviders()` method in `store.ts` syncs configuration
+(including `capabilities`, `ui` and `credentialFields`) from `BUILTIN_PROVIDERS`
+to persistent storage on app startup.
 
-The `initializeDefaultProviders()` method in `store.ts` syncs configuration from `BUILTIN_PROVIDERS` to persistent storage on app startup. If only one location is updated, the changes will not be reflected in the UI.
-
-Example: When updating Z.ai model list:
+Example: updating the Z.ai model list:
 ```typescript
-// 1. src/main/providers/builtin/zai.ts
-supportedModels: ['GLM-5-Turbo', 'GLM-5', 'GLM-4.7', ...]
-
-// 2. src/main/store/types.ts (BUILTIN_PROVIDERS array)
+// src/main/providers/zai/config.ts
 supportedModels: ['GLM-5-Turbo', 'GLM-5', 'GLM-4.7', ...]
 ```
+
+Do **not** duplicate the model list or config elsewhere.
 
 **Important**: Users must restart the app after configuration updates to see the changes.

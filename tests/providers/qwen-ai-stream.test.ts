@@ -8,7 +8,7 @@ import {
   QwenAiAdapter,
   QwenAiStreamHandler,
   resolveQwenAiGenerationSettings,
-} from '../../src/main/proxy/adapters/qwen-ai.ts'
+} from '../../src/main/providers/qwen-ai/adapter.ts'
 
 function sse(events: Array<unknown | '[DONE]'>): Readable {
   return Readable.from(

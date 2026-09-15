@@ -17,15 +17,8 @@ import { ConfigManager } from '../store/config'
 import { generateManagementSecret } from '../proxy/middleware/managementAuth'
 import { UpdaterManager } from '../updater'
 import { markAppQuitting } from '../lib/appLifecycle'
-import { DeepSeekAdapter } from '../proxy/adapters/deepseek'
-import { GLMAdapter } from '../proxy/adapters/glm'
-import { KimiAdapter } from '../proxy/adapters/kimi'
-import { MimoAdapter } from '../proxy/adapters/mimo'
-import { MiniMaxAdapter } from '../proxy/adapters/minimax'
-import { PerplexityAdapter } from '../proxy/adapters/perplexity'
-import { QwenAdapter } from '../proxy/adapters/qwen'
-import { QwenAiAdapter } from '../proxy/adapters/qwen-ai'
-import { ZaiAdapter } from '../proxy/adapters/zai'
+import { getProviderModule } from '../providers/registry'
+import { normalizeOAuthResult } from '../providers/oauthCredentials'
 import type {
   Provider,
   Account,
@@ -52,22 +45,6 @@ import type { ProviderType } from '../oauth/types'
 let proxyServer: ProxyServer | null = null
 let proxyStartTime: number | null = null
 const updaterManager = UpdaterManager.getInstance()
-
-const clearChatsHandlers: Record<
-  string,
-  (provider: Provider, account: Account) => Promise<boolean>
-> = {
-  kimi: async (provider, account) => new KimiAdapter(provider, account).deleteAllChats(),
-  qwen: async (provider, account) => new QwenAdapter(provider, account).deleteAllChats(),
-  'qwen-ai': async (provider, account) => new QwenAiAdapter(provider, account).deleteAllChats(),
-  minimax: async (provider, account) => new MiniMaxAdapter(provider, account).deleteAllChats(),
-  zai: async (provider, account) => new ZaiAdapter(provider, account).deleteAllChats(),
-  perplexity: async (provider, account) =>
-    new PerplexityAdapter(provider, account).deleteAllChats(),
-  deepseek: async (provider, account) => new DeepSeekAdapter(provider, account).deleteAllChats(),
-  glm: async (provider, account) => new GLMAdapter(provider, account).deleteAllChats(),
-  mimo: async (provider, account) => new MimoAdapter(provider, account).deleteAllChats(),
-}
 
 export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Promise<void> {
   try {
@@ -787,13 +764,13 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         return null
       }
 
-      if (provider.id !== 'minimax') {
+      const getCredits = getProviderModule(provider.id)?.capabilities?.credits
+      if (!getCredits) {
         return null
       }
 
       try {
-        const adapter = new MiniMaxAdapter(provider, account)
-        return await adapter.getCredits()
+        return await getCredits(provider, account)
       } catch (error) {
         console.error('[IPC] Failed to get credits:', error)
         return null
@@ -815,7 +792,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           return { success: false, error: 'Provider not found' }
         }
 
-        const clearChats = clearChatsHandlers[provider.id]
+        const clearChats = getProviderModule(provider.id)?.capabilities?.clearChats
         if (!clearChats) {
           return { success: false, error: 'This feature is not available for this provider' }
         }
@@ -836,10 +813,11 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     IpcChannels.OAUTH_START_LOGIN,
     async (_, providerId: string, providerType: ProviderVendor): Promise<OAuthResult> => {
       console.log('Starting OAuth login:', providerId, providerType)
-      return await oauthManager.startLogin({
+      const result = await oauthManager.startLogin({
         providerId,
         providerType: providerType as ProviderType,
       })
+      return normalizeOAuthResult(providerId, result)
     },
   )
 
@@ -861,7 +839,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         mimoPhToken?: string
       },
     ): Promise<OAuthResult> => {
-      return await oauthManager.loginWithToken(
+      const result = await oauthManager.loginWithToken(
         data.providerId,
         data.providerType as ProviderType,
         data.token,
@@ -869,6 +847,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         data.mimoUserId,
         data.mimoPhToken,
       )
+      return normalizeOAuthResult(data.providerId, result)
     },
   )
 
@@ -881,12 +860,13 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       console.log('Starting in-app OAuth login:', data.providerId, data.providerType)
       const config = storeManager.getConfig()
       const proxyMode = (config as any).oauthProxyMode || 'system'
-      return await oauthManager.startInAppLogin(
+      const result = await oauthManager.startInAppLogin(
         data.providerId,
         data.providerType as ProviderType,
         data.timeout,
         proxyMode,
       )
+      return normalizeOAuthResult(data.providerId, result)
     },
   )
 

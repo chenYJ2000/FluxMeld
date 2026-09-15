@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { Readable } from 'node:stream'
-import { GLMStreamHandler } from '../../src/main/proxy/adapters/glm.ts'
+import { GLMStreamHandler } from '../../src/main/providers/glm/adapter.ts'
 
 test('GLM non-stream preserves Chinese and emoji across every UTF-8 byte boundary', async () => {
   const expected = '{"客户":"中文测试公司🚢","金额":"1,056.90万元"}'

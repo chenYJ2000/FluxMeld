@@ -401,6 +401,8 @@ export class StoreManager {
             modelMappings: builtinConfig.modelMappings,
             headers: builtinConfig.headers,
             credentialFields: builtinConfig.credentialFields,
+            capabilities: builtinConfig.capabilities,
+            ui: builtinConfig.ui,
             description: builtinConfig.description,
           }
         }
@@ -440,6 +442,9 @@ export class StoreManager {
           description: builtinConfig.description,
           supportedModels: builtinConfig.supportedModels,
           modelMappings: builtinConfig.modelMappings,
+          credentialFields: builtinConfig.credentialFields,
+          capabilities: builtinConfig.capabilities,
+          ui: builtinConfig.ui,
         }
         providers.push(newProvider)
         this.store!.set('providers', providers)

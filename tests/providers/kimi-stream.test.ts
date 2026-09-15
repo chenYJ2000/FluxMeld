@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { PassThrough } from 'node:stream'
-import { KimiStreamHandler } from '../../src/main/proxy/adapters/kimi'
+import { KimiStreamHandler } from '../../src/main/providers/kimi/adapter'
 
 function frame(payload: unknown): Buffer {
   const body = Buffer.from(JSON.stringify(payload), 'utf8')

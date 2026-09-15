@@ -9,7 +9,7 @@ import axios from 'axios'
 import {
   QwenAiRequestValidationError,
   type QwenAiUpstreamCompletionState,
-} from '../adapters/qwen-ai'
+} from '../../providers/qwen-ai/adapter'
 import { ToolCallingResponseError } from '../toolCalling/ToolCallingEngine'
 import type { ToolCallingTransformResult } from '../toolCalling/types'
 import type { ForwardResult } from '../types'

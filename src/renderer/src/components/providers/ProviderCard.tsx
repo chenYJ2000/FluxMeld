@@ -24,27 +24,8 @@ import {
   Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getProviderIcon } from '@/lib/providerIcon'
 import type { Provider, ProviderStatus } from '@/types/electron'
-import deepseekIcon from '@/assets/providers/deepseek.svg'
-import glmIcon from '@/assets/providers/glm.svg'
-import kimiIcon from '@/assets/providers/kimi.svg'
-import minimaxIcon from '@/assets/providers/minimax.svg'
-import perplexityIcon from '@/assets/providers/perplexity.svg'
-import qwenIcon from '@/assets/providers/qwen.svg'
-import zaiIcon from '@/assets/providers/zai.svg'
-import mimoIcon from '@/assets/providers/mimo.svg'
-
-const providerIcons: Record<string, string> = {
-  deepseek: deepseekIcon,
-  glm: glmIcon,
-  kimi: kimiIcon,
-  minimax: minimaxIcon,
-  mimo: mimoIcon,
-  perplexity: perplexityIcon,
-  qwen: qwenIcon,
-  'qwen-ai': qwenIcon,
-  zai: zaiIcon,
-}
 
 interface ProviderCardProps {
   provider: Provider
@@ -85,7 +66,7 @@ export function ProviderCard({
 }: ProviderCardProps) {
   const { t } = useTranslation()
   const isBuiltin = provider.type === 'builtin'
-  const icon = providerIcons[provider.id]
+  const icon = getProviderIcon(provider.ui?.iconKey ?? provider.id)
   const currentStatus = provider.status || status || 'unknown'
 
   const statusTexts: Record<ProviderStatus, string> = {
@@ -132,10 +113,10 @@ export function ProviderCard({
               {getProviderDescription() ||
                 `${provider.supportedModels?.length || 0} ${t('providers.models').toLowerCase()}`}
             </CardDescription>
-            {provider.id === 'perplexity' && (
+            {provider.ui?.noticeKey && (
               <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-1">
                 <Info className="h-3 w-3 flex-shrink-0" />
-                <span>{t('perplexity.freeUserNotice')}</span>
+                <span>{t(provider.ui.noticeKey)}</span>
               </p>
             )}
           </div>

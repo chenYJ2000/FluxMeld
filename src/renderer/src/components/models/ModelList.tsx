@@ -35,29 +35,8 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getProviderIcon } from '@/lib/providerIcon'
 import type { Account, EffectiveModel } from '@/types/electron'
-import deepseekIcon from '@/assets/providers/deepseek.svg'
-import glmIcon from '@/assets/providers/glm.svg'
-import kimiIcon from '@/assets/providers/kimi.svg'
-import minimaxIcon from '@/assets/providers/minimax.svg'
-import mimoIcon from '@/assets/providers/mimo.svg'
-import perplexityIcon from '@/assets/providers/perplexity.svg'
-import qwenIcon from '@/assets/providers/qwen.svg'
-import zaiIcon from '@/assets/providers/zai.svg'
-import modelMappingIcon from '@/assets/providers/model-mapping.svg'
-
-const providerIcons: Record<string, string> = {
-  deepseek: deepseekIcon,
-  glm: glmIcon,
-  kimi: kimiIcon,
-  minimax: minimaxIcon,
-  mimo: mimoIcon,
-  perplexity: perplexityIcon,
-  qwen: qwenIcon,
-  'qwen-ai': qwenIcon,
-  zai: zaiIcon,
-  mapping: modelMappingIcon,
-}
 
 interface ModelInfo {
   id: string
@@ -79,7 +58,7 @@ interface ModelRowProps {
 const PAGE_SIZE = 50
 
 const ModelRow = memo(({ model, isSelected, onSelect, t }: ModelRowProps) => {
-  const providerIcon = providerIcons[model.providerId]
+  const providerIcon = getProviderIcon(model.providerId)
 
   return (
     <TableRow

@@ -38,12 +38,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import type { Account, AccountStatus } from '@/types/electron'
+import type { Account, AccountStatus, Provider } from '@/types/electron'
 import { cn } from '@/lib/utils'
 
 interface AccountListProps {
   accounts: Account[]
-  providerId: string
+  provider?: Provider
   onAddAccount: () => void
   onEditAccount: (account: Account) => void
   onDeleteAccount: (id: string) => void
@@ -53,7 +53,7 @@ interface AccountListProps {
 
 export function AccountList({
   accounts,
-  providerId,
+  provider,
   onAddAccount,
   onEditAccount,
   onDeleteAccount,
@@ -295,16 +295,8 @@ export function AccountList({
                             <Edit className="mr-2 h-4 w-4" />
                             {t('providers.editAccount')}
                           </DropdownMenuItem>
-                          {/* Show Clear Chats for supported web providers */}
-                          {(providerId === 'kimi' ||
-                            providerId === 'qwen' ||
-                            providerId === 'qwen-ai' ||
-                            providerId === 'minimax' ||
-                            providerId === 'zai' ||
-                            providerId === 'perplexity' ||
-                            providerId === 'deepseek' ||
-                            providerId === 'glm' ||
-                            providerId === 'mimo') && (
+                          {/* Clear Chats is shown only for providers that support it */}
+                          {provider?.capabilities?.clearChats && (
                             <>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem

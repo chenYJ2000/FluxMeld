@@ -81,7 +81,7 @@ export function AccountDetail({
     fetchTrendData()
   }, [account.id])
 
-  const isMiniMaxProvider = provider?.id === 'minimax'
+  const supportsCredits = Boolean(provider?.capabilities?.credits)
 
   const statusConfig: Record<
     AccountStatus,
@@ -165,7 +165,7 @@ export function AccountDetail({
   }
 
   const handleGetCredits = async () => {
-    if (!isMiniMaxProvider) return
+    if (!supportsCredits) return
 
     setIsLoadingCredits(true)
     try {
@@ -367,7 +367,7 @@ export function AccountDetail({
         </Card>
       </div>
 
-      {isMiniMaxProvider && (
+      {supportsCredits && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">

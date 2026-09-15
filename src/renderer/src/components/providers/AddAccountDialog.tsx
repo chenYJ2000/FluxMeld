@@ -37,96 +37,6 @@ import type {
   ProviderVendor,
 } from '@/types/electron'
 
-/**
- * Map OAuth credentials to provider credential field names
- * OAuth returns credentials with keys like 'chatglm_refresh_token', but providers expect 'refresh_token'
- * DeepSeek stores token as JSON: {"value":"..."}
- */
-function mapOAuthCredentials(
-  providerId: string | undefined,
-  credentials: Record<string, string>,
-): Record<string, string> {
-  if (!providerId) return credentials
-
-  const credentialKeyMap: Record<string, string> = {
-    glm: 'chatglm_refresh_token',
-    deepseek: 'userToken',
-    qwen: 'tongyi_sso_ticket',
-    'qwen-ai': 'tongyi_sso_ticket',
-    zai: 'tongyi_sso_ticket',
-    perplexity: '__Secure-next-auth.session-token',
-    mimo: 'serviceToken',
-  }
-
-  const providerFieldNames: Record<string, string> = {
-    glm: 'refresh_token',
-    deepseek: 'token',
-    qwen: 'ticket',
-    'qwen-ai': 'ticket',
-    zai: 'ticket',
-    perplexity: 'sessionToken',
-    mimo: 'service_token',
-  }
-
-  const oauthKey = credentialKeyMap[providerId]
-  if (oauthKey && credentials[oauthKey]) {
-    const fieldName = providerFieldNames[providerId]
-    if (fieldName) {
-      // Handle JSON-wrapped tokens (DeepSeek stores token as {"value":"..."})
-      let tokenValue = credentials[oauthKey]
-      if (
-        providerId === 'deepseek' &&
-        tokenValue &&
-        tokenValue.startsWith('{') &&
-        tokenValue.endsWith('}')
-      ) {
-        try {
-          const parsed = JSON.parse(tokenValue)
-          if (parsed.value) {
-            tokenValue = parsed.value
-          }
-        } catch (e) {
-          console.error('[AddAccountDialog] Error parsing JSON token:', e)
-        }
-      }
-      return { [fieldName]: tokenValue }
-    }
-  }
-
-  // For Perplexity, if we have the secure token, map it
-  if (providerId === 'perplexity' && credentials['__Secure-next-auth.session-token']) {
-    return { sessionToken: credentials['__Secure-next-auth.session-token'] }
-  }
-  if (providerId === 'perplexity' && credentials['next-auth.session-token']) {
-    return { sessionToken: credentials['next-auth.session-token'] }
-  }
-
-  // For Mimo, map all three tokens
-  if (providerId === 'mimo') {
-    const result: Record<string, string> = {}
-    // OAuth already returns credentials in correct format (service_token, user_id, ph_token)
-    // Check for final format first
-    if (credentials['service_token']) {
-      result['service_token'] = credentials['service_token']
-    } else if (credentials['serviceToken']) {
-      result['service_token'] = credentials['serviceToken']
-    }
-    if (credentials['user_id']) {
-      result['user_id'] = credentials['user_id']
-    } else if (credentials['userId']) {
-      result['user_id'] = credentials['userId']
-    }
-    if (credentials['ph_token']) {
-      result['ph_token'] = credentials['ph_token']
-    } else if (credentials['xiaomichatbot_ph']) {
-      result['ph_token'] = credentials['xiaomichatbot_ph']
-    }
-    return result
-  }
-
-  return credentials
-}
-
 interface AddAccountDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -187,11 +97,7 @@ export function AddAccountDialog({
   const builtinProvider = provider as BuiltinProviderConfig | null
   const credentialFields: CredentialField[] =
     builtinProvider?.credentialFields || getDefaultCredentialFields(provider?.authType, t)
-  const supportsOAuth =
-    provider &&
-    ['deepseek', 'glm', 'kimi', 'mimo', 'minimax', 'qwen', 'qwen-ai', 'zai', 'perplexity'].includes(
-      provider.id,
-    )
+  const supportsOAuth = provider?.type === 'builtin'
 
   useEffect(() => {
     if (open) {
@@ -287,16 +193,9 @@ export function AddAccountDialog({
     setIsSubmitting(true)
 
     try {
-      // For MiniMax, ensure realUserID is passed correctly
-      let finalCredentials = { ...credentials }
-      if (provider?.id === 'minimax' && credentials.realUserID && credentials.realUserID.trim()) {
-        // realUserID is provided separately, keep both fields
-        console.log('[AddAccountDialog] MiniMax realUserID provided:', credentials.realUserID)
-      }
-
       const data = {
         name: name.trim(),
-        credentials: finalCredentials,
+        credentials,
         dailyLimit: dailyLimit ? parseInt(dailyLimit, 10) : undefined,
       }
 
@@ -331,9 +230,8 @@ export function AddAccountDialog({
       )
 
       if (result?.success && result.credentials) {
-        // Map OAuth credentials to provider credential field names
-        const mappedCredentials = mapOAuthCredentials(provider?.id, result.credentials)
-        setCredentials(mappedCredentials)
+        // Main process normalizes OAuth credentials to canonical field names.
+        setCredentials(result.credentials)
         setOAuthStatus(t('providers.loginSuccess'))
 
         if (result.accountInfo?.name) {
@@ -415,8 +313,7 @@ export function AddAccountDialog({
                     credentials={credentials}
                     onChange={handleCredentialChange}
                     t={t}
-                    providerId={provider?.id}
-                  />
+                    />
                 </TabsContent>
 
                 <TabsContent value="oauth" className="mt-4">
@@ -460,7 +357,6 @@ export function AddAccountDialog({
                 credentials={credentials}
                 onChange={handleCredentialChange}
                 t={t}
-                providerId={provider?.id}
               />
             )}
 
@@ -531,8 +427,7 @@ interface CredentialFieldsFormProps {
   fields: CredentialField[]
   credentials: Record<string, string>
   onChange: (fieldName: string, value: string) => void
-  t: (key: string) => string
-  providerId?: string
+  t: (key: string, options?: { defaultValue?: string }) => string
 }
 
 function CredentialFieldsForm({
@@ -540,7 +435,6 @@ function CredentialFieldsForm({
   credentials,
   onChange,
   t,
-  providerId,
 }: CredentialFieldsFormProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({})
   const [copiedFields, setCopiedFields] = useState<Record<string, boolean>>({})
@@ -566,104 +460,15 @@ function CredentialFieldsForm({
   }
 
   const getFieldTranslation = (field: CredentialField) => {
-    if (!providerId)
-      return { label: field.label, placeholder: field.placeholder, helpText: field.helpText }
-
-    const translations: Record<
-      string,
-      Record<string, { label: string; placeholder: string; helpText: string }>
-    > = {
-      deepseek: {
-        token: {
-          label: t('deepseek.userToken'),
-          placeholder: t('deepseek.userTokenPlaceholder'),
-          helpText: t('deepseek.userTokenHelp'),
-        },
-      },
-      glm: {
-        refresh_token: {
-          label: t('glm.refreshToken'),
-          placeholder: t('glm.refreshTokenPlaceholder'),
-          helpText: t('glm.refreshTokenHelp'),
-        },
-      },
-      kimi: {
-        token: {
-          label: t('kimi.accessToken'),
-          placeholder: t('kimi.accessTokenPlaceholder'),
-          helpText: t('kimi.accessTokenHelp'),
-        },
-      },
-      minimax: {
-        token: {
-          label: t('minimax.token'),
-          placeholder: t('minimax.tokenPlaceholder'),
-          helpText: t('minimax.tokenHelp'),
-        },
-        realUserID: {
-          label: t('minimax.realUserID'),
-          placeholder: t('minimax.realUserIDPlaceholder'),
-          helpText: t('minimax.realUserIDHelp'),
-        },
-      },
-      qwen: {
-        ticket: {
-          label: t('qwen.ssoTicket'),
-          placeholder: t('qwen.ssoTicketPlaceholder'),
-          helpText: t('qwen.ssoTicketHelp'),
-        },
-      },
-      'qwen-ai': {
-        token: {
-          label: t('qwen-ai.token'),
-          placeholder: t('qwen-ai.tokenPlaceholder'),
-          helpText: t('qwen-ai.tokenHelp'),
-        },
-        cookies: {
-          label: t('qwen-ai.cookies'),
-          placeholder: t('qwen-ai.cookiesPlaceholder'),
-          helpText: t('qwen-ai.cookiesHelp'),
-        },
-      },
-      zai: {
-        token: {
-          label: t('zai.token'),
-          placeholder: t('zai.tokenPlaceholder'),
-          helpText: t('zai.tokenHelp'),
-        },
-      },
-      mimo: {
-        service_token: {
-          label: t('mimo.serviceToken'),
-          placeholder: t('mimo.serviceTokenPlaceholder'),
-          helpText: t('mimo.serviceTokenHelp'),
-        },
-        user_id: {
-          label: t('mimo.userId'),
-          placeholder: t('mimo.userIdPlaceholder'),
-          helpText: t('mimo.userIdHelp'),
-        },
-        ph_token: {
-          label: t('mimo.phToken'),
-          placeholder: t('mimo.phTokenPlaceholder'),
-          helpText: t('mimo.phTokenHelp'),
-        },
-      },
-      perplexity: {
-        sessionToken: {
-          label: t('perplexity.sessionToken'),
-          placeholder: t('perplexity.sessionTokenPlaceholder'),
-          helpText: t('perplexity.sessionTokenHelp'),
-        },
-      },
+    return {
+      label: field.labelKey ? t(field.labelKey, { defaultValue: field.label }) : field.label,
+      placeholder: field.placeholderKey
+        ? t(field.placeholderKey, { defaultValue: field.placeholder })
+        : field.placeholder,
+      helpText: field.helpTextKey
+        ? t(field.helpTextKey, { defaultValue: field.helpText })
+        : field.helpText,
     }
-
-    const providerTranslations = translations[providerId]
-    if (providerTranslations && providerTranslations[field.name]) {
-      return providerTranslations[field.name]
-    }
-
-    return { label: field.label, placeholder: field.placeholder, helpText: field.helpText }
   }
 
   return (
