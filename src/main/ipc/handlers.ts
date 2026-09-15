@@ -46,6 +46,20 @@ let proxyServer: ProxyServer | null = null
 let proxyStartTime: number | null = null
 const updaterManager = UpdaterManager.getInstance()
 
+/**
+ * Keep the in-memory proxy endpoint in sync with the persisted configuration so
+ * status consumers (header badge, dashboard, tray, management API) report the
+ * configured port before the proxy is started with it.
+ */
+function syncProxyStatusEndpoint(config: AppConfig): void {
+  if (typeof config.proxyPort === 'number') {
+    proxyStatusManager.setPort(config.proxyPort)
+  }
+  if (config.proxyHost) {
+    proxyStatusManager.setHost(config.proxyHost)
+  }
+}
+
 export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Promise<void> {
   try {
     await storeManager.initialize()
@@ -78,6 +92,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
 
   // Check if auto-start proxy is needed
   const config = storeManager.getConfig()
+  syncProxyStatusEndpoint(config)
   if (config.autoStartProxy) {
     console.log('[App] Auto-starting proxy service...')
     const proxyPort = config.proxyPort
@@ -174,10 +189,13 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
 
   ipcMain.handle(IpcChannels.PROXY_GET_STATUS, async (): Promise<ProxyStatus> => {
     const isRunning = proxyServer !== null
-    const port = proxyStatusManager.getPort()
+    const config = storeManager.getConfig()
+    const port = isRunning
+      ? proxyStatusManager.getPort()
+      : config.proxyPort || proxyStatusManager.getPort()
     const host = isRunning
       ? proxyStatusManager.getHost()
-      : storeManager.getConfig().proxyHost || proxyStatusManager.getHost()
+      : config.proxyHost || proxyStatusManager.getHost()
     return {
       isRunning,
       port,
@@ -277,6 +295,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
 
   ipcMain.handle(IpcChannels.CONFIG_UPDATE, async (_, updates: Partial<AppConfig>) => {
     const newConfig = storeManager.updateConfig(updates)
+    syncProxyStatusEndpoint(newConfig)
 
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed()) {
@@ -303,6 +322,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     const store = storeManager.getStore()
     store?.set(key as 'providers' | 'accounts' | 'config' | 'logs', value as never)
     if (key === 'config') {
+      syncProxyStatusEndpoint(storeManager.getConfig())
       BrowserWindow.getAllWindows().forEach((win) => {
         if (!win.isDestroyed()) {
           win.webContents.send(IpcChannels.CONFIG_CHANGED, value)

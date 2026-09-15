@@ -308,7 +308,8 @@ export class ProxyServer {
    */
   async restart(port?: number, host?: string): Promise<boolean> {
     await this.stop()
-    return this.start(port, host)
+    const config = storeManager.getConfig()
+    return this.start(port ?? config.proxyPort, host ?? config.proxyHost)
   }
 
   /**
