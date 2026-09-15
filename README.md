@@ -77,7 +77,7 @@ access can change independently of FluxMeld releases.
 | Provider | Current default models or status |
 | --- | --- |
 | DeepSeek | deepseek-v4-flash, deepseek-v4-pro |
-| GLM | GLM-5.2 |
+| GLM | GLM-5.3, GLM-5.3-Flash |
 | Kimi | Kimi-K3, Kimi-K2.6 |
 | MiniMax | MiniMax-M2.7 |
 | Mimo | MiMo-V2.5-Pro, MiMo-V2.5, MiMo-V2-Flash |

@@ -648,13 +648,18 @@ GLM STRICT RULES:
       chatMode = 'deep_research'
       console.log('[GLM] Using deep research mode')
     } else {
-      console.log('[GLM] Using GLM-5.2 thinking mode:', chatMode || 'fast')
+      console.log('[GLM] Using thinking mode:', chatMode || 'fast')
     }
 
     // Check if model is an assistant ID (24+ alphanumeric characters)
     if (/^[a-z0-9]{24,}$/.test(request.model)) {
       assistantId = request.model
     }
+
+    // Qingyan selects the model independently of the reasoning mode.
+    const selectedModel = /^glm-5\.3(?:-flash)?$/i.test(request.model)
+      ? request.model.toLowerCase()
+      : undefined
 
     console.log('[GLM] Sending chat request...')
 
@@ -670,6 +675,7 @@ GLM STRICT RULES:
           meta_data: {
             channel: '',
             chat_mode: chatMode,
+            ...(selectedModel ? { selected_model: selectedModel } : {}),
             draft_id: '',
             input_question_type: 'xxxx',
             is_networking: isNetworking,

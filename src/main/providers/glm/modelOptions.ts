@@ -41,7 +41,7 @@ export class GLMRequestValidationError extends Error {
 }
 
 export function resolveGLMChatMode(value?: string | boolean | null): GLMChatMode {
-  // Match the current Qingyan web client: GLM-5.2 defaults to Standard.
+  // Preserve the default thinking effort when the caller does not specify one.
   if (value === undefined || value === null) {
     return 'thinking'
   }
