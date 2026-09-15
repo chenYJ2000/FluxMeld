@@ -282,6 +282,7 @@ export function createClientApi(
     set: <T>(key: string, value: T): Promise<void> => transport.invoke('store:set', key, value),
     delete: (key: string): Promise<void> => transport.invoke('store:delete', key),
     clearAll: (): Promise<void> => transport.invoke('store:clearAll'),
+    getPath: (): Promise<string> => transport.invoke('store:getPath'),
     onInitError: (callback: (error: { message: string | null }) => void) =>
       transport.on('store:initError', (error) => callback(error)),
     retryInit: (): Promise<{ success: boolean; error?: string }> =>

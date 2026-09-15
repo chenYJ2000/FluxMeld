@@ -347,6 +347,10 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     storeManager.clearAll()
   })
 
+  ipcMain.handle(IpcChannels.STORE_GET_PATH, async (): Promise<string> => {
+    return storeManager.getStorePath()
+  })
+
   ipcMain.handle(IpcChannels.PROVIDERS_GET_ALL, async (): Promise<Provider[]> => {
     return ProviderManager.getAll()
   })

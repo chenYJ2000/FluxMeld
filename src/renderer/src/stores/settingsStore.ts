@@ -37,10 +37,6 @@ interface SettingsState {
   setLogRetentionDays: (days: number) => void
   maxLogs: number
   setMaxLogs: (count: number) => void
-  credentialEncryption: boolean
-  setCredentialEncryption: (enabled: boolean) => void
-  logDesensitization: boolean
-  setLogDesensitization: (enabled: boolean) => void
   config: AppConfig | null
   setConfig: (config: AppConfig) => void
   updateConfig: (updates: Partial<AppConfig>) => Promise<void>
@@ -106,10 +102,6 @@ export const useSettingsStore = create<SettingsState>()(
       setLogRetentionDays: (days) => set({ logRetentionDays: days }),
       maxLogs: 10000,
       setMaxLogs: (count) => set({ maxLogs: count }),
-      credentialEncryption: true,
-      setCredentialEncryption: (enabled) => set({ credentialEncryption: enabled }),
-      logDesensitization: true,
-      setLogDesensitization: (enabled) => set({ logDesensitization: enabled }),
       config: null,
       setConfig: (config) => set({ config }),
       updateConfig: async (updates) => {

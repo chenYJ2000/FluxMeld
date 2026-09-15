@@ -285,24 +285,6 @@ export function DataManagement() {
                   />
                 </div>
 
-                <div className="flex items-center justify-between rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3">
-                  <div className="space-y-1 pr-3">
-                    <Label htmlFor="request-log-redact">
-                      {t('settings.requestLogRedactSensitive')}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t('settings.requestLogRedactSensitiveHelp')}
-                    </p>
-                  </div>
-                  <Switch
-                    id="request-log-redact"
-                    checked={requestLogConfig.redactSensitiveData}
-                    onCheckedChange={(checked) => {
-                      void updateRequestLogConfig({ redactSensitiveData: checked })
-                    }}
-                  />
-                </div>
-
                 {requestLogConfig.includeBodies ? (
                   <div className="space-y-2 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] p-3 md:col-span-2 xl:col-span-3">
                     <Label htmlFor="request-log-max-body">

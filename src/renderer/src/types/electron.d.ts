@@ -107,6 +107,7 @@ interface StoreAPI {
   set: <T>(key: string, value: T) => Promise<void>
   delete: (key: string) => Promise<void>
   clearAll: () => Promise<void>
+  getPath: () => Promise<string>
 }
 
 interface ProvidersAPI {
