@@ -67,7 +67,7 @@ export const mimoConfig: BuiltinProviderConfig = {
       helpText: 'Found in browser DevTools -> Application -> Cookies -> xiaomichatbot_ph',
     },
   ],
-  capabilities: { clearChats: true },
+  capabilities: { clearChats: true, toolCalling: true },
   ui: { iconKey: 'mimo', i18nPrefix: 'mimo' },
 }
 

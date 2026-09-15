@@ -1,5 +1,5 @@
 import { QwenAdapter, QwenStreamHandler } from './adapter'
-import { isReasoningEnabled } from '../../proxy/utils/reasoning'
+import { isReasoningEnabled } from '../common/reasoning'
 import { createForwardFailure } from '../../proxy/forwarders/errors'
 import type { ForwarderServices, ProviderForwarder } from '../../proxy/forwarders/types'
 

@@ -9,7 +9,6 @@ test('first-version providers use managed prompt and managed xml by default', ()
     const profile = getProviderToolProfile(providerId)
 
     assert.equal(profile.managedSupport, true)
-    assert.equal(profile.supportsNativeTools, false)
     assert.equal(profile.preferredManagedProtocol, 'managed_xml')
   }
 })

@@ -8,7 +8,7 @@ import deepseekConfig from './config.ts'
 import { DeepSeekAdapter } from './adapter.ts'
 import { createDeepSeekForwarder } from './forwarder.ts'
 import { DeepSeekAdapter as DeepSeekOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import { checkDeepSeekToken } from './tokenCheck.ts'
 import type { ProviderModule } from '../types.ts'
 

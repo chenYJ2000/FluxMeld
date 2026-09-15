@@ -6,7 +6,7 @@
  * requires a module entry, not an edit here.
  */
 
-export { BaseOAuthAdapter } from './base'
+export { BaseOAuthAdapter } from '../../providers/common/oauthBase'
 export { DeepSeekAdapter } from '../../providers/deepseek/oauth'
 export { GLMAdapter } from '../../providers/glm/oauth'
 export { KimiAdapter } from '../../providers/kimi/oauth'

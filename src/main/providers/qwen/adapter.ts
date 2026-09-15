@@ -10,18 +10,22 @@ import { createGunzip, createInflate, createBrotliDecompress } from 'zlib'
 import * as ZstdCodec from 'zstd-codec'
 import { createParser } from 'eventsource-parser'
 import { Account, Provider } from '../../store/types'
-import { hasToolUse, parseToolUse, ToolCall } from '../../proxy/promptToolUse'
 import {
-  toolsToSystemPrompt,
-  TOOL_WRAP_HINT,
+  createBaseChunk,
+  getProviderToolProfile,
   hasToolPromptInjected,
+  hasToolUse,
+  parseToolCallsFromText,
+  parseToolUse,
   shouldInjectToolPrompt,
-} from '../../proxy/utils/tools'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser'
-import { createBaseChunk } from '../../proxy/utils/streamToolHandler'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles'
-import { ToolStreamParser } from '../../proxy/toolCalling/ToolStreamParser'
-import type { ToolCallingPlan } from '../../proxy/toolCalling/types'
+  TOOL_WRAP_HINT,
+  ToolStreamParser,
+  toolsToSystemPrompt,
+  type ToolCall,
+  type ToolCallingPlan,
+} from '../common/toolCalling'
+import { uuid } from '../common/crypto'
+import { extractTextContent } from '../common/text'
 
 /**
  * Check if content contains tool calls (both bracket and XML formats)
@@ -86,15 +90,6 @@ interface QwenSessionListPage {
   nextCursor: string
 }
 
-function uuid(separator: boolean = true): string {
-  const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-  return separator ? id : id.replace(/-/g, '')
-}
-
 function generateNonce(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
   let result = ''
@@ -102,19 +97,6 @@ function generateNonce(): string {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   return result
-}
-
-function extractTextContent(content: string | any[]): string {
-  if (typeof content === 'string') {
-    return content
-  }
-  if (Array.isArray(content)) {
-    return content
-      .filter((item) => item.type === 'text')
-      .map((item) => item.text || '')
-      .join('\n')
-  }
-  return ''
 }
 
 export class QwenAdapter {

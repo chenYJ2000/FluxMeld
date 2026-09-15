@@ -5,7 +5,7 @@ import zaiConfig from './config.ts'
 import { ZaiAdapter } from './adapter.ts'
 import { createZaiForwarder } from './forwarder.ts'
 import { ZaiAdapter as ZaiOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import type { ProviderModule } from '../types.ts'
 
 export const zaiModule: ProviderModule = {

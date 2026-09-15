@@ -5,7 +5,7 @@ import qwenAiConfig from './config.ts'
 import { QwenAiAdapter } from './adapter.ts'
 import { createQwenAiForwarder } from './forwarder.ts'
 import { QwenAiAdapter as QwenAiOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import { checkQwenAiToken } from './tokenCheck.ts'
 import type { ProviderModule } from '../types.ts'
 

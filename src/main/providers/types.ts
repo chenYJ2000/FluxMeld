@@ -12,7 +12,7 @@
  */
 
 import type { Account, Provider, CredentialField } from '../../shared/types'
-import type { BaseOAuthAdapter } from '../oauth/adapters/base'
+import type { BaseOAuthAdapter } from './common/oauthBase'
 import type { AdapterConfig, ProviderType } from '../oauth/types'
 import type { ForwarderServices, ProviderForwarder } from '../proxy/forwarders/types'
 import type { ProviderToolProfile } from '../proxy/toolCalling/providerProfiles'

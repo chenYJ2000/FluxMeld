@@ -47,7 +47,7 @@ export const kimiConfig: BuiltinProviderConfig = {
   ],
   tokenCheckEndpoint: '/api/auth/token/refresh',
   tokenCheckMethod: 'GET',
-  capabilities: { clearChats: true },
+  capabilities: { clearChats: true, toolCalling: true },
   ui: { iconKey: 'kimi', i18nPrefix: 'kimi' },
 }
 

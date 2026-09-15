@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CheckCircle2, FlaskConical, Settings2, Wrench, XCircle } from 'lucide-react'
 import {
   DEFAULT_TOOL_CALLING_CONFIG,
   P0_TOOL_CLIENT_ADAPTERS,
-  P0_TOOL_PROVIDER_SUPPORT,
   type ToolCallingConfig,
   type ToolCallingModeSetting,
   type ToolClientAdapterId,
@@ -48,6 +47,27 @@ export function ToolCallingPanel() {
   )
   const config = appConfig?.toolCallingConfig ?? DEFAULT_TOOL_CALLING_CONFIG
   const clientAdapters = P0_TOOL_CLIENT_ADAPTERS
+  const [supportedProviders, setSupportedProviders] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    window.electronAPI?.providers
+      ?.getBuiltin()
+      .then((providers) => {
+        if (cancelled) return
+        setSupportedProviders(
+          providers
+            .filter((provider) => provider.capabilities?.toolCalling)
+            .map((provider) => ({ id: provider.id, name: provider.name })),
+        )
+      })
+      .catch(() => {
+        // Non-fatal: the matrix is informational only.
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const selectedClient = useMemo(
     () => clientAdapters.find((adapter) => adapter.id === config.clientAdapterId),
@@ -148,10 +168,10 @@ export function ToolCallingPanel() {
           <div className="space-y-2">
             <Label>{t('toolCalling.providerMatrix')}</Label>
             <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-5">
-              {P0_TOOL_PROVIDER_SUPPORT.map((provider) => (
-                <div key={provider.providerId} className="rounded-md border p-3">
+              {supportedProviders.map((provider) => (
+                <div key={provider.id} className="rounded-md border p-3">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{provider.label}</span>
+                    <span className="text-sm font-medium">{provider.name}</span>
                     <Badge variant="secondary">{t('toolCalling.supported')}</Badge>
                   </div>
                 </div>

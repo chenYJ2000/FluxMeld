@@ -5,8 +5,8 @@ import {
   DEFAULT_TOOL_CALLING_CONFIG,
   normalizeToolCallingConfig,
   P0_TOOL_CLIENT_ADAPTERS,
-  P0_TOOL_PROVIDER_SUPPORT,
 } from '../../src/shared/toolCalling.ts'
+import { getBuiltinProviders } from '../../src/main/providers/builtin/index.ts'
 
 test('v2 tool calling defaults use managed standard OpenAI tools', () => {
   assert.deepEqual(DEFAULT_TOOL_CALLING_CONFIG, {
@@ -79,13 +79,9 @@ test('P0 metadata exposes only approved clients and providers', () => {
     'opencode',
   )
 
-  assert.deepEqual(
-    P0_TOOL_PROVIDER_SUPPORT.map((provider) => provider.providerId),
-    ['deepseek', 'kimi', 'glm', 'qwen', 'mimo'],
-  )
-
-  assert.deepEqual(
-    P0_TOOL_PROVIDER_SUPPORT.map((provider) => provider.label),
-    ['DEEPSEEK', 'KIMI', 'GLM', 'QWEN', 'MIMO'],
-  )
+  const toolCallingProviders = getBuiltinProviders()
+    .filter((provider) => provider.capabilities?.toolCalling)
+    .map((provider) => provider.id)
+    .sort()
+  assert.deepEqual(toolCallingProviders, ['deepseek', 'glm', 'kimi', 'mimo', 'qwen'])
 })

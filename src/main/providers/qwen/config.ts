@@ -45,7 +45,7 @@ export const qwenConfig: BuiltinProviderConfig = {
         'SSO ticket obtained from www.qianwen.com, found in browser DevTools Application -> Cookies as tongyi_sso_ticket',
     },
   ],
-  capabilities: { clearChats: true },
+  capabilities: { clearChats: true, toolCalling: true },
   ui: { iconKey: 'qwen', i18nPrefix: 'qwen' },
 }
 

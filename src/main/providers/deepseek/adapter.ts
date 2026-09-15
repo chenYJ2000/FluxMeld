@@ -10,7 +10,8 @@ import axios, { AxiosResponse } from 'axios'
 import { getDeepSeekHash } from './challenge'
 import type { Account, Provider } from '../../store/types'
 import { resolveDeepSeekChatOptions } from './modelOptions'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles'
+import { getProviderToolProfile } from '../common/toolCalling'
+import { unixTimestamp, uuid } from '../common/crypto'
 
 const DEEPSEEK_API_BASE = 'https://chat.deepseek.com/api'
 
@@ -86,22 +87,9 @@ function generateRandomString(length: number, charset: string = 'alphanumeric'):
   return result
 }
 
-function uuid(separator: boolean = true): string {
-  const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-  return separator ? id : id.replace(/-/g, '')
-}
-
 function generateCookie(): string {
   const timestamp = Date.now()
   return `intercom-HWWAFSESTIME=${timestamp}; HWWAFSESID=${generateRandomString(18, 'hex')}; Hm_lvt_${uuid(false)}=${Math.floor(timestamp / 1000)},${Math.floor(timestamp / 1000)},${Math.floor(timestamp / 1000)}; Hm_lpvt_${uuid(false)}=${Math.floor(timestamp / 1000)}; _frid=${uuid(false)}; _fr_ssid=${uuid(false)}; _fr_pvid=${uuid(false)}`
-}
-
-function unixTimestamp(): number {
-  return Math.floor(Date.now() / 1000)
 }
 
 export class DeepSeekAdapter {

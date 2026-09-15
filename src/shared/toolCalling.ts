@@ -37,14 +37,6 @@ export interface ToolClientAdapterMeta {
   smokeTestKind: 'openai-tools' | 'cherry-mcp-weather'
 }
 
-export interface ToolProviderSupportMeta {
-  providerId: 'deepseek' | 'kimi' | 'glm' | 'qwen' | 'mimo'
-  label: string
-  managed: true
-  protocolId: 'managed_xml'
-  status: 'supported'
-}
-
 export const DEFAULT_TOOL_CALLING_CONFIG: ToolCallingConfig = {
   enabled: true,
   mode: 'auto',
@@ -74,44 +66,6 @@ export const P0_TOOL_CLIENT_ADAPTERS: ToolClientAdapterMeta[] = [
     label: 'OpenCode',
     descriptionKey: 'toolCalling.clients.openCodeDesc',
     smokeTestKind: 'openai-tools',
-  },
-]
-
-export const P0_TOOL_PROVIDER_SUPPORT: ToolProviderSupportMeta[] = [
-  {
-    providerId: 'deepseek',
-    label: 'DEEPSEEK',
-    managed: true,
-    protocolId: 'managed_xml',
-    status: 'supported',
-  },
-  {
-    providerId: 'kimi',
-    label: 'KIMI',
-    managed: true,
-    protocolId: 'managed_xml',
-    status: 'supported',
-  },
-  {
-    providerId: 'glm',
-    label: 'GLM',
-    managed: true,
-    protocolId: 'managed_xml',
-    status: 'supported',
-  },
-  {
-    providerId: 'qwen',
-    label: 'QWEN',
-    managed: true,
-    protocolId: 'managed_xml',
-    status: 'supported',
-  },
-  {
-    providerId: 'mimo',
-    label: 'MIMO',
-    managed: true,
-    protocolId: 'managed_xml',
-    status: 'supported',
   },
 ]
 

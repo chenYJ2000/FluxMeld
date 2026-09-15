@@ -5,7 +5,7 @@ import mimoConfig from './config.ts'
 import { MimoAdapter } from './adapter.ts'
 import { createMimoForwarder } from './forwarder.ts'
 import { MimoAdapter as MimoOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import { checkMimoToken } from './tokenCheck.ts'
 import type { ProviderModule } from '../types.ts'
 

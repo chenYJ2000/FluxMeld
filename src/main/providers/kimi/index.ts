@@ -5,7 +5,7 @@ import kimiConfig from './config.ts'
 import { KimiAdapter } from './adapter.ts'
 import { createKimiForwarder } from './forwarder.ts'
 import { KimiAdapter as KimiOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import { checkKimiToken } from './tokenCheck.ts'
 import type { ProviderModule } from '../types.ts'
 

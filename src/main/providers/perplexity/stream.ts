@@ -1,12 +1,12 @@
 import { PassThrough } from 'stream'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser'
 import {
-  createToolCallState,
-  processStreamContent,
-  flushToolCallBuffer,
   createBaseChunk,
-  ToolCallState,
-} from '../../proxy/utils/streamToolHandler'
+  createToolCallState,
+  flushToolCallBuffer,
+  parseToolCallsFromText,
+  processStreamContent,
+  type ToolCallState,
+} from '../common/toolCalling'
 import type { PerplexityAdapter } from './adapter'
 
 function filterCitations(content: string): string {

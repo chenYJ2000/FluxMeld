@@ -4,7 +4,6 @@ import { managedXmlProtocol } from './protocols/managedXml.ts'
 export interface ProviderToolProfile {
   providerId: 'deepseek' | 'kimi' | 'glm' | 'qwen' | string
   managedSupport: boolean
-  supportsNativeTools: boolean
   preferredManagedProtocol: ToolProtocolId
   formatAssistantToolCalls(calls: Array<{ id: string; name: string; arguments: string }>): string
   formatToolResult(result: NormalizedToolResult): string
@@ -12,7 +11,6 @@ export interface ProviderToolProfile {
 
 const fluxMeldXmlHistoryProfile: Omit<ProviderToolProfile, 'providerId'> = {
   managedSupport: true,
-  supportsNativeTools: false,
   preferredManagedProtocol: 'managed_xml',
   formatAssistantToolCalls(calls) {
     return managedXmlProtocol.formatAssistantToolCalls(calls)

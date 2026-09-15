@@ -6,14 +6,19 @@
 import axios, { AxiosResponse } from 'axios'
 import { Account, Provider } from '../../store/types'
 import { PassThrough } from 'stream'
-import { toolsToSystemPrompt, TOOL_WRAP_HINT, hasToolPromptInjected } from '../../proxy/utils/tools'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser'
-import { createBaseChunk } from '../../proxy/utils/streamToolHandler'
 import { createKimiChatPayload, encodeKimiGrpcFrame } from './modelOptions'
 import { buildKimiAuthHeaders } from './token'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles'
-import { ToolStreamParser } from '../../proxy/toolCalling/ToolStreamParser'
-import type { ToolCallingPlan } from '../../proxy/toolCalling/types'
+import {
+  createBaseChunk,
+  getProviderToolProfile,
+  hasToolPromptInjected,
+  parseToolCallsFromText,
+  TOOL_WRAP_HINT,
+  ToolStreamParser,
+  toolsToSystemPrompt,
+  type ToolCallingPlan,
+} from '../common/toolCalling'
+import { unixTimestamp } from '../common/crypto'
 
 const KIMI_API_BASE = 'https://www.kimi.com'
 
@@ -64,10 +69,6 @@ interface ChatCompletionRequest {
 }
 
 const accessTokenMap = new Map<string, TokenInfo>()
-
-function unixTimestamp(): number {
-  return Math.floor(Date.now() / 1000)
-}
 
 export function detectTokenType(token: string): 'jwt' | 'refresh' {
   if (token.startsWith('eyJ') && token.split('.').length === 3) {

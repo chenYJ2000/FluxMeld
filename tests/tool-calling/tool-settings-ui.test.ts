@@ -30,11 +30,10 @@ test('normal UI hides protocol and prompt-template internals', () => {
 test('provider support matrix shows display labels instead of provider ids', () => {
   const panel = readFileSync('src/renderer/src/components/models/ToolCallingPanel.tsx', 'utf8')
 
-  assert.match(panel, /provider\.label/)
-  assert.doesNotMatch(
-    panel,
-    /<span className="text-sm font-medium">\{provider\.providerId\}<\/span>/,
-  )
+  assert.match(panel, /capabilities\?\.toolCalling/)
+  assert.match(panel, /provider\.name/)
+  assert.doesNotMatch(panel, /\{provider\.providerId\}/)
+  assert.doesNotMatch(panel, /P0_TOOL_PROVIDER_SUPPORT/)
 })
 
 test('Models page delegates tool settings to ToolCallingPanel', () => {

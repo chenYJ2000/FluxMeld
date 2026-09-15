@@ -8,20 +8,15 @@ import type { AxiosResponse } from 'axios'
 import { PassThrough } from 'stream'
 import type { Account, Provider } from '../../store/types'
 import type { ChatMessage } from '../../proxy/types.ts'
-import { ToolStreamParser } from '../../proxy/toolCalling/ToolStreamParser.ts'
-import type { ToolCallingPlan } from '../../proxy/toolCalling/types.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import {
+  getProviderToolProfile,
+  ToolStreamParser,
+  type ToolCallingPlan,
+} from '../common/toolCalling'
+import { uuid } from '../common/crypto'
+import { extractTextContent } from '../common/text'
 
 const MIMO_API_BASE = 'https://aistudio.xiaomimimo.com'
-
-function uuid(separator: boolean = true): string {
-  const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-  return separator ? id : id.replace(/-/g, '')
-}
 
 type MimoMessage = ChatMessage
 
@@ -250,21 +245,6 @@ function extractThinkContent(text: string): { thinking: string; content: string 
   }
 
   return { thinking, content }
-}
-
-function extractTextContent(content: ChatMessage['content']): string {
-  if (typeof content === 'string') {
-    return content
-  }
-  if (Array.isArray(content)) {
-    return content
-      .filter(
-        (part) => typeof part === 'object' && part !== null && part.type === 'text' && part.text,
-      )
-      .map((part) => part.text)
-      .join('\n')
-  }
-  return ''
 }
 
 export function buildMimoQuery(messages: MimoMessage[]): string {

@@ -33,6 +33,14 @@ test('serializable config capabilities mirror module capability handlers', () =>
   }
 })
 
+test('toolCalling capability is declared on the expected providers', () => {
+  const ids = providerModules
+    .filter((module) => module.config.capabilities?.toolCalling)
+    .map((module) => module.id)
+    .sort()
+  assert.deepEqual(ids, ['deepseek', 'glm', 'kimi', 'mimo', 'qwen'])
+})
+
 test('every module exposes UI icon metadata and OAuth auth methods', () => {
   for (const module of providerModules) {
     assert.ok(module.config.ui?.iconKey, `${module.id}: missing ui.iconKey`)

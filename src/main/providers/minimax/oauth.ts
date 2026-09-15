@@ -5,8 +5,8 @@
 
 import axios from 'axios'
 import { shell } from 'electron'
-import crypto from 'crypto'
-import { BaseOAuthAdapter } from '../../oauth/adapters/base'
+import { BaseOAuthAdapter } from '../common/oauthBase'
+import { md5, unixTimestamp } from '../common/crypto'
 import {
   OAuthResult,
   OAuthOptions,
@@ -54,14 +54,6 @@ const FAKE_USER_DATA: Record<string, any> = {
   unix: null,
   lang: 'zh',
   token: null,
-}
-
-function md5(input: string): string {
-  return crypto.createHash('md5').update(input).digest('hex')
-}
-
-function unixTimestamp(): number {
-  return Math.floor(Date.now() / 1000)
 }
 
 export class MiniMaxAdapter extends BaseOAuthAdapter {

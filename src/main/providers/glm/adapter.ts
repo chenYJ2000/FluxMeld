@@ -4,7 +4,6 @@
  */
 
 import axios, { AxiosResponse } from 'axios'
-import crypto from 'crypto'
 import { Account, Provider } from '../../store/types'
 import { storeManager } from '../../store/store'
 import { PassThrough } from 'stream'
@@ -17,12 +16,17 @@ import { createParser } from 'eventsource-parser'
 import FormData from 'form-data'
 import mime from 'mime-types'
 import path from 'path'
-import { toolsToSystemPrompt, TOOL_WRAP_HINT, hasToolPromptInjected } from '../../proxy/utils/tools'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser'
-import { createBaseChunk } from '../../proxy/utils/streamToolHandler'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles'
-import { ToolStreamParser } from '../../proxy/toolCalling/ToolStreamParser'
-import type { ToolCallingPlan } from '../../proxy/toolCalling/types'
+import {
+  createBaseChunk,
+  getProviderToolProfile,
+  hasToolPromptInjected,
+  parseToolCallsFromText,
+  TOOL_WRAP_HINT,
+  ToolStreamParser,
+  toolsToSystemPrompt,
+  type ToolCallingPlan,
+} from '../common/toolCalling'
+import { md5, uuid } from '../common/crypto'
 import { getAbortReason, RequestTimeoutError, throwIfAborted } from '../../proxy/requestLifecycle'
 
 const GLM_API_BASE = 'https://chatglm.cn/chatglm'
@@ -97,14 +101,6 @@ function getGLMRequestTimeout(defaultMs: number, options?: GLMRequestOptions): n
 }
 
 const tokenCache = new Map<string, TokenInfo>()
-
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
 
 export class GLMUpstreamResponseError extends Error {
   readonly status = 502
@@ -185,10 +181,6 @@ export function applyGLMGenerationControls<T extends Record<string, unknown>>(
     temperature,
     ...(temperature === 0 ? { do_sample: false } : {}),
   }
-}
-
-function md5(str: string): string {
-  return crypto.createHash('md5').update(str).digest('hex')
 }
 
 function generateSign(): { timestamp: string; nonce: string; sign: string } {

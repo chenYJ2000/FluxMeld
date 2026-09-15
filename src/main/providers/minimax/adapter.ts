@@ -7,24 +7,22 @@
 import { PassThrough } from 'stream'
 import http2, { ClientHttp2Session, ClientHttp2Stream } from 'http2'
 import axios, { AxiosResponse } from 'axios'
-import crypto from 'crypto'
 import { createParser, EventSourceMessage } from 'eventsource-parser'
 import FormData from 'form-data'
 import { Account, Provider } from '../../store/types'
 import {
-  toolsToSystemPrompt,
-  TOOL_WRAP_HINT,
-  hasToolPromptInjected,
-  shouldInjectToolPrompt,
-} from '../../proxy/utils/tools'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser'
-import {
-  createToolCallState,
-  processStreamContent,
-  flushToolCallBuffer,
   createBaseChunk,
-  ToolCallState,
-} from '../../proxy/utils/streamToolHandler'
+  createToolCallState,
+  flushToolCallBuffer,
+  hasToolPromptInjected,
+  parseToolCallsFromText,
+  processStreamContent,
+  shouldInjectToolPrompt,
+  TOOL_WRAP_HINT,
+  toolsToSystemPrompt,
+  type ToolCallState,
+} from '../common/toolCalling'
+import { md5, unixTimestamp, uuid } from '../common/crypto'
 
 const AGENT_BASE_URL = 'https://agent.minimaxi.com'
 
@@ -112,22 +110,6 @@ interface ChatListItem {
 
 const deviceInfoMap = new Map<string, DeviceInfo>()
 const DEVICE_INFO_EXPIRES = 10800
-
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
-
-function md5(input: string): string {
-  return crypto.createHash('md5').update(input).digest('hex')
-}
-
-function unixTimestamp(): number {
-  return Math.floor(Date.now() / 1000)
-}
 
 function tokenSplit(authorization: string): string[] {
   const token = authorization.replace('Bearer ', '')

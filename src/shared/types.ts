@@ -46,6 +46,8 @@ export interface ProviderCapabilities {
   clearChats?: boolean
   /** Provider usage credits support */
   credits?: boolean
+  /** Whether FluxMeld provides managed (prompt-emulated) tool calling for this provider */
+  toolCalling?: boolean
 }
 
 /** Serializable UI metadata for a provider. */

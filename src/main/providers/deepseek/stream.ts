@@ -4,9 +4,11 @@
  */
 
 import { PassThrough } from 'stream'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser.ts'
-import { ToolStreamParser } from '../../proxy/toolCalling/ToolStreamParser.ts'
-import type { ToolCallingPlan } from '../../proxy/toolCalling/types.ts'
+import {
+  parseToolCallsFromText,
+  ToolStreamParser,
+  type ToolCallingPlan,
+} from '../common/toolCalling'
 
 const MODEL_NAME = 'deepseek-chat'
 const SEARCH_CONTROL_MARKER_PATTERN = /^(SEARCH|WEB_SEARCH|SEARCHING)(?:\s+|$)/i

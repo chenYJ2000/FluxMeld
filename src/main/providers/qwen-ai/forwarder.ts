@@ -3,8 +3,10 @@ import {
   QwenAiStreamHandler,
   type QwenAiUpstreamCompletionState,
 } from './adapter'
-import { ToolCallingResponseError } from '../../proxy/toolCalling/ToolCallingEngine'
-import type { ToolCallingTransformResult } from '../../proxy/toolCalling/types'
+import {
+  ToolCallingResponseError,
+  type ToolCallingTransformResult,
+} from '../common/toolCalling'
 import { proxyStatusManager } from '../../proxy/status'
 import { getRemainingTimeout, throwIfAborted } from '../../proxy/requestLifecycle'
 import {

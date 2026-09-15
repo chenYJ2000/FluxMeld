@@ -16,7 +16,7 @@ import {
   CredentialInfo,
   AdapterConfig,
   OAuthProgressEvent,
-} from '../types'
+} from '../../oauth/types'
 
 /**
  * OAuth adapter abstract base class

@@ -5,7 +5,7 @@ import minimaxConfig from './config.ts'
 import { MiniMaxAdapter } from './adapter.ts'
 import { createMiniMaxForwarder } from './forwarder.ts'
 import { MiniMaxAdapter as MiniMaxOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import { checkMiniMaxToken } from './tokenCheck.ts'
 import type { ProviderModule } from '../types.ts'
 

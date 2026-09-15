@@ -1,4 +1,4 @@
-import { isReasoningEnabled } from '../../proxy/utils/reasoning'
+import { isReasoningEnabled } from '../common/reasoning'
 
 export interface DeepSeekChatOptionInput {
   model: string

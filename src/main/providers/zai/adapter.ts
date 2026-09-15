@@ -9,15 +9,18 @@ import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
 import FormData from 'form-data'
 import { Account, Provider } from '../../store/types'
-import { hasToolUse, parseToolUse, ToolCall } from '../../proxy/promptToolUse'
-import { parseToolCallsFromText } from '../../proxy/utils/toolParser'
 import {
-  createToolCallState,
-  processStreamContent,
-  flushToolCallBuffer,
   createBaseChunk,
-  ToolCallState,
-} from '../../proxy/utils/streamToolHandler'
+  createToolCallState,
+  flushToolCallBuffer,
+  hasToolUse,
+  parseToolCallsFromText,
+  parseToolUse,
+  processStreamContent,
+  type ToolCall,
+  type ToolCallState,
+} from '../common/toolCalling'
+import { uuid } from '../common/crypto'
 
 const ZAI_API_BASE = 'https://chat.z.ai'
 const X_FE_VERSION = 'prod-fe-1.1.37'
@@ -97,15 +100,6 @@ interface ChatCompletionRequest {
   reasoning_effort?: string | boolean
   chatId?: string
   parentMessageId?: string
-}
-
-function uuid(separator: boolean = true): string {
-  const id = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-  return separator ? id : id.replace(/-/g, '')
 }
 
 export class ZaiAdapter {

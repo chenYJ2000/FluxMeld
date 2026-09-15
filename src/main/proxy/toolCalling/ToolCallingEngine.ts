@@ -133,6 +133,7 @@ export class ToolCallingEngine {
       model: request.model,
       config: this.config,
       clientRequest,
+      providerToolCalling: provider.capabilities?.toolCalling,
     })
     if (plan.shouldParseResponse) {
       for (const tool of plan.tools) getToolArgumentValidator(tool)

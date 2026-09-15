@@ -4,7 +4,7 @@
  */
 
 import axios from 'axios'
-import { BaseOAuthAdapter } from '../../oauth/adapters/base'
+import { BaseOAuthAdapter } from '../common/oauthBase'
 import {
   OAuthResult,
   OAuthOptions,

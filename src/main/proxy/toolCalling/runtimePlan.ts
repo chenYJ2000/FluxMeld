@@ -10,6 +10,8 @@ export function buildToolCallingRuntimePlan(input: {
   model?: string
   config: ToolCallingConfig
   clientRequest: NormalizedClientToolRequest
+  /** Explicit provider capability flag; falls back to the tool profile. */
+  providerToolCalling?: boolean
 }): ToolCallingPlan {
   const profile = getProviderToolProfile(input.providerId)
   const tools = input.clientRequest.tools
@@ -30,7 +32,7 @@ export function buildToolCallingRuntimePlan(input: {
     input.config,
     allowedTools.length,
     input.clientRequest.toolChoice.mode,
-    profile.managedSupport,
+    input.providerToolCalling ?? profile.managedSupport,
   )
   const mode = disabledReason ? 'disabled' : 'managed'
   const protocol =

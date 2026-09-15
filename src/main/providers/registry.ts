@@ -23,7 +23,7 @@ import { zaiModule } from './zai/index.ts'
 import type { Provider } from '../../shared/types'
 import type { ProviderModule, BuiltinProviderConfig } from './types.ts'
 import type { ForwarderServices, ProviderForwarder } from '../proxy/forwarders/types.ts'
-import type { BaseOAuthAdapter } from '../oauth/adapters/base.ts'
+import type { BaseOAuthAdapter } from './common/oauthBase.ts'
 import type { AdapterConfig, ProviderType } from '../oauth/types.ts'
 import type { ProviderToolProfile } from '../proxy/toolCalling/providerProfiles.ts'
 

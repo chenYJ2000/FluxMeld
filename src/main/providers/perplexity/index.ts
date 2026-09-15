@@ -5,7 +5,7 @@ import perplexityConfig from './config.ts'
 import { PerplexityAdapter } from './adapter.ts'
 import { createPerplexityForwarder } from './forwarder.ts'
 import { PerplexityAdapter as PerplexityOAuthAdapter } from './oauth.ts'
-import { getProviderToolProfile } from '../../proxy/toolCalling/providerProfiles.ts'
+import { getProviderToolProfile } from '../common/toolCalling'
 import { checkPerplexityToken } from './tokenCheck.ts'
 import type { ProviderModule } from '../types.ts'
 

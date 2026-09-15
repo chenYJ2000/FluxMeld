@@ -8,9 +8,14 @@ import axios, { AxiosResponse } from 'axios'
 import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
 import type { Account, Provider } from '../../store/types'
-import { hasToolUse, parseToolUse } from '../../proxy/promptToolUse'
-import { getToolProtocol } from '../../proxy/toolCalling/protocols'
-import type { ToolProtocolId } from '../../proxy/toolCalling/types'
+import {
+  getToolProtocol,
+  hasToolUse,
+  parseToolUse,
+  type ToolProtocolId,
+} from '../common/toolCalling'
+import { uuid } from '../common/crypto'
+import { extractTextContent } from '../common/text'
 
 const QWEN_AI_BASE = 'https://chat.qwen.ai'
 const QWEN_AI_WEB_VERSION = '0.2.35'
@@ -268,29 +273,8 @@ export function buildQwenAiFeatureConfig(
   }
 }
 
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
-
 function timestamp(): number {
   return Date.now()
-}
-
-function extractTextContent(content: QwenAiMessage['content']): string {
-  if (typeof content === 'string') return content
-
-  if (Array.isArray(content)) {
-    return content
-      .filter((item) => item?.type === 'text' && typeof item.text === 'string')
-      .map((item) => item.text)
-      .join('\n')
-  }
-
-  return ''
 }
 
 export function buildQwenAiPrompt(

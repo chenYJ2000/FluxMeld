@@ -71,6 +71,15 @@ through a single entry point (`index.ts`). `src/main/providers/registry.ts` is
 the one registration point; shared orchestrators dispatch via the registry and
 never branch on a provider id.
 
+Multi-provider shared methods live in `src/main/providers/common/` (crypto,
+text, `oauthBase`, and the `toolCalling.ts` facade). Provider modules import
+from `common/` and may override locally. Stable provider-agnostic
+infrastructure stays in `proxy/`; the facade is the provider-facing seam.
+
+A provider declares managed tool-calling support via
+`capabilities.toolCalling` on its config; `runtimePlan` and the tool-calling UI
+consume that flag.
+
 To add or modify a provider, see `docs/architecture/provider-plugin.md`.
 
 ### IPC Communication

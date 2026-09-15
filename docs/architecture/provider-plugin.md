@@ -22,6 +22,23 @@ src/main/providers/<id>/
 └── challenge.ts      # optional provider-specific crypto (e.g. DeepSeek WASM)
 ```
 
+The surrounding `providers/` layout (shared code lives in `common/`):
+
+```
+src/main/providers/
+├── common/           # multi-provider shared methods (import here, or override locally)
+│   ├── crypto.ts      # uuid / md5 / unixTimestamp
+│   ├── text.ts        # extractTextContent
+│   ├── reasoning.ts   # isReasoningEnabled re-export
+│   ├── oauthBase.ts   # BaseOAuthAdapter (token acquire/refresh base)
+│   └── toolCalling.ts # provider-facing tool-calling facade (re-exports the proxy engine)
+├── registry.ts       # the single registration point
+├── types.ts          # ProviderModule contract
+├── checker.ts        # generic provider status / token-check orchestration
+├── custom.ts         # custom provider support
+└── <id>/             # one self-contained folder per provider
+```
+
 `src/main/providers/registry.ts` is the single registration point. All shared
 orchestrators (proxy forwarder, OAuth manager, provider checker, IPC handlers,
 store) consume providers through it and never branch on a provider id:
@@ -30,6 +47,31 @@ store) consume providers through it and never branch on a provider id:
 - `providers/builtin/index.ts` — config-only aggregation (no adapter imports) for the store
 - `providers/oauthCredentials.ts` — applies a module's `normalizeOAuthCredentials`
 - `proxy/forwarders/index.ts`, `oauth/adapters/index.ts`, `oauth/tokenExtractionConfig.ts` — thin facades over the registry
+
+## Shared code (`providers/common/`)
+
+Multi-provider shared methods live in `providers/common/`. A provider module may
+import them, or define its own version locally when its protocol differs.
+Providers never reach into `proxy/` directly for shared helpers — they use the
+`common/` modules (notably the `common/toolCalling.ts` facade).
+
+Stable, provider-agnostic infrastructure (the tool-calling engine, legacy tool
+parsers, `proxy/types.ts`) stays in `proxy/`; the `common/toolCalling.ts` facade
+is the seam that exposes it to providers.
+
+### Tool-calling support flag
+
+Whether FluxMeld provides managed (prompt-emulated) tool calling for a provider
+is a boolean on the provider config:
+
+```ts
+capabilities: { clearChats: true, toolCalling: true }
+```
+
+It is consumed by `runtimePlan` (falling back to the shared tool profile when
+unset) and by the renderer's tool-calling panel, which derives its provider
+matrix from `providers.getBuiltin()` instead of a hard-coded list.
+
 
 ## ProviderModule contract
 
