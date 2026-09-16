@@ -32,7 +32,7 @@ src/main/egress/
 │   └── discovery.ts         # env proxy parsing + TCP probing
 ├── clash/                   # Clash/mihomo controller source
 ├── config-file/             # JSON config-file source
-└── ip-pool/                 # Proxy-layer gateway IP pool source (leased exits)
+└── netfountain/             # NetFountain proxy-layer gateway source (leased exits)
 ```
 
 ## How requests are proxied
@@ -92,7 +92,7 @@ Sources whose exits must be leased (and may expire) implement the optional
 - `refreshPool`, the empty-table guard, and expiry scheduling behave as for
   table sources (the IP pool sets `expiresAt` from `created_at + ttl`).
 
-The `ip-pool` source talks to the proxy-layer gateway (`USAGE.md`):
+The `netfountain` source talks to the proxy-layer gateway (`USAGE.md`):
 `POST /{site}/ips/acquire?strategy=remaining_desc&min_remaining_sec=...`,
 `DELETE /{site}/ips/{id}` (change IP), `POST /{site}/ips/{id}/release`
 (deactivate) and `GET /{site}/count` (probe). Unsupported protocols (`socks4`)

@@ -2,21 +2,21 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  IpPoolClient,
-  parseIpPoolRecord,
-  type IpPoolHttpFn,
-  type IpPoolResponse,
-} from '../../src/main/egress/ip-pool/client.ts'
-import { IpPoolSource } from '../../src/main/egress/ip-pool/source.ts'
+  NetFountainClient,
+  parseNetFountainRecord,
+  type NetFountainHttpFn,
+  type NetFountainResponse,
+} from '../../src/main/egress/netfountain/client.ts'
+import { NetFountainSource } from '../../src/main/egress/netfountain/source.ts'
 import type { EgressServices } from '../../src/main/egress/types.ts'
 
-type Handler = (method: string, url: string) => IpPoolResponse | Promise<IpPoolResponse>
+type Handler = (method: string, url: string) => NetFountainResponse | Promise<NetFountainResponse>
 
-function ok(data: unknown): IpPoolResponse {
+function ok(data: unknown): NetFountainResponse {
   return { status: 200, data: { code: 0, msg: 'ok', data } }
 }
 
-function fail(code: number, msg = 'error'): IpPoolResponse {
+function fail(code: number, msg = 'error'): NetFountainResponse {
   return { status: 200, data: { code, msg, data: null } }
 }
 
@@ -36,15 +36,15 @@ function poolRecord(overrides: Record<string, unknown> = {}): Record<string, unk
 }
 
 function makeClient(handler: Handler): {
-  client: IpPoolClient
+  client: NetFountainClient
   calls: Array<{ method: string; url: string }>
 } {
   const calls: Array<{ method: string; url: string }> = []
-  const http: IpPoolHttpFn = async ({ method, url }) => {
+  const http: NetFountainHttpFn = async ({ method, url }) => {
     calls.push({ method, url })
     return handler(method, url)
   }
-  const client = new IpPoolClient({
+  const client = new NetFountainClient({
     baseUrl: 'http://pool:9000/api/v1/',
     site: 'glm',
     http,
@@ -78,12 +78,12 @@ function makeServices(settings: Record<string, unknown> = SETTINGS): EgressServi
 
 function makeSource(handler: Handler, settings: Record<string, unknown> = SETTINGS) {
   const { client, calls } = makeClient(handler)
-  const source = new IpPoolSource(makeServices(settings), { client })
+  const source = new NetFountainSource(makeServices(settings), { client })
   return { source, calls }
 }
 
-test('parseIpPoolRecord normalizes fields and derives proxy_url', () => {
-  const parsed = parseIpPoolRecord({
+test('parseNetFountainRecord normalizes fields and derives proxy_url', () => {
+  const parsed = parseNetFountainRecord({
     id: '7',
     ip: '5.6.7.8',
     port: '1080',
@@ -100,12 +100,12 @@ test('parseIpPoolRecord normalizes fields and derives proxy_url', () => {
   assert.equal(parsed?.created_at, 2000)
 })
 
-test('parseIpPoolRecord rejects malformed entries', () => {
-  assert.equal(parseIpPoolRecord(null), null)
-  assert.equal(parseIpPoolRecord({ ip: '', port: 1 }), null)
-  assert.equal(parseIpPoolRecord({ id: 1, ip: 'a', port: 0 }), null)
-  assert.equal(parseIpPoolRecord({ id: -1, ip: 'a', port: 80 }), null)
-  assert.equal(parseIpPoolRecord({ id: 1, ip: 'a', port: 70000 }), null)
+test('parseNetFountainRecord rejects malformed entries', () => {
+  assert.equal(parseNetFountainRecord(null), null)
+  assert.equal(parseNetFountainRecord({ ip: '', port: 1 }), null)
+  assert.equal(parseNetFountainRecord({ id: 1, ip: 'a', port: 0 }), null)
+  assert.equal(parseNetFountainRecord({ id: -1, ip: 'a', port: 80 }), null)
+  assert.equal(parseNetFountainRecord({ id: 1, ip: 'a', port: 70000 }), null)
 })
 
 test('acquire requests remaining_desc with a min remaining floor', async () => {
@@ -254,11 +254,11 @@ test('probe is available while the pool is empty (acquisition waits)', async () 
 })
 
 test('probe reports unavailable when the gateway is unreachable', async () => {
-  const http: IpPoolHttpFn = async () => {
+  const http: NetFountainHttpFn = async () => {
     throw new Error('boom')
   }
-  const client = new IpPoolClient({ baseUrl: 'http://pool', site: 'glm', http })
-  const source = new IpPoolSource(makeServices(), { client })
+  const client = new NetFountainClient({ baseUrl: 'http://pool', site: 'glm', http })
+  const source = new NetFountainSource(makeServices(), { client })
   const result = await source.probe()
   assert.equal(result.available, false)
 })

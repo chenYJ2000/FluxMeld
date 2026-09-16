@@ -8,7 +8,7 @@
 
 import { clashSourceModule } from './clash/index.ts'
 import { configFileSourceModule } from './config-file/index.ts'
-import { ipPoolSourceModule } from './ip-pool/index.ts'
+import { netFountainSourceModule } from './netfountain/index.ts'
 import type {
   EgressServices,
   EgressSource,
@@ -23,7 +23,7 @@ export type { EgressSourceModule } from './types.ts'
 export const egressSourceModules: EgressSourceModule[] = [
   clashSourceModule,
   configFileSourceModule,
-  ipPoolSourceModule,
+  netFountainSourceModule,
 ]
 
 const moduleMap: Record<string, EgressSourceModule> = Object.fromEntries(

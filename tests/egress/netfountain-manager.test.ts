@@ -11,8 +11,8 @@ import type {
 import type { RotationPolicy } from '../../src/shared/types.ts'
 
 const META: EgressSourceModuleMeta = {
-  id: 'ip-pool',
-  labelKey: 'test.ipPool',
+  id: 'netfountain',
+  labelKey: 'test.netfountain',
   fields: [],
   capabilities: { rotate: true, listExits: true, expiry: true, alwaysOn: true },
   defaultMaxExitAttempts: 3,
@@ -38,7 +38,7 @@ function makeSettings(): OutboundProxySettings {
     groupAssignmentEnabled: false,
     activeSourceId: 's1',
     rotation: rotationWith(),
-    sources: [{ id: 's1', sourceId: 'ip-pool', settings: {} }],
+    sources: [{ id: 's1', sourceId: 'netfountain', settings: {} }],
     groups: [],
   }
 }

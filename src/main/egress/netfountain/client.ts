@@ -1,5 +1,5 @@
 /**
- * IP pool gateway client.
+ * NetFountain gateway client.
  *
  * Talks to the proxy-layer gateway (see USAGE.md): `{baseUrl}/{site}/...`.
  * Uses a dedicated axios instance so the per-request egress interceptor (which
@@ -14,8 +14,8 @@ import axios, { type AxiosRequestConfig } from 'axios'
 
 const DEFAULT_TIMEOUT_MS = 8000
 
-/** One record returned by the pool (`data` of an acquire/count response). */
-export interface IpPoolRecord {
+/** One record returned by the gateway (`data` of an acquire/count response). */
+export interface NetFountainRecord {
   id: number
   ip: string
   port: number
@@ -28,19 +28,19 @@ export interface IpPoolRecord {
   created_at: number | null
 }
 
-export interface IpPoolCount {
+export interface NetFountainCount {
   total: number
   free_total: number
   [key: string]: unknown
 }
 
-export type IpPoolAcquireResult =
-  | { status: 'ok'; record: IpPoolRecord }
+export type NetFountainAcquireResult =
+  | { status: 'ok'; record: NetFountainRecord }
   | { status: 'empty'; error: string }
   | { status: 'config-error'; error: string }
   | { status: 'error'; error: string }
 
-export interface IpPoolResponse {
+export interface NetFountainResponse {
   status: number
   data: unknown
 }
@@ -48,17 +48,17 @@ export interface IpPoolResponse {
 export type HttpMethod = 'GET' | 'POST' | 'DELETE'
 
 /** Injectable transport so the client can be exercised without real HTTP. */
-export type IpPoolHttpFn = (request: {
+export type NetFountainHttpFn = (request: {
   method: HttpMethod
   url: string
   timeoutMs: number
-}) => Promise<IpPoolResponse>
+}) => Promise<NetFountainResponse>
 
-export interface IpPoolClientOptions {
+export interface NetFountainClientOptions {
   baseUrl: string
   site: string
   timeoutMs?: number
-  http?: IpPoolHttpFn
+  http?: NetFountainHttpFn
 }
 
 interface Envelope {
@@ -93,8 +93,8 @@ function parseEnvelope(raw: unknown): Envelope | null {
   }
 }
 
-/** Normalize one pool record; returns null for malformed entries. */
-export function parseIpPoolRecord(raw: unknown): IpPoolRecord | null {
+/** Normalize one gateway record; returns null for malformed entries. */
+export function parseNetFountainRecord(raw: unknown): NetFountainRecord | null {
   const record = asRecord(raw)
   if (!record) return null
 
@@ -130,30 +130,30 @@ export function parseIpPoolRecord(raw: unknown): IpPoolRecord | null {
   }
 }
 
-const poolAxios = axios.create()
+const netFountainAxios = axios.create()
 
 async function defaultHttp(request: {
   method: HttpMethod
   url: string
   timeoutMs: number
-}): Promise<IpPoolResponse> {
+}): Promise<NetFountainResponse> {
   const config: AxiosRequestConfig = {
     method: request.method,
     url: request.url,
     timeout: request.timeoutMs,
     validateStatus: () => true,
   }
-  const response = await poolAxios.request(config)
+  const response = await netFountainAxios.request(config)
   return { status: response.status, data: response.data }
 }
 
-export class IpPoolClient {
+export class NetFountainClient {
   private readonly baseUrl: string
   private readonly site: string
   private readonly timeoutMs: number
-  private readonly http: IpPoolHttpFn
+  private readonly http: NetFountainHttpFn
 
-  constructor(options: IpPoolClientOptions) {
+  constructor(options: NetFountainClientOptions) {
     this.baseUrl = String(options.baseUrl ?? '').replace(/\/+$/, '')
     this.site = String(options.site ?? '').replace(/^\/+|\/+$/g, '')
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS
@@ -179,34 +179,34 @@ export class IpPoolClient {
   }
 
   /** `GET /{site}/count`; null when unreachable or malformed. */
-  async count(): Promise<IpPoolCount | null> {
+  async count(): Promise<NetFountainCount | null> {
     const envelope = await this.send('GET', this.url('/count'))
     const data = asRecord(envelope?.data)
     if (!envelope || envelope.code !== 0 || !data) return null
-    return data as IpPoolCount
+    return data as NetFountainCount
   }
 
   /**
    * `POST /{site}/ips/acquire` with `strategy=remaining_desc` (longest
    * remaining first) and a `min_remaining_sec` floor.
    */
-  async acquire(minRemainingSeconds: number): Promise<IpPoolAcquireResult> {
+  async acquire(minRemainingSeconds: number): Promise<NetFountainAcquireResult> {
     const min = Number.isFinite(minRemainingSeconds) ? Math.max(0, minRemainingSeconds) : 0
     const path = `/ips/acquire?strategy=remaining_desc&min_remaining_sec=${min}`
     const envelope = await this.send('POST', this.url(path))
     if (!envelope) {
-      return { status: 'error', error: 'IP pool gateway returned an invalid response.' }
+      return { status: 'error', error: 'NetFountain gateway returned an invalid response.' }
     }
     if (envelope.code === 40402) return { status: 'empty', error: envelope.msg }
     if (envelope.code === 40000 || envelope.code === 40400) {
-      return { status: 'config-error', error: envelope.msg || `IP pool error ${envelope.code}` }
+      return { status: 'config-error', error: envelope.msg || `NetFountain error ${envelope.code}` }
     }
     if (envelope.code !== 0) {
-      return { status: 'error', error: envelope.msg || `IP pool error ${envelope.code}` }
+      return { status: 'error', error: envelope.msg || `NetFountain error ${envelope.code}` }
     }
 
-    const record = parseIpPoolRecord(envelope.data)
-    if (!record) return { status: 'error', error: 'IP pool returned a malformed record.' }
+    const record = parseNetFountainRecord(envelope.data)
+    if (!record) return { status: 'error', error: 'NetFountain returned a malformed record.' }
     return { status: 'ok', record }
   }
 

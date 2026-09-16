@@ -1,5 +1,5 @@
 /**
- * IP pool egress source.
+ * NetFountain egress source.
  *
  * Leases exits one at a time from the proxy-layer gateway (see USAGE.md) and
  * exposes them as `EgressExit`s. Acquisition rules:
@@ -14,8 +14,8 @@
  * before switching to a new one. `deactivate()` releases every held lease.
  */
 
-import { IP_POOL_META } from './config.ts'
-import { IpPoolClient, type IpPoolRecord } from './client.ts'
+import { NETFOUNTAIN_META } from './config.ts'
+import { NetFountainClient, type NetFountainRecord } from './client.ts'
 import type {
   EgressExit,
   EgressProbeResult,
@@ -31,7 +31,7 @@ const DEFAULT_MIN_REMAINING_SECONDS = 120
 const DEFAULT_EMPTY_POOL_WAIT_MS = 20000
 const REQUEST_TIMEOUT_MS = 8000
 
-/** Pool protocols this app can actually route through. */
+/** Gateway protocols this app can actually route through. */
 const SUPPORTED_PROTOCOLS: Record<string, EgressProtocol | undefined> = {
   http: 'http',
   https: 'https',
@@ -39,16 +39,16 @@ const SUPPORTED_PROTOCOLS: Record<string, EgressProtocol | undefined> = {
   socks5h: 'socks5h',
 }
 
-interface IpPoolSettings {
+interface NetFountainSettings {
   baseUrl: string
   site: string
   minRemainingSeconds: number
   emptyPoolWaitMs: number
 }
 
-export interface IpPoolSourceDeps {
+export interface NetFountainSourceDeps {
   /** Test seam: reuse a preconfigured client instead of building one. */
-  client?: IpPoolClient
+  client?: NetFountainClient
 }
 
 function toNonNegativeNumber(value: unknown, fallback: number): number {
@@ -57,7 +57,7 @@ function toNonNegativeNumber(value: unknown, fallback: number): number {
   return parsed
 }
 
-function recordToExit(record: IpPoolRecord, protocol: EgressProtocol): EgressExit {
+function recordToExit(record: NetFountainRecord, protocol: EgressProtocol): EgressExit {
   const expiresAt =
     record.ttl !== null && record.created_at !== null
       ? (record.created_at + record.ttl) * 1000
@@ -91,20 +91,20 @@ function delay(ms: number, signal?: AbortSignal): Promise<boolean> {
   })
 }
 
-export class IpPoolSource implements EgressSource {
-  readonly meta: EgressSourceModuleMeta = IP_POOL_META
+export class NetFountainSource implements EgressSource {
+  readonly meta: EgressSourceModuleMeta = NETFOUNTAIN_META
 
-  /** Exits currently leased from the pool, keyed by exit id. */
+  /** Exits currently leased from the gateway, keyed by exit id. */
   private readonly held = new Map<string, EgressExit>()
-  private client: IpPoolClient | null = null
+  private client: NetFountainClient | null = null
   private clientSignature = ''
 
   constructor(
     private readonly services: EgressServices,
-    private readonly deps: IpPoolSourceDeps = {},
+    private readonly deps: NetFountainSourceDeps = {},
   ) {}
 
-  private getSettings(): IpPoolSettings {
+  private getSettings(): NetFountainSettings {
     const raw = this.services.getSettings()
     return {
       baseUrl: String(raw.baseUrl ?? '').trim() || DEFAULT_BASE_URL,
@@ -117,11 +117,11 @@ export class IpPoolSource implements EgressSource {
     }
   }
 
-  private getClient(settings: IpPoolSettings): IpPoolClient {
+  private getClient(settings: NetFountainSettings): NetFountainClient {
     if (this.deps.client) return this.deps.client
     const signature = `${settings.baseUrl}|${settings.site}`
     if (this.client && this.clientSignature === signature) return this.client
-    this.client = new IpPoolClient({
+    this.client = new NetFountainClient({
       baseUrl: settings.baseUrl,
       site: settings.site,
       timeoutMs: REQUEST_TIMEOUT_MS,
@@ -136,7 +136,7 @@ export class IpPoolSource implements EgressSource {
     if (!count) {
       return {
         available: false,
-        error: `IP pool gateway unreachable: ${settings.baseUrl}/${settings.site}`,
+        error: `NetFountain gateway unreachable: ${settings.baseUrl}/${settings.site}`,
         details: { baseUrl: settings.baseUrl, site: settings.site },
       }
     }
@@ -168,7 +168,7 @@ export class IpPoolSource implements EgressSource {
         const protocol = SUPPORTED_PROTOCOLS[outcome.record.protocol]
         if (!protocol) {
           this.services.logger.warn(
-            `[Egress] IP pool returned unsupported protocol "${outcome.record.protocol}"; deleting and re-acquiring`,
+            `[Egress] NetFountain returned unsupported protocol "${outcome.record.protocol}"; deleting and re-acquiring`,
           )
           await client.remove(outcome.record.id)
           continue
@@ -179,12 +179,12 @@ export class IpPoolSource implements EgressSource {
       }
 
       if (outcome.status === 'config-error') {
-        this.services.logger.warn(`[Egress] IP pool configuration error: ${outcome.error}`)
+        this.services.logger.warn(`[Egress] NetFountain configuration error: ${outcome.error}`)
         return null
       }
 
       this.services.logger.info(
-        `[Egress] IP pool (${settings.site}) has no usable IP; retrying in ${settings.emptyPoolWaitMs}ms`,
+        `[Egress] NetFountain (${settings.site}) has no usable IP; retrying in ${settings.emptyPoolWaitMs}ms`,
       )
       const waited = await delay(settings.emptyPoolWaitMs, signal)
       if (!waited) return null

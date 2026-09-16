@@ -1028,9 +1028,9 @@
         "filePath": "配置文件路径",
         "filePathHelp": "JSON 数组，每项包含 host、port，可选 protocol/username/password/name"
       },
-      "ipPool": {
-        "label": "IP 池",
-        "description": "从 IP 池网关租用出口 IP，优先剩余时间最长者，更换时删除旧 IP",
+      "netfountain": {
+        "label": "NetFountain",
+        "description": "从 NetFountain IP 池网关租用出口 IP，优先剩余时间最长者，更换时删除旧 IP",
         "baseUrl": "网关地址",
         "baseUrlHelp": "代理层网关基路径（默认 http://127.0.0.1:9000/api/v1）",
         "site": "站点标识",

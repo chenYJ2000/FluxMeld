@@ -1028,9 +1028,9 @@
         "filePath": "Config file path",
         "filePathHelp": "A JSON array whose items contain host, port and optional protocol/username/password/name"
       },
-      "ipPool": {
-        "label": "IP Pool",
-        "description": "Lease exit IPs from the IP pool gateway, preferring the longest remaining lifetime and deleting the old IP on change",
+      "netfountain": {
+        "label": "NetFountain",
+        "description": "Lease exit IPs from the NetFountain gateway, preferring the longest remaining lifetime and deleting the old IP on change",
         "baseUrl": "Gateway URL",
         "baseUrlHelp": "Proxy-layer gateway base path (default http://127.0.0.1:9000/api/v1)",
         "site": "Site",
