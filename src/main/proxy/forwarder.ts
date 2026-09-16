@@ -9,9 +9,10 @@ import { PassThrough } from 'stream'
 import { Account, Provider } from '../store/types'
 import { AccountSelection, ForwardResult, ChatCompletionRequest, ProxyContext } from './types'
 import { proxyStatusManager } from './status'
-import { egressManager } from '../egress/manager'
+import { egressManager, EgressUnavailableError } from '../egress/manager'
 import { runWithEgress } from '../egress/context'
 import { createEgressAxios } from '../egress/http'
+import type { EgressExit } from '../egress/types'
 import { loadBalancer } from './loadbalancer'
 import { storeManager } from '../store/store'
 import {
@@ -408,10 +409,26 @@ export class RequestForwarder {
       try {
         // Resolve the exit this account must route through (null = direct) and
         // snapshot its identity for request-log attribution.
-        const accountExit = await egressManager.resolveExitForAccount(
-          currentSelection.provider.id,
-          currentSelection.account.id,
-        )
+        let accountExit: EgressExit | null
+        try {
+          accountExit = await egressManager.resolveExitForAccount(
+            currentSelection.provider.id,
+            currentSelection.account.id,
+          )
+        } catch (error) {
+          if (error instanceof EgressUnavailableError) {
+            // The proxy is enabled but could not be activated: fail fast with a
+            // clear error instead of silently falling back to a direct request.
+            return {
+              success: false,
+              status: 503,
+              error: error.message,
+              latency: Date.now() - startTime,
+              selection: currentSelection,
+            }
+          }
+          throw error
+        }
         attemptEgressNode = accountExit ? (accountExit.name ?? accountExit.id) : undefined
         let result = await runWithEgress(accountExit, () =>
           this.doForward(

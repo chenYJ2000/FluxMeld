@@ -78,6 +78,28 @@ a per-source **Check** button that calls `outboundProxy:checkSource` →
 source and runs `probe()` (using the draft settings, so unsaved edits can be
 tested).
 
+## Resilience
+
+- **Single-flight activation**: concurrent requests share one activation attempt
+  (`activate()` / `activationPromise`), so they never race on the shared exit
+  allocator or thrash the source. Per-group allocation is single-flight too
+  (`Map<groupId, Promise>`), so a group never gets two exits.
+- **Apply then verify**: `pickUsableExit()` applies each candidate *before*
+  verifying it. This is required for sources whose exits share one endpoint
+  (Clash): verifying before applying would test the current node, not the
+  candidate, and could never skip a dead node. At most `MAX_EXIT_ATTEMPTS`
+  candidates are tried; on total failure the previous exit is re-applied.
+- **Cooldown**: a failed activation backs off (1s doubling to 30s) so a down
+  source is not hammered; it resets on success, manual enable, config save, or a
+  successful source check.
+- **Generation guard**: `invalidateSource()`/mode switches bump a generation and
+  clear in-flight promises; stale async results are discarded.
+- **Rotation throttle**: `rotateProxy`/`rotateGroup` are single-flight and
+  rate-limited (3s) to avoid Clash node thrash affecting in-flight requests.
+- **Fail fast**: with `enabled` and group assignment off, if no exit can be
+  activated the request fails with `503` (`EgressUnavailableError`) instead of
+  silently falling back to a (possibly blocked) direct connection.
+
 ## Registration
 
 1. Create `src/main/egress/<id>/` with `index.ts`, `config.ts`, `source.ts`

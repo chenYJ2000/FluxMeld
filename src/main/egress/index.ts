@@ -35,12 +35,9 @@ export async function initializeEgress(): Promise<void> {
   try {
     const settings = storeManager.getConfig().outboundProxy
     if (settings?.enabled) {
-      if (settings.groupAssignmentEnabled) {
-        await egressManager.reload()
-      } else {
-        // Single-exit mode: proactively route all traffic through the proxy.
-        await egressManager.enterProxyMode()
-      }
+      // Activate on startup (single-exit mode enters proxy mode; group mode
+      // is activated lazily per request).
+      await egressManager.enable()
     }
   } catch {
     // Startup should never fail because egress could not be prepared.

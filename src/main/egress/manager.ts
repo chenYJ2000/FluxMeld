@@ -8,6 +8,11 @@
  *     async-local context (`runWithEgress`), never mutating global axios state,
  *   - implements the single-exit mode and per-account group routing.
  *
+ * Resilience: activation and per-group allocation are single-flight (concurrent
+ * callers share one attempt), exits are applied *before* being verified (so dead
+ * nodes are actually skipped), and failures back off with a cooldown. A
+ * generation token invalidates in-flight work when the source or mode changes.
+ *
  * Dependencies on the store are injected through `setDeps()` (wired in
  * `egress/index.ts`) to keep this module free of store import cycles.
  */
@@ -29,6 +34,28 @@ import type { ProxyGroup } from '../../shared/types'
 
 /** Sentinel group id for accounts that must stay strictly direct. */
 export const DIRECT_GROUP = '__direct__'
+
+/** When true, an enabled single-exit proxy that cannot activate fails the
+ * request fast instead of silently falling back to a direct connection. */
+export const EGRESS_FAIL_FAST = true
+
+/** Max candidate exits tried per activation/rotation. */
+const MAX_EXIT_ATTEMPTS = 8
+/** Exit verification timeout. */
+const VERIFY_TIMEOUT_MS = 5000
+/** Failure backoff: base and cap. */
+const COOLDOWN_BASE_MS = 1000
+const COOLDOWN_MAX_MS = 30000
+/** Minimum interval between rotations (avoids thrashing the Clash node). */
+const MIN_ROTATE_INTERVAL_MS = 3000
+
+/** Thrown when the proxy is enabled but no exit could be activated. */
+export class EgressUnavailableError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'EgressUnavailableError'
+  }
+}
 
 export type ProxyCountScope = 'global' | 'provider'
 
@@ -106,17 +133,30 @@ export class EgressManager {
   private readonly scheduler = new RotationScheduler()
   private deps: EgressManagerDeps | null = null
 
+  /** Invalidates in-flight async work when the source/mode changes. */
+  private generation = 0
+  private activationPromise: Promise<boolean> | null = null
+  private rotationPromise: Promise<string | null> | null = null
+  private readonly groupEnsurePromises = new Map<string, Promise<EgressExit | null>>()
+  private readonly groupRotatePromises = new Map<string, Promise<string | null>>()
+  private consecutiveFailures = 0
+  private cooldownUntil = 0
+  private lastRotateAt = 0
+  private readonly lastGroupRotateAt = new Map<string, number>()
+
   setDeps(deps: EgressManagerDeps): void {
     this.deps = deps
   }
 
-  /** Drop cached source/pool state so the next call rebuilds from config. */
+  /** Drop all runtime state so the next call rebuilds from config. */
   invalidateSource(): void {
-    this.activeSource = null
-    this.activeSourceConfigId = null
-    this.pool = []
-    this.groupExits.clear()
-    this.allocator.reset()
+    this.resetRuntime()
+  }
+
+  /** Clear the failure cooldown (manual enable, config save, successful check). */
+  resetCooldown(): void {
+    this.consecutiveFailures = 0
+    this.cooldownUntil = 0
   }
 
   /** Forget a deleted group's runtime exit binding. */
@@ -124,6 +164,25 @@ export class EgressManager {
     const exit = this.groupExits.get(groupId)
     if (exit) this.allocator.release(exit.id)
     this.groupExits.delete(groupId)
+    this.groupEnsurePromises.delete(groupId)
+    this.groupRotatePromises.delete(groupId)
+    this.lastGroupRotateAt.delete(groupId)
+  }
+
+  private resetRuntime(): void {
+    this.generation += 1
+    this.activationPromise = null
+    this.rotationPromise = null
+    this.groupEnsurePromises.clear()
+    this.groupRotatePromises.clear()
+    this.lastGroupRotateAt.clear()
+    this.activeSource = null
+    this.activeSourceConfigId = null
+    this.pool = []
+    this.groupExits.clear()
+    this.globalExit = null
+    this.proxyMode = false
+    this.allocator.reset()
   }
 
   // ---------- configuration ----------
@@ -233,6 +292,7 @@ export class EgressManager {
       return { available: false, error: `Unknown egress source type: ${config.sourceId}` }
     }
     const result: EgressProbeResult = await source.probe()
+    if (result.available) this.resetCooldown()
     return { available: result.available, error: result.error, details: result.details }
   }
 
@@ -250,11 +310,6 @@ export class EgressManager {
 
   // ---------- activation (single-exit mode) ----------
 
-  private allocateNext(pool: EgressExit[]): EgressExit | null {
-    if (this.globalExit) this.allocator.release(this.globalExit.id)
-    return this.allocator.allocate(pool)
-  }
-
   private async verify(
     exit: EgressExit,
     source: EgressSource,
@@ -262,31 +317,91 @@ export class EgressManager {
   ): Promise<boolean> {
     if (!settings.rotation.verifyBeforeUse) return true
     if (source.verifyExit) return source.verifyExit(exit)
-    return defaultVerifyExit(exit)
+    return defaultVerifyExit(exit, { timeoutMs: VERIFY_TIMEOUT_MS })
   }
 
+  /**
+   * Apply each candidate before verifying it, so a source whose exits share one
+   * local endpoint (Clash) can actually skip dead nodes. Failed candidates are
+   * released; on total failure the previous exit is re-applied.
+   */
   private async pickUsableExit(
     source: EgressSource,
     settings: OutboundProxySettings,
+    gen: number,
   ): Promise<EgressExit | null> {
-    const total = this.pool.length
-    for (let attempt = 0; attempt < total; attempt++) {
-      const exit = this.allocateNext(this.pool)
-      if (!exit) return null
-      if (await this.verify(exit, source, settings)) return exit
+    const previous = this.globalExit
+    const limit = Math.min(this.pool.length, MAX_EXIT_ATTEMPTS)
+    const tried: EgressExit[] = []
+
+    for (let i = 0; i < limit; i++) {
+      if (gen !== this.generation) return null
+      const exit = this.allocator.allocate(this.pool)
+      if (!exit) break
+      tried.push(exit)
+
+      const applied = await source.apply(exit)
+      if (gen !== this.generation) return null
+      if (applied && (await this.verify(exit, source, settings))) {
+        for (const candidate of tried) {
+          if (candidate.id !== exit.id) this.allocator.release(candidate.id)
+        }
+        return exit
+      }
       this.log(`Exit unusable, skipping: ${exit.id}`)
+    }
+
+    for (const candidate of tried) this.allocator.release(candidate.id)
+    if (previous) {
+      try {
+        await source.apply(previous)
+      } catch {
+        // best-effort restore
+      }
     }
     return null
   }
 
+  private noteFailure(): void {
+    this.consecutiveFailures += 1
+    const delay = Math.min(
+      COOLDOWN_BASE_MS * 2 ** Math.max(0, this.consecutiveFailures - 1),
+      COOLDOWN_MAX_MS,
+    )
+    this.cooldownUntil = Date.now() + delay
+  }
+
+  private noteSuccess(): void {
+    this.consecutiveFailures = 0
+    this.cooldownUntil = 0
+  }
+
+  /** Single-flight on-demand activation shared by all concurrent callers. */
+  private activate(): Promise<boolean> {
+    if (this.proxyMode && this.globalExit) return Promise.resolve(true)
+    if (this.activationPromise) return this.activationPromise
+    if (Date.now() < this.cooldownUntil) return Promise.resolve(false)
+
+    const gen = this.generation
+    const promise = this.enterProxyMode(gen).catch(() => false)
+    this.activationPromise = promise
+    void promise.finally(() => {
+      if (this.activationPromise === promise) this.activationPromise = null
+    })
+    return promise
+  }
+
   async enable(): Promise<{ success: boolean; error?: string; node?: string | null }> {
     const settings = this.getSettings()
+    this.resetCooldown()
+
     if (settings.groupAssignmentEnabled) {
       const ready = await this.prepareGroupPool(settings)
       if (!ready) return { success: false, error: 'No usable egress exit available.' }
       return { success: true, node: null }
     }
-    const entered = await this.enterProxyMode()
+
+    const entered = await this.activate()
     if (!entered) return { success: false, error: 'Failed to activate outbound proxy.' }
     return { success: true, node: this.getEgressNodeName() }
   }
@@ -305,40 +420,42 @@ export class EgressManager {
     return this.pool.length > 0
   }
 
-  async enterProxyMode(): Promise<boolean> {
+  private async enterProxyMode(gen: number): Promise<boolean> {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source) {
       this.log('No egress source configured; keeping direct connection')
+      this.noteFailure()
       return false
     }
 
     const probe = await source.probe()
+    if (gen !== this.generation) return false
     if (!probe.available) {
       this.log(`Egress source unavailable: ${probe.error ?? 'unknown'}`)
+      this.noteFailure()
       return false
     }
 
     await this.refreshPool(source)
+    if (gen !== this.generation) return false
     if (this.pool.length === 0) {
       this.log('Egress source reported no exits; keeping direct connection')
+      this.noteFailure()
       return false
     }
 
-    const exit = await this.pickUsableExit(source, settings)
+    const exit = await this.pickUsableExit(source, settings, gen)
+    if (gen !== this.generation) return false
     if (!exit) {
       this.log('No usable exit verified; keeping direct connection')
-      return false
-    }
-
-    const applied = await source.apply(exit)
-    if (!applied) {
-      this.log(`Failed to apply exit: ${exit.id}`)
+      this.noteFailure()
       return false
     }
 
     this.globalExit = exit
     this.proxyMode = true
+    this.noteSuccess()
     this.scheduleExpiryRotation(exit, settings)
     this.log(
       `Routing outbound traffic through exit: ${exit.name ?? exit.id} (${this.getProxyUrl()})`,
@@ -346,31 +463,44 @@ export class EgressManager {
     return true
   }
 
+  /** Single-flight, throttled rotation of the global single exit. */
   async rotateProxy(): Promise<string | null> {
+    if (this.rotationPromise) return this.rotationPromise
+    if (Date.now() - this.lastRotateAt < MIN_ROTATE_INTERVAL_MS) {
+      return this.getEgressNodeName()
+    }
+
+    const gen = this.generation
+    const promise = this.doRotateProxy(gen)
+    this.rotationPromise = promise
+    void promise.finally(() => {
+      if (this.rotationPromise === promise) this.rotationPromise = null
+    })
+    return promise
+  }
+
+  private async doRotateProxy(gen: number): Promise<string | null> {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source || this.pool.length === 0) return null
 
-    const exit = await this.pickUsableExit(source, settings)
+    const exit = await this.pickUsableExit(source, settings, gen)
+    if (gen !== this.generation) return null
     if (!exit) {
       this.log('All exits failed verification; keeping current selection')
       return null
     }
 
-    const applied = await source.apply(exit)
-    if (!applied) return null
-
     this.globalExit = exit
     this.proxyMode = true
+    this.lastRotateAt = Date.now()
     this.scheduleExpiryRotation(exit, settings)
     this.log(`Rotated outbound exit to: ${exit.name ?? exit.id}`)
     return exit.name ?? exit.id
   }
 
   async ensureProxyForRequest(_timeoutMs = 5000): Promise<boolean> {
-    if (this.proxyMode && this.globalExit) return true
-    const result = await this.enterProxyMode()
-    return result || (this.proxyMode && !!this.globalExit)
+    return this.activate()
   }
 
   private scheduleExpiryRotation(exit: EgressExit, settings: OutboundProxySettings): void {
@@ -382,23 +512,16 @@ export class EgressManager {
   }
 
   async resetToDirect(): Promise<void> {
-    this.proxyMode = false
     this.scheduler.cancel()
-    if (this.activeSource) {
+    const source = this.activeSource
+    this.resetRuntime()
+    if (source) {
       try {
-        await this.activeSource.deactivate()
+        await source.deactivate()
       } catch {
         // ignore restore failures
       }
     }
-    if (this.globalExit) {
-      this.allocator.release(this.globalExit.id)
-    }
-    for (const exit of this.groupExits.values()) {
-      this.allocator.release(exit.id)
-    }
-    this.groupExits.clear()
-    this.globalExit = null
     this.log('Outbound traffic restored to direct connection')
   }
 
@@ -418,7 +541,12 @@ export class EgressManager {
 
     if (!settings.groupAssignmentEnabled) {
       if (!this.proxyMode || !this.globalExit) {
-        await this.enterProxyMode()
+        const active = await this.activate()
+        if (!active && EGRESS_FAIL_FAST) {
+          throw new EgressUnavailableError(
+            'Outbound proxy is enabled but no exit could be activated.',
+          )
+        }
       }
       return this.proxyMode ? this.globalExit : null
     }
@@ -433,26 +561,58 @@ export class EgressManager {
     return this.deps?.getProviderAssignment(providerId)?.[accountId] ?? null
   }
 
-  /** Lazily allocate (and cache) the dynamic exit for a group. */
-  private async ensureGroupExit(groupId: string): Promise<EgressExit | null> {
+  /** Single-flight, lazy allocation of a group's dynamic exit. */
+  private ensureGroupExit(groupId: string): Promise<EgressExit | null> {
     const existing = this.groupExits.get(groupId)
-    if (existing) return existing
+    if (existing) return Promise.resolve(existing)
 
+    const pending = this.groupEnsurePromises.get(groupId)
+    if (pending) return pending
+
+    const gen = this.generation
+    const promise = this.doEnsureGroupExit(groupId, gen)
+    this.groupEnsurePromises.set(groupId, promise)
+    void promise.finally(() => {
+      if (this.groupEnsurePromises.get(groupId) === promise) {
+        this.groupEnsurePromises.delete(groupId)
+      }
+    })
+    return promise
+  }
+
+  private async doEnsureGroupExit(groupId: string, gen: number): Promise<EgressExit | null> {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source) return null
     if (this.pool.length === 0) await this.refreshPool(source)
+    if (gen !== this.generation) return null
     if (this.pool.length === 0) {
       this.log(`No exits available for group ${groupId}; falling back to direct`)
       return null
     }
 
-    const exit = this.allocator.allocate(this.pool)
-    if (!exit) return null
-    await source.apply(exit)
-    this.groupExits.set(groupId, exit)
-    this.log(`Group ${groupId} assigned exit: ${exit.name ?? exit.id}`)
-    return exit
+    const limit = Math.min(this.pool.length, MAX_EXIT_ATTEMPTS)
+    const tried: EgressExit[] = []
+
+    for (let i = 0; i < limit; i++) {
+      const exit = this.allocator.allocate(this.pool)
+      if (!exit) break
+      tried.push(exit)
+
+      const applied = await source.apply(exit)
+      if (gen !== this.generation) return null
+      if (applied && (await this.verify(exit, source, settings))) {
+        for (const candidate of tried) {
+          if (candidate.id !== exit.id) this.allocator.release(candidate.id)
+        }
+        this.groupExits.set(groupId, exit)
+        this.log(`Group ${groupId} assigned exit: ${exit.name ?? exit.id}`)
+        return exit
+      }
+    }
+
+    for (const candidate of tried) this.allocator.release(candidate.id)
+    return null
   }
 
   /** Pre-allocate dynamic exits for every group (used by the assignment UI). */
@@ -466,24 +626,45 @@ export class EgressManager {
 
   /**
    * Rotate the dynamic exit used by one group without touching the global
-   * single-exit selection. The binding is runtime-only.
+   * single-exit selection. Single-flight and throttled per group.
    */
   async rotateGroup(groupId: string): Promise<string | null> {
+    const pending = this.groupRotatePromises.get(groupId)
+    if (pending) return pending
+
+    const last = this.lastGroupRotateAt.get(groupId) ?? 0
+    if (Date.now() - last < MIN_ROTATE_INTERVAL_MS) {
+      const current = this.groupExits.get(groupId)
+      return current ? (current.name ?? current.id) : null
+    }
+
+    const gen = this.generation
+    const promise = this.doRotateGroup(groupId, gen)
+    this.groupRotatePromises.set(groupId, promise)
+    void promise.finally(() => {
+      if (this.groupRotatePromises.get(groupId) === promise) {
+        this.groupRotatePromises.delete(groupId)
+      }
+    })
+    return promise
+  }
+
+  private async doRotateGroup(groupId: string, gen: number): Promise<string | null> {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source) return null
     if (this.pool.length === 0) await this.refreshPool(source)
+    if (gen !== this.generation) return null
 
     const current = this.groupExits.get(groupId)
     if (current) this.allocator.release(current.id)
+    this.groupExits.delete(groupId)
 
-    const next = this.allocator.allocate(this.pool)
-    if (!next) return null
-
-    await source.apply(next)
-    this.groupExits.set(groupId, next)
-    this.log(`Rotated exit for group ${groupId} to: ${next.name ?? next.id}`)
-    return next.name ?? next.id
+    const exit = await this.doEnsureGroupExit(groupId, gen)
+    if (!exit) return null
+    this.lastGroupRotateAt.set(groupId, Date.now())
+    this.log(`Rotated exit for group ${groupId} to: ${exit.name ?? exit.id}`)
+    return exit.name ?? exit.id
   }
 
   // ---------- assignment ----------

@@ -254,11 +254,15 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
   ipcMain.handle(
     IpcChannels.OUTBOUND_PROXY_ENABLE,
     async (): Promise<{ success: boolean; error?: string; node?: string | null }> => {
+      const settings = getOutboundSettings()
       if (egressManager.isProxyMode()) {
         return { success: true, node: egressManager.getEgressNodeName() }
       }
       const result = await egressManager.enable()
-      storeManager.updateConfig({ outboundProxy: { ...getOutboundSettings(), enabled: true } })
+      // Only persist the master switch as enabled when activation succeeded.
+      storeManager.updateConfig({
+        outboundProxy: { ...settings, enabled: result.success },
+      })
       return result
     },
   )
@@ -393,11 +397,13 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       if (enabled) {
         // Release the single global exit before switching to group routing.
         await egressManager.resetToDirect()
+        egressManager.resetCooldown()
         await egressManager.warmGroupExits()
       } else {
         await egressManager.resetToDirect()
+        egressManager.resetCooldown()
         if (settings.enabled) {
-          await egressManager.enterProxyMode()
+          await egressManager.enable()
         }
       }
       return enabled
@@ -435,6 +441,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       // Cheap synchronous invalidation only; the exit pool is refreshed lazily
       // on the next actual use so typing in the settings UI stays responsive.
       egressManager.invalidateSource()
+      egressManager.resetCooldown()
     }
 
     BrowserWindow.getAllWindows().forEach((win) => {

@@ -112,6 +112,12 @@ Sources expose `probe()` / `listExits()` / `apply(exit)` / `deactivate()`;
 `meta.fields` drives the renderer's source settings UI. Shared rotation helpers
 live in `src/main/egress/common/`.
 
+Activation and per-group allocation are single-flight; candidates are applied
+before verifying (so dead nodes are skipped), failures back off with a cooldown,
+and a generation token cancels in-flight work when the source changes. With the
+master switch on and group assignment off, an activation failure fails the
+request fast (`503`) rather than silently going direct.
+
 To add or modify an egress source, see `docs/architecture/egress-plugin.md`.
 
 ### IPC Communication
