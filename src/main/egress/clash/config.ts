@@ -20,6 +20,9 @@ export const CLASH_META: EgressSourceModuleMeta = {
       placeholder: '9097',
       helpKey: 'egress.sources.clash.controllerPortHelp',
       defaultValue: 9097,
+      min: 1,
+      max: 65535,
+      step: 1,
     },
     {
       key: 'proxyPort',
@@ -28,6 +31,9 @@ export const CLASH_META: EgressSourceModuleMeta = {
       placeholder: '7897',
       helpKey: 'egress.sources.clash.proxyPortHelp',
       defaultValue: 7897,
+      min: 1,
+      max: 65535,
+      step: 1,
     },
     {
       key: 'secret',

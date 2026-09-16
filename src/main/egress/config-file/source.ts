@@ -8,6 +8,7 @@
 
 import { existsSync } from 'node:fs'
 import { CONFIG_FILE_META } from './config.ts'
+import { resolveSourceSettings } from '../common/fields.ts'
 import { readExitFile, readExitFileDetailed } from './parser.ts'
 import type {
   EgressExit,
@@ -23,8 +24,8 @@ export class ConfigFileSource implements EgressSource {
   constructor(private readonly services: EgressServices) {}
 
   private getFilePath(): string {
-    const settings = this.services.getSettings()
-    return String(settings.filePath ?? '').trim()
+    const settings = resolveSourceSettings(CONFIG_FILE_META, this.services.getSettings())
+    return String(settings.filePath).trim()
   }
 
   async probe(): Promise<EgressProbeResult> {

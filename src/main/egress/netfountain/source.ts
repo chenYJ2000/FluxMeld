@@ -16,6 +16,7 @@
 
 import { NETFOUNTAIN_META } from './config.ts'
 import { NetFountainClient, type NetFountainRecord } from './client.ts'
+import { resolveSourceSettings } from '../common/fields.ts'
 import type {
   EgressExit,
   EgressProbeResult,
@@ -25,10 +26,6 @@ import type {
   EgressSourceModuleMeta,
 } from '../types.ts'
 
-const DEFAULT_BASE_URL = 'http://127.0.0.1:9000/api/v1'
-const DEFAULT_SITE = 'glm'
-const DEFAULT_MIN_REMAINING_SECONDS = 120
-const DEFAULT_EMPTY_POOL_WAIT_MS = 20000
 const REQUEST_TIMEOUT_MS = 8000
 
 /** Gateway protocols this app can actually route through. */
@@ -49,12 +46,6 @@ interface NetFountainSettings {
 export interface NetFountainSourceDeps {
   /** Test seam: reuse a preconfigured client instead of building one. */
   client?: NetFountainClient
-}
-
-function toNonNegativeNumber(value: unknown, fallback: number): number {
-  const parsed = typeof value === 'number' ? value : Number(value)
-  if (!Number.isFinite(parsed) || parsed < 0) return fallback
-  return parsed
 }
 
 function recordToExit(record: NetFountainRecord, protocol: EgressProtocol): EgressExit {
@@ -105,15 +96,13 @@ export class NetFountainSource implements EgressSource {
   ) {}
 
   private getSettings(): NetFountainSettings {
-    const raw = this.services.getSettings()
+    // Defaults/constraints live on NETFOUNTAIN_META.fields, applied by the resolver.
+    const settings = resolveSourceSettings(NETFOUNTAIN_META, this.services.getSettings())
     return {
-      baseUrl: String(raw.baseUrl ?? '').trim() || DEFAULT_BASE_URL,
-      site: String(raw.site ?? '').trim() || DEFAULT_SITE,
-      minRemainingSeconds: toNonNegativeNumber(
-        raw.minRemainingSeconds,
-        DEFAULT_MIN_REMAINING_SECONDS,
-      ),
-      emptyPoolWaitMs: toNonNegativeNumber(raw.emptyPoolWaitMs, DEFAULT_EMPTY_POOL_WAIT_MS),
+      baseUrl: String(settings.baseUrl),
+      site: String(settings.site),
+      minRemainingSeconds: Number(settings.minRemainingSeconds),
+      emptyPoolWaitMs: Number(settings.emptyPoolWaitMs),
     }
   }
 

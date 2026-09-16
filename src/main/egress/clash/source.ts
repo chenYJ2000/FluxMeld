@@ -9,6 +9,7 @@
 import { ClashController, type ClashMode } from './controller.ts'
 import { CLASH_META } from './config.ts'
 import { canTcpConnect } from '../common/discovery.ts'
+import { resolveSourceSettings } from '../common/fields.ts'
 import type {
   EgressExit,
   EgressProbeResult,
@@ -17,15 +18,7 @@ import type {
   EgressSourceModuleMeta,
 } from '../types.ts'
 
-const DEFAULT_CLASH_HOST = '127.0.0.1'
-const DEFAULT_CONTROLLER_PORT = 9097
-const DEFAULT_PROXY_PORT = 7897
 const PROBE_TIMEOUT_MS = 1200
-
-function normalizePort(value: unknown, fallback: number): number {
-  const port = typeof value === 'number' ? value : Number(value)
-  return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : fallback
-}
 
 interface ClashSettings {
   host: string
@@ -46,12 +39,13 @@ export class ClashSource implements EgressSource {
   constructor(private readonly services: EgressServices) {}
 
   private getSettings(): ClashSettings {
-    const settings = this.services.getSettings()
+    // Defaults and port bounds live on CLASH_META.fields, applied by the resolver.
+    const settings = resolveSourceSettings(CLASH_META, this.services.getSettings())
     return {
-      host: String(settings.clashHost ?? '').trim() || DEFAULT_CLASH_HOST,
-      controllerPort: normalizePort(settings.controllerPort, DEFAULT_CONTROLLER_PORT),
-      proxyPort: normalizePort(settings.proxyPort, DEFAULT_PROXY_PORT),
-      secret: String(settings.secret ?? '').trim(),
+      host: String(settings.clashHost),
+      controllerPort: Number(settings.controllerPort),
+      proxyPort: Number(settings.proxyPort),
+      secret: String(settings.secret),
     }
   }
 

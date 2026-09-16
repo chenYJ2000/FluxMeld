@@ -27,6 +27,7 @@ src/main/egress/
 ├── http.ts                  # axios injection + createEgressAxios()
 ├── index.ts                 # initializeEgress() bootstrap
 ├── common/
+│   ├── fields.ts            # field defaults/constraints resolver (resolveSourceSettings)
 │   ├── rotation/            # ExitPool, orderExits, RotationScheduler
 │   ├── verification.ts      # verifyExit
 │   └── discovery.ts         # env proxy parsing + TCP probing
@@ -155,7 +156,14 @@ within the candidate budget.
    `visibleWhen` rule (`{ key, equals?, in? }`) to show a field only when
    another field's value matches. A `file` field renders a native picker
    button (Electron only; the web build falls back to a text input).
-4. Add i18n strings under `egress.sources.<id>.*` in
+4. `meta.fields` is also the single source of truth for the source's logic:
+   `resolveSourceSettings(meta, settings)` (in `common/fields.ts`) merges the
+   persisted values with the declared `defaultValue`s, coerces each value to the
+   field's type, clamps `number` fields to `min`/`max` and validates `select`
+   options. Sources read their settings through it instead of defining their own
+   `DEFAULT_*` constants, so a new field is picked up without touching
+   `source.ts`.
+5. Add i18n strings under `egress.sources.<id>.*` in
    `src/renderer/src/i18n/locales/{zh-CN,en-US}.json`.
 
 ## Proxy assignment (Phase 2)
