@@ -305,6 +305,8 @@ export interface ForwardResult {
   }
   /** Account/provider that produced the final attempt after retry failover. */
   selection?: AccountSelection
+  /** Outbound exit used by the final attempt (Clash node name / future exit IP). */
+  egressNode?: string
 }
 
 /**

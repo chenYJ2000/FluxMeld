@@ -113,6 +113,7 @@ interface RequestLogEntry {
   status: 'success' | 'error'
   statusCode: number
   clientIp?: string
+  egressNode?: string
   method: string
   url: string
   model: string

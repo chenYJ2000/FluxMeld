@@ -631,6 +631,7 @@
     "latency": "Latency",
     "method": "Method",
     "clientIp": "Client IP",
+    "egressNode": "Egress node",
     "url": "URL",
     "stream": "Stream",
     "responseStatus": "Response Status",

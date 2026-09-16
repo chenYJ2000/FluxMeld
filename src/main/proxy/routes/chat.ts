@@ -167,6 +167,7 @@ router.post('/completions', async (ctx: Context) => {
   ctx.set('X-Request-Id', requestId)
 
   let request: ChatCompletionRequest
+  let resultEgressNode: string | undefined
   try {
     request = ctx.request.body as ChatCompletionRequest
   } catch (error) {
@@ -389,6 +390,8 @@ router.post('/completions', async (ctx: Context) => {
       requestDeadline.signal,
     )
 
+    resultEgressNode = result.egressNode
+
     const latency = Date.now() - startTime
     const resolvedSelection = result.selection ?? selection
     const usedAccount = resolvedSelection.account
@@ -437,6 +440,7 @@ router.post('/completions', async (ctx: Context) => {
         statusCode: result.status || 500,
         method: 'POST',
         clientIp: clientIP,
+        egressNode: result.egressNode,
         url: '/v1/chat/completions',
         model: request.model,
         actualModel: usedActualModel,
@@ -520,6 +524,7 @@ router.post('/completions', async (ctx: Context) => {
         statusCode: 200,
         method: 'POST',
         clientIp: clientIP,
+        egressNode: result.egressNode,
         url: '/v1/chat/completions',
         model: request.model,
         actualModel: usedActualModel,
@@ -725,6 +730,7 @@ router.post('/completions', async (ctx: Context) => {
         statusCode: 200,
         method: 'POST',
         clientIp: clientIP,
+        egressNode: result.egressNode,
         url: '/v1/chat/completions',
         model: request.model,
         actualModel: usedActualModel,
@@ -812,6 +818,7 @@ router.post('/completions', async (ctx: Context) => {
       statusCode,
       method: 'POST',
       clientIp: clientIP,
+      egressNode: resultEgressNode,
       url: '/v1/chat/completions',
       model: request.model,
       actualModel,

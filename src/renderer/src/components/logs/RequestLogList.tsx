@@ -28,6 +28,7 @@ interface RequestLogEntry {
   status: 'success' | 'error'
   statusCode: number
   clientIp?: string
+  egressNode?: string
   method: string
   url: string
   model: string
@@ -201,6 +202,12 @@ export function RequestLogList() {
                   <>
                     <span>·</span>
                     <span className="font-mono">{log.clientIp}</span>
+                  </>
+                )}
+                {log.egressNode && (
+                  <>
+                    <span>·</span>
+                    <span>{log.egressNode}</span>
                   </>
                 )}
               </div>

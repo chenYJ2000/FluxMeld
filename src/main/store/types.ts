@@ -146,6 +146,9 @@ export interface RequestLogEntry {
   /** Source IP of the client that called this proxy endpoint (already sanitized) */
   clientIp?: string
 
+  /** Outbound exit used for the upstream call (Clash node name / exit IP); empty = direct */
+  egressNode?: string
+
   /** HTTP method */
   method: string
   /** Request URL path */

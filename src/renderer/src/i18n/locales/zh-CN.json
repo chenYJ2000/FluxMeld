@@ -631,6 +631,7 @@
     "latency": "延迟",
     "method": "方法",
     "clientIp": "源 IP",
+    "egressNode": "出口节点",
     "url": "URL",
     "stream": "流式",
     "responseStatus": "响应状态",

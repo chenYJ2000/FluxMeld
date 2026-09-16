@@ -59,6 +59,9 @@ export class OutboundProxyManager {
   /** Clash node name selected in GLOBAL before we started rotating */
   private nodeBeforeProxy: string | null = null
 
+  /** Human-readable display name of the currently active exit node */
+  private currentNodeName: string | null = null
+
   /** Cached GLOBAL member list (proxy nodes only) used for rotation */
   private clashNodes: string[] = []
 
@@ -86,6 +89,15 @@ export class OutboundProxyManager {
 
   getControllerUrl(): string | null {
     return this.controllerUrl
+  }
+
+  /**
+   * Human-readable exit identifier for request-log records. When traffic goes
+   * direct this is null (no proxy hop involved). Future non-Clash exits (e.g.
+   * an IP pool) can record their exit IP here as a plain string.
+   */
+  getEgressNodeName(): string | null {
+    return this.proxyMode ? this.currentNodeName : null
   }
 
   /**
@@ -438,6 +450,7 @@ export class OutboundProxyManager {
 
       if (await this.verifyClashNodeExit()) {
         this.log(`Rotated outbound proxy node to: ${node} (verified)`)
+        this.currentNodeName = node
         return node
       }
       this.log(`Proxy node unusable, skipping: ${node}`)
@@ -507,6 +520,7 @@ export class OutboundProxyManager {
           }
         }
         await this.setClashMode('global')
+        this.currentNodeName = this.nodeBeforeProxy
       }
 
       this.proxyMode = true

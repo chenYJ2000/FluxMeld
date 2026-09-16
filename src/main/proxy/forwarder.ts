@@ -345,6 +345,7 @@ export class RequestForwarder {
     const attemptedAccountIds = new Set<string>()
     let toolRepairAttempted = false
     let toolRepairTelemetry: ForwardResult['toolRepair']
+    let attemptEgressNode: string | undefined
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       throwIfAborted(context.signal)
@@ -403,6 +404,9 @@ export class RequestForwarder {
       }
 
       try {
+        // Snapshot the outbound exit before the upstream call so request logs
+        // can attribute the response to the exit actually in effect here.
+        attemptEgressNode = outboundProxyManager.getEgressNodeName() ?? undefined
         let result = await this.doForward(
           modifiedRequest,
           currentSelection.account,
@@ -542,6 +546,7 @@ export class RequestForwarder {
             contextMessages: modifiedRequest.messages.map(cloneChatMessage),
             ...(toolRepairTelemetry ? { toolRepair: toolRepairTelemetry } : {}),
             selection: currentSelection,
+            ...(attemptEgressNode ? { egressNode: attemptEgressNode } : {}),
           }
         }
 
@@ -623,6 +628,7 @@ export class RequestForwarder {
       selection: currentSelection,
       ...(lastToolCallingFailure ? { toolCallingFailure: lastToolCallingFailure } : {}),
       ...(toolRepairTelemetry ? { toolRepair: toolRepairTelemetry } : {}),
+      ...(attemptEgressNode ? { egressNode: attemptEgressNode } : {}),
     }
   }
 
