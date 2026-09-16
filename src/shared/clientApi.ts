@@ -23,6 +23,7 @@ import type {
   EffectiveModel,
   RotationPolicy,
   EgressSourceConfig,
+  ValidationResult,
 } from './types'
 
 export interface ClientTransport {
@@ -461,6 +462,8 @@ export function createClientApi(
     delete: (id: string): Promise<boolean> => transport.invoke('accounts:delete', id),
     validate: (accountId: string): Promise<boolean> =>
       transport.invoke('accounts:validate', accountId),
+    validateAll: (providerId?: string): Promise<Record<string, ValidationResult>> =>
+      transport.invoke('accounts:validateAll', providerId),
     validateToken: (
       providerId: string,
       credentials: Record<string, string>,

@@ -29,6 +29,7 @@ import {
   Activity,
   Plus,
   Trash,
+  ShieldCheck,
 } from 'lucide-react'
 import {
   Dialog,
@@ -45,6 +46,8 @@ interface AccountListProps {
   accounts: Account[]
   provider?: Provider
   onAddAccount: () => void
+  onValidateAllAccounts?: () => void
+  isValidatingAll?: boolean
   onEditAccount: (account: Account) => void
   onDeleteAccount: (id: string) => void
   onValidateAccount: (id: string) => void
@@ -55,6 +58,8 @@ export function AccountList({
   accounts,
   provider,
   onAddAccount,
+  onValidateAllAccounts,
+  isValidatingAll = false,
   onEditAccount,
   onDeleteAccount,
   onValidateAccount,
@@ -188,10 +193,27 @@ export function AccountList({
             {activeCount} {t('providers.onlineCount')}
           </span>
         </div>
-        <Button size="sm" onClick={onAddAccount}>
-          <Plus className="mr-2 h-4 w-4" />
-          {t('providers.addAccount')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {onValidateAllAccounts && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onValidateAllAccounts}
+              disabled={isValidatingAll}
+            >
+              {isValidatingAll ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="mr-2 h-4 w-4" />
+              )}
+              {isValidatingAll ? t('providers.validatingAll') : t('providers.validateAllAccounts')}
+            </Button>
+          )}
+          <Button size="sm" onClick={onAddAccount}>
+            <Plus className="mr-2 h-4 w-4" />
+            {t('providers.addAccount')}
+          </Button>
+        </div>
       </div>
 
       <ScrollArea className="h-[calc(100vh-400px)]">

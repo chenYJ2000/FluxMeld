@@ -31,6 +31,7 @@ import type {
   LogEntry,
   ProviderVendor,
   AppConfig,
+  ValidationResult,
 } from '../../shared/types'
 import type {
   SystemPrompt,
@@ -858,6 +859,14 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     const result = await AccountManager.validate(accountId)
     return result.valid
   })
+
+  ipcMain.handle(
+    IpcChannels.ACCOUNTS_VALIDATE_ALL,
+    async (_, providerId?: string): Promise<Record<string, ValidationResult>> => {
+      const results = await AccountManager.validateAll(providerId)
+      return Object.fromEntries(results)
+    },
+  )
 
   ipcMain.handle(
     IpcChannels.ACCOUNTS_VALIDATE_TOKEN,

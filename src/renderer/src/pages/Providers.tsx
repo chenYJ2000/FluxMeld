@@ -41,6 +41,7 @@ export function Providers() {
   const [typeFilter, setTypeFilter] = useState<FilterType>('all')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isValidatingAll, setIsValidatingAll] = useState(false)
 
   const [showAddProviderDialog, setShowAddProviderDialog] = useState(false)
   const [showCustomProviderForm, setShowCustomProviderForm] = useState(false)
@@ -551,6 +552,46 @@ export function Providers() {
     return await window.electronAPI.accounts.validateToken(providerId, credentials)
   }
 
+  const handleValidateAllAccounts = async (providerId?: string) => {
+    const state = useProvidersStore.getState()
+    const targets = providerId ? state.getAccountsByProvider(providerId) : state.accounts
+
+    if (targets.length === 0) return
+
+    setIsValidatingAll(true)
+    try {
+      const results = await window.electronAPI.accounts.validateAll(providerId)
+      const accounts = await window.electronAPI.accounts.getAll()
+      useProvidersStore.getState().setAccounts(accounts)
+
+      const countMap: Record<string, { total: number; active: number }> = {}
+      for (const account of accounts) {
+        const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
+        countMap[account.providerId] = {
+          total: providerAccounts.length,
+          active: providerAccounts.filter((a) => a.status === 'active').length,
+        }
+      }
+      useProvidersStore.getState().setAccountCounts(countMap)
+
+      const total = Object.keys(results).length
+      const valid = Object.values(results).filter((r) => r.valid).length
+
+      toast({
+        title: t('providers.validateAllComplete'),
+        description: t('providers.validateAllSummary', { valid, total }),
+      })
+    } catch (error) {
+      toast({
+        title: t('providers.validateFailed'),
+        description: error instanceof Error ? error.message : t('providers.operationFailed'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsValidatingAll(false)
+    }
+  }
+
   const handleViewAccountDetail = (account: Account) => {
     store.setSelectedAccountId(account.id)
     setViewMode('account-detail')
@@ -639,6 +680,8 @@ export function Providers() {
           accounts={providerAccounts}
           provider={selectedProvider}
           onAddAccount={() => setShowAddAccountDialog(true)}
+          onValidateAllAccounts={() => handleValidateAllAccounts(selectedProvider.id)}
+          isValidatingAll={isValidatingAll}
           onEditAccount={async (account) => {
             const fullAccount = await window.electronAPI.accounts.getById(account.id, true)
             setEditingAccount(fullAccount || account)
@@ -683,7 +726,9 @@ export function Providers() {
         onStatusFilterChange={setStatusFilter}
         onRefresh={handleCheckAllStatus}
         onAddProvider={() => setShowAddProviderDialog(true)}
+        onValidateAllAccounts={() => handleValidateAllAccounts()}
         isRefreshing={isRefreshing}
+        isValidatingAll={isValidatingAll}
         stats={stats}
       />
 

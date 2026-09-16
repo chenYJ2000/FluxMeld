@@ -30,6 +30,7 @@ import {
   Layers,
   CheckCircle2,
   XCircle,
+  ShieldCheck,
 } from 'lucide-react'
 import type { ProviderStatus, ProviderType } from '@/types/electron'
 import { cn } from '@/lib/utils'
@@ -46,7 +47,9 @@ interface ProviderFilterProps {
   onStatusFilterChange: (filter: StatusFilter) => void
   onRefresh: () => void
   onAddProvider: () => void
+  onValidateAllAccounts?: () => void
   isRefreshing?: boolean
+  isValidatingAll?: boolean
   stats?: {
     total: number
     builtin: number
@@ -65,7 +68,9 @@ export function ProviderFilter({
   onStatusFilterChange,
   onRefresh,
   onAddProvider,
+  onValidateAllAccounts,
   isRefreshing = false,
+  isValidatingAll = false,
   stats,
 }: ProviderFilterProps) {
   const { t } = useTranslation()
@@ -212,23 +217,43 @@ export function ProviderFilter({
       )}
 
       {stats && (
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>
-            {t('providers.total')}: {stats.total}
-          </span>
-          <span>•</span>
-          <span className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
-            {stats.online} {t('providers.onlineCount')}
-          </span>
-          <span>•</span>
-          <span>
-            {stats.enabled} {t('providers.enabled')}
-          </span>
-          <span>•</span>
-          <span>
-            {stats.builtin} {t('providers.builtin')}, {stats.custom} {t('providers.custom')}
-          </span>
+        <div className="flex items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <span>
+              {t('providers.total')}: {stats.total}
+            </span>
+            <span>•</span>
+            <span className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              {stats.online} {t('providers.onlineCount')}
+            </span>
+            <span>•</span>
+            <span>
+              {stats.enabled} {t('providers.enabled')}
+            </span>
+            <span>•</span>
+            <span>
+              {stats.builtin} {t('providers.builtin')}, {stats.custom} {t('providers.custom')}
+            </span>
+          </div>
+
+          {onValidateAllAccounts && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onValidateAllAccounts}
+              disabled={isValidatingAll}
+            >
+              {isValidatingAll ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ShieldCheck className="mr-2 h-4 w-4" />
+              )}
+              {isValidatingAll
+                ? t('providers.validatingAll')
+                : t('providers.validateAllAccounts')}
+            </Button>
+          )}
         </div>
       )}
     </div>

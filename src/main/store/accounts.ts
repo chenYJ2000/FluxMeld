@@ -239,17 +239,32 @@ export class AccountManager {
   }
 
   /**
-   * Batch validate all accounts
+   * Batch validate accounts with bounded concurrency
+   * @param providerId Optional, only validate accounts of this provider
+   * @param concurrency Maximum number of validations running at once
    * @returns Validation result mapping
    */
-  static async validateAll(): Promise<Map<string, ValidationResult>> {
-    const accounts = storeManager.getAccounts(true)
+  static async validateAll(
+    providerId?: string,
+    concurrency = 5,
+  ): Promise<Map<string, ValidationResult>> {
+    const accounts = providerId
+      ? storeManager.getAccountsByProviderId(providerId, true)
+      : storeManager.getAccounts(true)
     const results = new Map<string, ValidationResult>()
 
-    for (const account of accounts) {
-      const result = await this.validate(account.id)
-      results.set(account.id, result)
+    let cursor = 0
+    const limit = Math.max(1, Math.min(concurrency, accounts.length))
+
+    const worker = async (): Promise<void> => {
+      while (cursor < accounts.length) {
+        const account = accounts[cursor]
+        cursor += 1
+        results.set(account.id, await this.validate(account.id))
+      }
     }
+
+    await Promise.all(Array.from({ length: limit }, () => worker()))
 
     return results
   }

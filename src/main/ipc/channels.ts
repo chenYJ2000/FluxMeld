@@ -60,6 +60,7 @@ export const IpcChannels = {
   ACCOUNTS_UPDATE: 'accounts:update',
   ACCOUNTS_DELETE: 'accounts:delete',
   ACCOUNTS_VALIDATE: 'accounts:validate',
+  ACCOUNTS_VALIDATE_ALL: 'accounts:validateAll',
   ACCOUNTS_VALIDATE_TOKEN: 'accounts:validateToken',
   ACCOUNTS_GET_CREDITS: 'accounts:getCredits',
   ACCOUNTS_CLEAR_CHATS: 'accounts:clearChats',
