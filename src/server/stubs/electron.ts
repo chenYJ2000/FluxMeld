@@ -231,6 +231,14 @@ export const shell = {
   showItemInFolder: (): void => {},
 }
 
+// Headless server has no native dialog; callers fall back to manual input.
+export const dialog = {
+  showOpenDialog: async (): Promise<{ canceled: boolean; filePaths: string[] }> => ({
+    canceled: true,
+    filePaths: [],
+  }),
+}
+
 export class Session extends EventEmitter {
   cookies = {
     get: async () => [],
@@ -416,6 +424,7 @@ export default {
   app,
   ipcMain,
   BrowserWindow,
+  dialog,
   shell,
   session,
   screen,
