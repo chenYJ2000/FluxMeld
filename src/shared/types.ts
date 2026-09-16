@@ -157,6 +157,12 @@ export interface Account {
   email?: string
   credentials: Record<string, string>
   status: AccountStatus
+  /**
+   * Manual per-account switch, independent of health status. When false the
+   * account is never selected for forwarding. Undefined is treated as enabled
+   * for backward compatibility.
+   */
+  enabled?: boolean
   lastUsed?: number
   createdAt: number
   updatedAt: number

@@ -93,6 +93,23 @@ test('model availability count follows persisted account and provider health', (
   assert.equal(loadBalancer.getAvailableAccountCount('Qwen3.6-Plus', provider.id), 0)
 })
 
+test('manually disabled accounts are excluded from selection and availability', (t) => {
+  const { provider, accounts } = installStoreFixture(t)
+  const loadBalancer = new LoadBalancer()
+
+  accounts[0].enabled = false
+
+  assert.equal(loadBalancer.getAvailableAccountCount('Qwen3.6-Plus', provider.id), 1)
+
+  for (let i = 0; i < 5; i++) {
+    const selected = loadBalancer.selectAccount('Qwen3.6-Plus', 'round-robin', provider.id)
+    assert.equal(selected?.account.id, 'account-b')
+  }
+
+  accounts[0].enabled = true
+  assert.equal(loadBalancer.getAvailableAccountCount('Qwen3.6-Plus', provider.id), 2)
+})
+
 test('least-recently-used strategy picks the account unused the longest', (t) => {
   const { provider, accounts } = installStoreFixture(t)
   const loadBalancer = new LoadBalancer()

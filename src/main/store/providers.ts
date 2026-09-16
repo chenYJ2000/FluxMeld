@@ -229,7 +229,7 @@ export class ProviderManager {
    */
   static getActiveAccountCount(id: string): number {
     const accounts = storeManager.getAccountsByProviderId(id)
-    return accounts.filter((a) => a.status === 'active').length
+    return accounts.filter((a) => a.status === 'active' && a.enabled !== false).length
   }
 
   /**

@@ -82,6 +82,7 @@ export class AccountManager {
       email: data.email,
       credentials: data.credentials,
       status: 'active',
+      enabled: true,
       createdAt: now,
       updatedAt: now,
       requestCount: 0,
@@ -363,7 +364,7 @@ export class AccountManager {
   static isAvailable(id: string): boolean {
     const account = storeManager.getAccountById(id)
 
-    if (!account || account.status !== 'active') {
+    if (!account || account.status !== 'active' || account.enabled === false) {
       return false
     }
 
@@ -387,7 +388,7 @@ export class AccountManager {
     }
 
     return accounts.filter((account) => {
-      if (account.status !== 'active') {
+      if (account.status !== 'active' || account.enabled === false) {
         return false
       }
 

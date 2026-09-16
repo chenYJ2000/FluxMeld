@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   DropdownMenu,
@@ -54,6 +55,8 @@ interface AccountListProps {
   onDeleteAccount: (id: string) => void
   onValidateAccount: (id: string) => void
   onViewDetail: (account: Account) => void
+  /** Toggle the account's independent enable switch (excluded from routing when off). */
+  onToggleAccount?: (id: string, enabled: boolean) => void
   /** Export the provider's accounts (credentials included) to a JSON file. */
   onExportAccounts?: () => void
   /** Import accounts from a JSON export file's contents. */
@@ -70,6 +73,7 @@ export function AccountList({
   onDeleteAccount,
   onValidateAccount,
   onViewDetail,
+  onToggleAccount,
   onExportAccounts,
   onImportAccounts,
 }: AccountListProps) {
@@ -171,7 +175,7 @@ export function AccountList({
     onExportAccounts?.()
   }
 
-  const activeCount = accounts.filter((a) => a.status === 'active').length
+  const activeCount = accounts.filter((a) => a.status === 'active' && a.enabled !== false).length
   const totalCount = accounts.length
 
   const formatDate = (timestamp?: number) => {
@@ -287,11 +291,15 @@ export function AccountList({
             const config = statusConfig[account.status]
             const StatusIcon = config.icon
             const isValidating = validatingIds.has(account.id)
+            const isEnabled = account.enabled !== false
 
             return (
               <Card
                 key={account.id}
-                className="hover:shadow-sm transition-shadow cursor-pointer"
+                className={cn(
+                  'hover:shadow-sm transition-shadow cursor-pointer',
+                  !isEnabled && 'opacity-60',
+                )}
                 onClick={() => onViewDetail(account)}
               >
                 <CardContent className="p-4">
@@ -316,6 +324,11 @@ export function AccountList({
                             <StatusIcon className="mr-1 h-3 w-3" />
                             {t(config.labelKey)}
                           </Badge>
+                          {!isEnabled && (
+                            <Badge variant="outline" className="text-xs text-muted-foreground">
+                              {t('providers.accountDisabled')}
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
@@ -341,6 +354,19 @@ export function AccountList({
                         <div>{t('providers.lastCheck')}</div>
                         <div>{formatDate(account.lastUsed)}</div>
                       </div>
+
+                      {onToggleAccount && (
+                        <div
+                          className="flex items-center"
+                          onClick={(e) => e.stopPropagation()}
+                          title={isEnabled ? t('providers.disableAccount') : t('providers.enableAccount')}
+                        >
+                          <Switch
+                            checked={isEnabled}
+                            onCheckedChange={(checked) => onToggleAccount(account.id, checked)}
+                          />
+                        </div>
+                      )}
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

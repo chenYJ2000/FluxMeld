@@ -95,7 +95,7 @@ export function Providers() {
           const providerAccounts = accountsData.filter((a) => a.providerId === provider.id)
           countMap[provider.id] = {
             total: providerAccounts.length,
-            active: providerAccounts.filter((a) => a.status === 'active').length,
+            active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
           }
         }
 
@@ -328,7 +328,7 @@ export function Providers() {
       store.updateAccountCount(
         targetProvider.id,
         providerAccounts.length,
-        providerAccounts.filter((a) => a.status === 'active').length,
+        providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
       )
     }
 
@@ -411,7 +411,7 @@ export function Providers() {
       store.updateAccountCount(
         store.selectedProviderId,
         providerAccounts.length,
-        providerAccounts.filter((a) => a.status === 'active').length,
+        providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
       )
 
       setShowAddAccountDialog(false)
@@ -442,7 +442,7 @@ export function Providers() {
           store.updateAccountCount(
             store.selectedProviderId,
             providerAccounts.length,
-            providerAccounts.filter((a) => a.status === 'active').length,
+            providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
           )
         }
 
@@ -472,7 +472,7 @@ export function Providers() {
           store.updateAccountCount(
             store.selectedProviderId,
             providerAccounts.length,
-            providerAccounts.filter((a) => a.status === 'active').length,
+            providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
           )
         }
 
@@ -501,7 +501,7 @@ export function Providers() {
           store.updateAccountCount(
             store.selectedProviderId,
             providerAccounts.length,
-            providerAccounts.filter((a) => a.status === 'active').length,
+            providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
           )
         }
 
@@ -517,7 +517,7 @@ export function Providers() {
           store.updateAccountCount(
             store.selectedProviderId,
             providerAccounts.length,
-            providerAccounts.filter((a) => a.status === 'active').length,
+            providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
           )
         }
 
@@ -536,7 +536,7 @@ export function Providers() {
         store.updateAccountCount(
           store.selectedProviderId,
           providerAccounts.length,
-          providerAccounts.filter((a) => a.status === 'active').length,
+          providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
         )
       }
 
@@ -569,7 +569,7 @@ export function Providers() {
         const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
         countMap[account.providerId] = {
           total: providerAccounts.length,
-          active: providerAccounts.filter((a) => a.status === 'active').length,
+          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
         }
       }
       useProvidersStore.getState().setAccountCounts(countMap)
@@ -629,7 +629,7 @@ export function Providers() {
         const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
         countMap[account.providerId] = {
           total: providerAccounts.length,
-          active: providerAccounts.filter((a) => a.status === 'active').length,
+          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
         }
       }
       useProvidersStore.getState().setAccountCounts(countMap)
@@ -710,6 +710,7 @@ export function Providers() {
           }}
           onDelete={() => handleDeleteAccount(selectedAccount.id)}
           onValidate={() => handleValidateAccount(selectedAccount.id)}
+          onToggleEnabled={(enabled) => handleUpdateAccount(selectedAccount.id, { enabled })}
         />
       </div>
     )
@@ -749,6 +750,7 @@ export function Providers() {
           onDeleteAccount={handleDeleteAccount}
           onValidateAccount={handleValidateAccount}
           onViewDetail={handleViewAccountDetail}
+          onToggleAccount={(id, enabled) => handleUpdateAccount(id, { enabled })}
           onExportAccounts={() => handleExportAccounts(selectedProvider.id)}
           onImportAccounts={(jsonData) => handleImportAccounts(selectedProvider.id, jsonData)}
         />

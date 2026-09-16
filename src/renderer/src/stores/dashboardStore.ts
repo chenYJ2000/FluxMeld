@@ -223,7 +223,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
             ? Math.round((persistentStats?.totalLatency ?? 0) / successRequests)
             : Math.round(statistics?.avgLatency ?? 0)
 
-      const activeAccounts = accounts?.filter((a: Account) => a.status === 'active').length ?? 0
+      const activeAccounts =
+        accounts?.filter((a: Account) => a.status === 'active' && a.enabled !== false).length ?? 0
 
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 

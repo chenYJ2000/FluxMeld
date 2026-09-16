@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,8 @@ interface AccountDetailProps {
   onEdit: () => void
   onDelete: () => void
   onValidate: () => Promise<void>
+  /** Toggle the account's independent enable switch (excluded from routing when off). */
+  onToggleEnabled?: (enabled: boolean) => void
 }
 
 export function AccountDetail({
@@ -53,6 +56,7 @@ export function AccountDetail({
   onEdit,
   onDelete,
   onValidate,
+  onToggleEnabled,
 }: AccountDetailProps) {
   const { t, i18n } = useTranslation()
   const [isValidating, setIsValidating] = useState(false)
@@ -225,10 +229,26 @@ export function AccountDetail({
               <StatusIcon className="mr-1 h-3 w-3" />
               {t(config.labelKey)}
             </Badge>
+            {account.enabled === false && (
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                {t('providers.accountDisabled')}
+              </Badge>
+            )}
           </h2>
           <p className="text-muted-foreground">{provider?.name || t('providers.unknown')}</p>
         </div>
         <div className="flex items-center gap-2">
+          {onToggleEnabled && (
+            <div className="flex items-center gap-2 mr-1">
+              <span className="text-sm text-muted-foreground">
+                {account.enabled === false ? t('providers.accountDisabled') : t('providers.accountEnabled')}
+              </span>
+              <Switch
+                checked={account.enabled !== false}
+                onCheckedChange={onToggleEnabled}
+              />
+            </div>
+          )}
           <Button variant="outline" size="sm" onClick={handleValidate} disabled={isValidating}>
             <RefreshCw className={cn('mr-2 h-4 w-4', isValidating && 'animate-spin')} />
             {isValidating ? t('oauth.validating') : t('providers.validateCredentials')}

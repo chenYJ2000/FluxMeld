@@ -670,7 +670,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         }
 
         const accounts = AccountManager.getByProviderId(providerId, true)
-        const activeAccount = accounts.find((a) => a.status === 'active')
+        const activeAccount = accounts.find((a) => a.status === 'active' && a.enabled !== false)
 
         const requestHeaders: Record<string, string> = {
           'Content-Type': 'application/json',

@@ -793,7 +793,7 @@ export class StoreManager {
   getActiveAccounts(includeCredentials: boolean = false): Account[] {
     this.ensureInitialized()
     const accounts = (this.store!.get('accounts') as Account[]) || []
-    const active = accounts.filter((a: Account) => a.status === 'active')
+    const active = accounts.filter((a: Account) => a.status === 'active' && a.enabled !== false)
 
     if (includeCredentials) {
       return active.map((account: Account) => ({

@@ -230,6 +230,10 @@ export class LoadBalancer {
    * Check if account is available
    */
   private isAccountAvailable(account: Account): boolean {
+    if (account.enabled === false) {
+      return false
+    }
+
     if (account.status !== 'active') {
       return false
     }
