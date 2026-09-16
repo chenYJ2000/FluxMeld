@@ -979,6 +979,9 @@
       "setActive": "设为当前",
       "saveFailed": "代理源保存失败",
       "saved": "代理源已保存",
+      "check": "连通性检查",
+      "checkOk": "连通正常",
+      "checkFailed": "连通失败",
       "clash": {
         "label": "Clash / mihomo",
         "description": "通过 Clash 代理端口与外部控制器切换出口节点",

@@ -8,7 +8,7 @@
 
 import { existsSync } from 'node:fs'
 import { CONFIG_FILE_META } from './config.ts'
-import { readExitFile } from './parser.ts'
+import { readExitFile, readExitFileDetailed } from './parser.ts'
 import type {
   EgressExit,
   EgressProbeResult,
@@ -36,11 +36,25 @@ export class ConfigFileSource implements EgressSource {
       return { available: false, error: `Config file not found: ${filePath}` }
     }
     try {
-      const exits = readExitFile(filePath)
-      if (exits.length === 0) {
-        return { available: false, error: 'Config file contains no valid exit entries.' }
+      const result = readExitFileDetailed(filePath)
+      if (!result.found) {
+        return {
+          available: false,
+          error: 'Config file format is invalid: expected an array of proxy entries.',
+          details: { filePath },
+        }
       }
-      return { available: true, details: { filePath, exitCount: exits.length } }
+      if (result.exits.length === 0) {
+        return {
+          available: false,
+          error: `Config file contains no valid exit entries (${result.total} inspected, ${result.skipped} malformed).`,
+          details: { filePath, total: result.total, skipped: result.skipped },
+        }
+      }
+      return {
+        available: true,
+        details: { filePath, exitCount: result.exits.length, skipped: result.skipped },
+      }
     } catch (error) {
       return {
         available: false,

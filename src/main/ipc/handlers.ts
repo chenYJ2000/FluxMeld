@@ -237,6 +237,20 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
   )
 
   ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_CHECK_SOURCE,
+    async (
+      _,
+      config: { id: string; sourceId: string; settings: Record<string, unknown> },
+    ): Promise<{
+      available: boolean
+      error?: string
+      details?: Record<string, unknown>
+    }> => {
+      return egressManager.checkSource(config)
+    },
+  )
+
+  ipcMain.handle(
     IpcChannels.OUTBOUND_PROXY_ENABLE,
     async (): Promise<{ success: boolean; error?: string; node?: string | null }> => {
       if (egressManager.isProxyMode()) {

@@ -13,7 +13,17 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Layers, Plus, Trash2, Loader2, CheckCircle2, Save, RotateCcw } from 'lucide-react'
+import {
+  Layers,
+  Plus,
+  Trash2,
+  Loader2,
+  CheckCircle2,
+  Save,
+  RotateCcw,
+  ShieldCheck,
+  XCircle,
+} from 'lucide-react'
 
 interface SourceField {
   key: string
@@ -51,6 +61,9 @@ export function SourceConfig() {
   const [activeSourceId, setActiveSourceId] = useState('')
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [checks, setChecks] = useState<
+    Record<string, { checking: boolean; result?: { available: boolean; error?: string } }>
+  >({})
 
   const load = useCallback(async () => {
     try {
@@ -106,12 +119,22 @@ export function SourceConfig() {
     setDirty(true)
   }
 
+  const clearCheck = (id: string) => {
+    setChecks((prev) => {
+      if (!(id in prev)) return prev
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
+  }
+
   const handleRemove = (id: string) => {
     setSources((prev) => {
       const next = prev.filter((source) => source.id !== id)
       setActiveSourceId((active) => (active === id ? (next[0]?.id ?? '') : active))
       return next
     })
+    clearCheck(id)
     setDirty(true)
   }
 
@@ -119,7 +142,25 @@ export function SourceConfig() {
     setSources((prev) =>
       prev.map((source) => (source.id === id ? { ...source, sourceId, settings: {} } : source)),
     )
+    clearCheck(id)
     setDirty(true)
+  }
+
+  const handleCheck = async (source: SourceEntry) => {
+    setChecks((prev) => ({ ...prev, [source.id]: { checking: true } }))
+    try {
+      const result = await window.electronAPI.outboundProxy.checkSource({
+        id: source.id,
+        sourceId: source.sourceId,
+        settings: source.settings,
+      })
+      setChecks((prev) => ({ ...prev, [source.id]: { checking: false, result } }))
+    } catch (error) {
+      setChecks((prev) => ({
+        ...prev,
+        [source.id]: { checking: false, result: { available: false, error: String(error) } },
+      }))
+    }
   }
 
   const handleSettingChange = (id: string, key: string, value: unknown) => {
@@ -210,10 +251,45 @@ export function SourceConfig() {
                     </Button>
                   )}
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => handleRemove(source.id)}>
-                  <Trash2 className="h-4 w-4 text-destructive" />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleCheck(source)}
+                    disabled={checks[source.id]?.checking}
+                  >
+                    {checks[source.id]?.checking ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                    ) : (
+                      <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                    )}
+                    {t('egress.sources.check')}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleRemove(source.id)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
               </div>
+
+              {checks[source.id]?.result && (
+                <div className="flex items-start gap-2">
+                  {checks[source.id].result!.available ? (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-xs text-emerald-600 dark:text-emerald-500">
+                        {t('egress.sources.checkOk')}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
+                      <span className="text-xs text-destructive">
+                        {checks[source.id].result!.error || t('egress.sources.checkFailed')}
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-3">
                 {(meta?.fields ?? []).map((field) => (

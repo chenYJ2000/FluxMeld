@@ -38,20 +38,37 @@ function normalizeProtocol(value: unknown): EgressProtocol {
   return 'http'
 }
 
-/** Parse a decoded JSON value into exits, skipping malformed entries. */
-export function parseExitEntries(raw: unknown): EgressExit[] {
+export interface ParsedExitResult {
+  /** An entry array (top-level or under proxies/list/nodes/exits) was found. */
+  found: boolean
+  /** Number of entries inspected. */
+  total: number
+  /** Number of entries skipped as malformed. */
+  skipped: number
+  exits: EgressExit[]
+}
+
+/** Parse a decoded JSON value into exits, reporting malformed entries. */
+export function parseExitEntriesDetailed(raw: unknown): ParsedExitResult {
   const items = extractArray(raw)
-  if (!items) return []
+  if (!items) return { found: false, total: 0, skipped: 0, exits: [] }
 
   const exits: EgressExit[] = []
   const seen = new Set<string>()
+  let skipped = 0
 
   items.forEach((item, index) => {
-    if (!isRecord(item)) return
+    if (!isRecord(item)) {
+      skipped += 1
+      return
+    }
 
     const host = asString(item.host) ?? asString(item.ip)
     const port = typeof item.port === 'number' ? item.port : Number(item.port)
-    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) return
+    if (!host || !Number.isInteger(port) || port < 1 || port > 65535) {
+      skipped += 1
+      return
+    }
 
     const name = asString(item.name)
     let id = name ?? `${host}:${port}`
@@ -69,11 +86,22 @@ export function parseExitEntries(raw: unknown): EgressExit[] {
     })
   })
 
-  return exits
+  return { found: true, total: items.length, skipped, exits }
+}
+
+/** Parse a decoded JSON value into exits, skipping malformed entries. */
+export function parseExitEntries(raw: unknown): EgressExit[] {
+  return parseExitEntriesDetailed(raw).exits
 }
 
 /** Read and parse an exit list from a JSON file. */
 export function readExitFile(filePath: string): EgressExit[] {
   const content = readFileSync(filePath, 'utf8')
   return parseExitEntries(JSON.parse(content))
+}
+
+/** Read and parse a JSON file, reporting malformed entries. */
+export function readExitFileDetailed(filePath: string): ParsedExitResult {
+  const content = readFileSync(filePath, 'utf8')
+  return parseExitEntriesDetailed(JSON.parse(content))
 }

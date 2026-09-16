@@ -356,6 +356,11 @@ export function createClientApi(
   const outboundProxyAPI = {
     getStatus: (): Promise<OutboundProxyStatus> => transport.invoke('outboundProxy:getStatus'),
     check: (): Promise<OutboundProxyCheckResult> => transport.invoke('outboundProxy:check'),
+    checkSource: (config: {
+      id: string
+      sourceId: string
+      settings: Record<string, unknown>
+    }): Promise<OutboundProxyCheckResult> => transport.invoke('outboundProxy:checkSource', config),
     enable: (): Promise<OutboundProxyActionResult> => transport.invoke('outboundProxy:enable'),
     disable: (): Promise<{ success: boolean }> => transport.invoke('outboundProxy:disable'),
     getSources: (): Promise<OutboundProxySourcesResult> =>

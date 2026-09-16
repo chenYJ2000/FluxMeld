@@ -143,6 +143,11 @@ interface OutboundProxyOverview {
 interface OutboundProxyAPI {
   getStatus: () => Promise<OutboundProxyStatus>
   check: () => Promise<OutboundProxyCheckResult>
+  checkSource: (config: {
+    id: string
+    sourceId: string
+    settings: Record<string, unknown>
+  }) => Promise<OutboundProxyCheckResult>
   enable: () => Promise<OutboundProxyActionResult>
   disable: () => Promise<{ success: boolean }>
   getSources: () => Promise<{

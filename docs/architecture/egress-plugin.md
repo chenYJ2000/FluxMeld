@@ -71,6 +71,13 @@ The manager owns allocation and rotation, so a source normally reuses the shared
 `ExitAllocator`. A source may override rotation behaviour when its protocol
 requires it (Clash switches controller nodes; the file source is a no-op).
 
+Each source implements its own `probe()` connectivity check (Clash: controller +
+proxy port; config-file: file exists + parses). The "Proxy Sources" page exposes
+a per-source **Check** button that calls `outboundProxy:checkSource` →
+`EgressManager.checkSource(config)`, which builds a throwaway instance of that
+source and runs `probe()` (using the draft settings, so unsaved edits can be
+tested).
+
 ## Registration
 
 1. Create `src/main/egress/<id>/` with `index.ts`, `config.ts`, `source.ts`

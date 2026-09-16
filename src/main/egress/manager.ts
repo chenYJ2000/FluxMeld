@@ -221,6 +221,21 @@ export class EgressManager {
     return { available: result.available, error: result.error, details: result.details }
   }
 
+  /**
+   * Probe one configured source (by its persisted/draft config) using that
+   * source's own `probe()` implementation. The instance is throwaway so it
+   * never disturbs the active-source cache.
+   */
+  async checkSource(config: EgressSourceConfig): Promise<EgressCheckResult> {
+    const settings = this.getSettings()
+    const source = createEgressSource(config, this.buildServices(settings))
+    if (!source) {
+      return { available: false, error: `Unknown egress source type: ${config.sourceId}` }
+    }
+    const result: EgressProbeResult = await source.probe()
+    return { available: result.available, error: result.error, details: result.details }
+  }
+
   async getExits(): Promise<EgressExit[]> {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)

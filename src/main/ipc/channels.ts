@@ -8,6 +8,7 @@ export const IpcChannels = {
 
   OUTBOUND_PROXY_GET_STATUS: 'outboundProxy:getStatus',
   OUTBOUND_PROXY_CHECK: 'outboundProxy:check',
+  OUTBOUND_PROXY_CHECK_SOURCE: 'outboundProxy:checkSource',
   OUTBOUND_PROXY_ENABLE: 'outboundProxy:enable',
   OUTBOUND_PROXY_DISABLE: 'outboundProxy:disable',
   OUTBOUND_PROXY_GET_SOURCES: 'outboundProxy:getSources',

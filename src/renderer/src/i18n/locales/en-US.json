@@ -979,6 +979,9 @@
       "setActive": "Set active",
       "saveFailed": "Failed to save proxy source",
       "saved": "Proxy source saved",
+      "check": "Check",
+      "checkOk": "Reachable",
+      "checkFailed": "Not reachable",
       "clash": {
         "label": "Clash / mihomo",
         "description": "Switch exit nodes via the Clash proxy port and external controller",
