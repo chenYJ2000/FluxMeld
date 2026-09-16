@@ -429,7 +429,7 @@ export class RequestForwarder {
           }
           throw error
         }
-        attemptEgressNode = accountExit ? (accountExit.name ?? accountExit.id) : undefined
+        attemptEgressNode = accountExit ? (accountExit.name ?? accountExit.id) : 'DIRECT'
         let result = await runWithEgress(accountExit, () =>
           this.doForward(
             modifiedRequest,
