@@ -142,6 +142,17 @@ interface OutboundProxyOverview {
   groupExits: Record<string, EgressExitInfo | null>
 }
 
+interface RotationPolicyInfo {
+  strategy: string
+  rotateEarlySeconds: number
+  verifyBeforeUse: boolean
+  verifyTimeoutMs: number
+  maxExitAttempts: number
+  rotateMinIntervalMs: number
+  cooldownBaseMs: number
+  cooldownMaxMs: number
+}
+
 interface OutboundProxyAPI {
   getStatus: () => Promise<OutboundProxyStatus>
   check: () => Promise<OutboundProxyCheckResult>
@@ -158,18 +169,14 @@ interface OutboundProxyAPI {
       enabled: boolean
       groupAssignmentEnabled: boolean
       activeSourceId: string
-      rotation: { strategy: string; rotateEarlySeconds: number; verifyBeforeUse: boolean }
+      rotation: RotationPolicyInfo
       sources: Array<{ id: string; sourceId: string; settings: Record<string, unknown> }>
       groups: ProxyGroupInfo[]
     }
   }>
   listExits: () => Promise<EgressExitInfo[]>
-  getRotation: () => Promise<{ strategy: string; rotateEarlySeconds: number; verifyBeforeUse: boolean }>
-  setRotation: (rotation: Record<string, unknown>) => Promise<{
-    strategy: string
-    rotateEarlySeconds: number
-    verifyBeforeUse: boolean
-  }>
+  getRotation: () => Promise<RotationPolicyInfo>
+  setRotation: (rotation: Record<string, unknown>) => Promise<RotationPolicyInfo>
   getAssignment: (providerId: string) => Promise<OutboundProxyOverview>
   setAssignment: (
     providerId: string,

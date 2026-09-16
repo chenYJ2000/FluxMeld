@@ -39,15 +39,22 @@ export const DIRECT_GROUP = '__direct__'
  * request fast instead of silently falling back to a direct connection. */
 export const EGRESS_FAIL_FAST = true
 
-/** Max candidate exits tried per activation/rotation. */
+/** Defaults for the configurable rotation policy values. */
 const MAX_EXIT_ATTEMPTS = 8
-/** Exit verification timeout. */
 const VERIFY_TIMEOUT_MS = 5000
-/** Failure backoff: base and cap. */
 const COOLDOWN_BASE_MS = 1000
 const COOLDOWN_MAX_MS = 30000
-/** Minimum interval between rotations (avoids thrashing the Clash node). */
 const MIN_ROTATE_INTERVAL_MS = 3000
+
+function clampNumber(value: unknown, fallback: number, min: number, max: number): number {
+  const num = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(num)) return fallback
+  return Math.min(Math.max(num, min), max)
+}
+
+function clampInt(value: unknown, fallback: number, min: number, max: number): number {
+  return Math.round(clampNumber(value, fallback, min, max))
+}
 
 /** Thrown when the proxy is enabled but no exit could be activated. */
 export class EgressUnavailableError extends Error {
@@ -110,6 +117,11 @@ const DEFAULT_ROTATION: RotationPolicy = {
   strategy: 'roundRobin',
   rotateEarlySeconds: 30,
   verifyBeforeUse: true,
+  verifyTimeoutMs: VERIFY_TIMEOUT_MS,
+  maxExitAttempts: MAX_EXIT_ATTEMPTS,
+  rotateMinIntervalMs: MIN_ROTATE_INTERVAL_MS,
+  cooldownBaseMs: COOLDOWN_BASE_MS,
+  cooldownMaxMs: COOLDOWN_MAX_MS,
 }
 
 const DEFAULT_SETTINGS: OutboundProxySettings = {
@@ -317,7 +329,8 @@ export class EgressManager {
   ): Promise<boolean> {
     if (!settings.rotation.verifyBeforeUse) return true
     if (source.verifyExit) return source.verifyExit(exit)
-    return defaultVerifyExit(exit, { timeoutMs: VERIFY_TIMEOUT_MS })
+    const timeoutMs = clampNumber(settings.rotation.verifyTimeoutMs, VERIFY_TIMEOUT_MS, 100, 120000)
+    return defaultVerifyExit(exit, { timeoutMs })
   }
 
   /**
@@ -331,7 +344,10 @@ export class EgressManager {
     gen: number,
   ): Promise<EgressExit | null> {
     const previous = this.globalExit
-    const limit = Math.min(this.pool.length, MAX_EXIT_ATTEMPTS)
+    const limit = Math.min(
+      this.pool.length,
+      clampInt(settings.rotation.maxExitAttempts, MAX_EXIT_ATTEMPTS, 1, 1000),
+    )
     const tried: EgressExit[] = []
 
     for (let i = 0; i < limit; i++) {
@@ -363,10 +379,13 @@ export class EgressManager {
   }
 
   private noteFailure(): void {
+    const { rotation } = this.getSettings()
+    const base = clampNumber(rotation.cooldownBaseMs, COOLDOWN_BASE_MS, 0, COOLDOWN_MAX_MS)
+    const max = clampNumber(rotation.cooldownMaxMs, COOLDOWN_MAX_MS, 0, 3600000)
     this.consecutiveFailures += 1
     const delay = Math.min(
-      COOLDOWN_BASE_MS * 2 ** Math.max(0, this.consecutiveFailures - 1),
-      COOLDOWN_MAX_MS,
+      base * 2 ** Math.max(0, this.consecutiveFailures - 1),
+      Math.max(base, max),
     )
     this.cooldownUntil = Date.now() + delay
   }
@@ -466,7 +485,14 @@ export class EgressManager {
   /** Single-flight, throttled rotation of the global single exit. */
   async rotateProxy(): Promise<string | null> {
     if (this.rotationPromise) return this.rotationPromise
-    if (Date.now() - this.lastRotateAt < MIN_ROTATE_INTERVAL_MS) {
+    const settings = this.getSettings()
+    const minInterval = clampNumber(
+      settings.rotation.rotateMinIntervalMs,
+      MIN_ROTATE_INTERVAL_MS,
+      0,
+      600000,
+    )
+    if (Date.now() - this.lastRotateAt < minInterval) {
       return this.getEgressNodeName()
     }
 
@@ -591,7 +617,10 @@ export class EgressManager {
       return null
     }
 
-    const limit = Math.min(this.pool.length, MAX_EXIT_ATTEMPTS)
+    const limit = Math.min(
+      this.pool.length,
+      clampInt(settings.rotation.maxExitAttempts, MAX_EXIT_ATTEMPTS, 1, 1000),
+    )
     const tried: EgressExit[] = []
 
     for (let i = 0; i < limit; i++) {
@@ -633,7 +662,13 @@ export class EgressManager {
     if (pending) return pending
 
     const last = this.lastGroupRotateAt.get(groupId) ?? 0
-    if (Date.now() - last < MIN_ROTATE_INTERVAL_MS) {
+    const minInterval = clampNumber(
+      this.getSettings().rotation.rotateMinIntervalMs,
+      MIN_ROTATE_INTERVAL_MS,
+      0,
+      600000,
+    )
+    if (Date.now() - last < minInterval) {
       const current = this.groupExits.get(groupId)
       return current ? (current.name ?? current.id) : null
     }

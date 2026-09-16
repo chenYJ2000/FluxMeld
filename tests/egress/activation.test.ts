@@ -14,7 +14,16 @@ function makeSettings(overrides: Partial<OutboundProxySettings> = {}): OutboundP
     enabled: true,
     groupAssignmentEnabled: false,
     activeSourceId: 's1',
-    rotation: { strategy: 'roundRobin', rotateEarlySeconds: 30, verifyBeforeUse: false },
+    rotation: {
+      strategy: 'roundRobin',
+      rotateEarlySeconds: 30,
+      verifyBeforeUse: false,
+      verifyTimeoutMs: 5000,
+      maxExitAttempts: 8,
+      rotateMinIntervalMs: 3000,
+      cooldownBaseMs: 1000,
+      cooldownMaxMs: 30000,
+    },
     sources: [{ id: 's1', sourceId: 'config-file', settings: {} }],
     groups: [],
     ...overrides,
@@ -102,7 +111,22 @@ test('concurrent activation is single-flight (one probe, one result)', async () 
 
 test('failed activation sets a cooldown that suppresses immediate retries', async () => {
   const manager = new EgressManager()
-  manager.setDeps(makeDeps(makeSettings()))
+  manager.setDeps(
+    makeDeps(
+      makeSettings({
+        rotation: {
+          strategy: 'roundRobin',
+          rotateEarlySeconds: 30,
+          verifyBeforeUse: false,
+          verifyTimeoutMs: 5000,
+          maxExitAttempts: 8,
+          rotateMinIntervalMs: 3000,
+          cooldownBaseMs: 60000,
+          cooldownMaxMs: 60000,
+        },
+      }),
+    ),
+  )
   const calls = stubSource(
     fakeSource({ probe: async () => ({ available: false, error: 'down' }) }),
     manager,
@@ -111,6 +135,34 @@ test('failed activation sets a cooldown that suppresses immediate retries', asyn
   assert.equal(await manager.ensureProxyForRequest(), false)
   assert.equal(await manager.ensureProxyForRequest(), false)
   assert.equal(calls.probe, 1)
+})
+
+test('maxExitAttempts caps the number of candidates tried', async () => {
+  const manager = new EgressManager()
+  manager.setDeps(
+    makeDeps(
+      makeSettings({
+        rotation: {
+          strategy: 'roundRobin',
+          rotateEarlySeconds: 30,
+          verifyBeforeUse: false,
+          verifyTimeoutMs: 5000,
+          maxExitAttempts: 3,
+          rotateMinIntervalMs: 3000,
+          cooldownBaseMs: 1000,
+          cooldownMaxMs: 30000,
+        },
+      }),
+    ),
+  )
+  const candidates = Array.from({ length: 10 }, (_, index) => exit(`n${index}`))
+  const calls = stubSource(
+    fakeSource({ listExits: async () => candidates, apply: async () => false }),
+    manager,
+  )
+
+  assert.equal(await manager.ensureProxyForRequest(), false)
+  assert.equal(calls.apply, 3)
 })
 
 test('invalidation during activation discards the in-flight result', async () => {

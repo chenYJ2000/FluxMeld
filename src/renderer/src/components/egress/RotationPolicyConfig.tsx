@@ -18,6 +18,11 @@ interface RotationPolicy {
   strategy: string
   rotateEarlySeconds: number
   verifyBeforeUse: boolean
+  verifyTimeoutMs: number
+  maxExitAttempts: number
+  rotateMinIntervalMs: number
+  cooldownBaseMs: number
+  cooldownMaxMs: number
 }
 
 export function RotationPolicyConfig() {
@@ -32,6 +37,11 @@ export function RotationPolicyConfig() {
         strategy: result.strategy,
         rotateEarlySeconds: result.rotateEarlySeconds,
         verifyBeforeUse: result.verifyBeforeUse,
+        verifyTimeoutMs: result.verifyTimeoutMs,
+        maxExitAttempts: result.maxExitAttempts,
+        rotateMinIntervalMs: result.rotateMinIntervalMs,
+        cooldownBaseMs: result.cooldownBaseMs,
+        cooldownMaxMs: result.cooldownMaxMs,
       })
     } catch (error) {
       console.error('Failed to load rotation policy:', error)
@@ -58,6 +68,34 @@ export function RotationPolicyConfig() {
   }
 
   if (!policy) return null
+
+  const numberField = (
+    key:
+      | 'rotateEarlySeconds'
+      | 'verifyTimeoutMs'
+      | 'maxExitAttempts'
+      | 'rotateMinIntervalMs'
+      | 'cooldownBaseMs'
+      | 'cooldownMaxMs',
+    labelKey: string,
+    helpKey: string,
+    min: number,
+  ) => (
+    <div className="space-y-1">
+      <Label htmlFor={key}>{t(labelKey)}</Label>
+      <Input
+        id={key}
+        type="number"
+        min={min}
+        value={policy[key]}
+        onChange={(event) =>
+          setPolicy({ ...policy, [key]: Number(event.target.value) } as RotationPolicy)
+        }
+        onBlur={() => void persist({ [key]: policy[key] } as Partial<RotationPolicy>)}
+      />
+      <p className="text-xs text-muted-foreground">{t(helpKey)}</p>
+    </div>
+  )
 
   return (
     <Card>
@@ -87,21 +125,6 @@ export function RotationPolicyConfig() {
           <p className="text-xs text-muted-foreground">{t('egress.rotation.strategyHelp')}</p>
         </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="rotate-early">{t('egress.rotation.rotateEarly')}</Label>
-          <Input
-            id="rotate-early"
-            type="number"
-            min={0}
-            value={policy.rotateEarlySeconds}
-            onChange={(event) =>
-              setPolicy({ ...policy, rotateEarlySeconds: Number(event.target.value) })
-            }
-            onBlur={() => void persist({ rotateEarlySeconds: policy.rotateEarlySeconds })}
-          />
-          <p className="text-xs text-muted-foreground">{t('egress.rotation.rotateEarlyHelp')}</p>
-        </div>
-
         <div className="flex items-center justify-between space-x-2">
           <div className="space-y-0.5">
             <Label>{t('egress.rotation.verify')}</Label>
@@ -111,6 +134,48 @@ export function RotationPolicyConfig() {
             checked={policy.verifyBeforeUse}
             onCheckedChange={(value) => void persist({ verifyBeforeUse: value })}
           />
+        </div>
+
+        <div className="space-y-4 pt-4 border-t">
+          {numberField(
+            'verifyTimeoutMs',
+            'egress.rotation.verifyTimeout',
+            'egress.rotation.verifyTimeoutHelp',
+            100,
+          )}
+          {numberField(
+            'maxExitAttempts',
+            'egress.rotation.maxExitAttempts',
+            'egress.rotation.maxExitAttemptsHelp',
+            1,
+          )}
+          {numberField(
+            'rotateMinIntervalMs',
+            'egress.rotation.rotateMinInterval',
+            'egress.rotation.rotateMinIntervalHelp',
+            0,
+          )}
+        </div>
+
+        <div className="space-y-4 pt-4 border-t">
+          {numberField(
+            'rotateEarlySeconds',
+            'egress.rotation.rotateEarly',
+            'egress.rotation.rotateEarlyHelp',
+            0,
+          )}
+          {numberField(
+            'cooldownBaseMs',
+            'egress.rotation.cooldownBase',
+            'egress.rotation.cooldownBaseHelp',
+            0,
+          )}
+          {numberField(
+            'cooldownMaxMs',
+            'egress.rotation.cooldownMax',
+            'egress.rotation.cooldownMaxHelp',
+            0,
+          )}
         </div>
       </CardContent>
     </Card>

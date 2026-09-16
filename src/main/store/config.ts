@@ -379,6 +379,29 @@ export class ConfigManager {
         ) {
           errors.push('outboundProxy.rotation.rotateEarlySeconds must be a non-negative number')
         }
+
+        const nonNegativeKeys = [
+          'verifyTimeoutMs',
+          'rotateMinIntervalMs',
+          'cooldownBaseMs',
+          'cooldownMaxMs',
+        ] as const
+        for (const key of nonNegativeKeys) {
+          if (rotation[key] !== undefined) {
+            const value = Number(rotation[key])
+            if (!Number.isFinite(value) || value < 0) {
+              errors.push(`outboundProxy.rotation.${key} must be a non-negative number`)
+            }
+          }
+        }
+
+        if (
+          rotation.maxExitAttempts !== undefined &&
+          (!Number.isInteger(Number(rotation.maxExitAttempts)) ||
+            Number(rotation.maxExitAttempts) < 1)
+        ) {
+          errors.push('outboundProxy.rotation.maxExitAttempts must be a positive integer')
+        }
       }
 
       if (

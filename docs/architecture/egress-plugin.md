@@ -100,6 +100,13 @@ tested).
   activated the request fails with `503` (`EgressUnavailableError`) instead of
   silently falling back to a (possibly blocked) direct connection.
 
+These knobs live on `outboundProxy.rotation` and are editable on the "Rotation
+Policy" page: `verifyTimeoutMs` (5000), `maxExitAttempts` (8),
+`rotateMinIntervalMs` (3000), `cooldownBaseMs` (1000), `cooldownMaxMs` (30000).
+An *activation failure* (which drives the cooldown) is any of: no source
+configured; source probe unavailable; empty exit pool; no usable exit found
+within the candidate cap.
+
 ## Registration
 
 1. Create `src/main/egress/<id>/` with `index.ts`, `config.ts`, `source.ts`

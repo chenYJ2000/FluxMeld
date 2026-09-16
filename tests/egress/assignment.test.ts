@@ -13,7 +13,16 @@ function makeDeps(options: {
     enabled: true,
     groupAssignmentEnabled: true,
     activeSourceId: '',
-    rotation: { strategy: 'roundRobin', rotateEarlySeconds: 30, verifyBeforeUse: false },
+    rotation: {
+      strategy: 'roundRobin',
+      rotateEarlySeconds: 30,
+      verifyBeforeUse: false,
+      verifyTimeoutMs: 5000,
+      maxExitAttempts: 8,
+      rotateMinIntervalMs: 3000,
+      cooldownBaseMs: 1000,
+      cooldownMaxMs: 30000,
+    },
     sources: [],
     groups: options.groups,
   }

@@ -102,6 +102,16 @@ export interface RotationPolicy {
   rotateEarlySeconds: number
   /** Verify an exit before routing traffic through it. */
   verifyBeforeUse: boolean
+  /** Timeout for a single exit connectivity verification (ms). */
+  verifyTimeoutMs: number
+  /** Max candidate exits tried per activation/rotation. */
+  maxExitAttempts: number
+  /** Minimum interval between two rotations (ms). */
+  rotateMinIntervalMs: number
+  /** First cooldown after an activation failure (ms). */
+  cooldownBaseMs: number
+  /** Upper bound of the exponential activation-failure cooldown (ms). */
+  cooldownMaxMs: number
 }
 
 /** Persisted settings for one configured outbound proxy source instance. */

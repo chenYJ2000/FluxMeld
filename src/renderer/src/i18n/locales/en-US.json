@@ -1017,6 +1017,16 @@
       "rotateEarlyHelp": "For exits with a lifetime, rotate this many seconds before expiry (default 30)",
       "verify": "Verify before use",
       "verifyHelp": "Verify connectivity before routing traffic through a chosen exit",
+      "verifyTimeout": "Verify timeout (ms)",
+      "verifyTimeoutHelp": "After picking an exit, connectivity is verified by requesting https://www.gstatic.com/generate_204 through it; no response within this many milliseconds marks the exit unusable and moves to the next candidate.",
+      "maxExitAttempts": "Candidate cap",
+      "maxExitAttemptsHelp": "Max exits tried per activation/rotation. Each candidate is applied then verified; reaching this cap without success ends the attempt.",
+      "rotateMinInterval": "Min rotation interval (ms)",
+      "rotateMinIntervalHelp": "Rotation requests within this interval of the last successful rotation are ignored (the current exit is kept). Rotation is triggered by request failures (HTTP 403/408/409/425/429 or 5xx).",
+      "cooldownBase": "Failure cooldown base (ms)",
+      "cooldownBaseHelp": "First cooldown after an activation failure, doubling each consecutive failure up to the cap. An activation failure is any of: (1) no source configured; (2) source probe unavailable (e.g. Clash controller/proxy port unreachable, config file missing); (3) empty exit pool; (4) no usable exit found within the candidate cap (every candidate failed to apply or verify). While cooling down no activation is attempted and requests fail fast; saving config, manual enable, or a successful source check resets it.",
+      "cooldownMax": "Failure cooldown cap (ms)",
+      "cooldownMaxHelp": "Upper bound of the exponential cooldown. See \"Failure cooldown base\" for what counts as an activation failure.",
       "saveFailed": "Failed to save rotation policy"
     },
     "assignment": {
