@@ -114,6 +114,7 @@ interface RequestLogEntry {
   statusCode: number
   clientIp?: string
   egressNode?: string
+  apiKey?: string
   method: string
   url: string
   model: string

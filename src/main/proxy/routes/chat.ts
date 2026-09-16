@@ -59,6 +59,26 @@ function getClientIP(ctx: Context): string {
   return resolveClientIp(ctx.req.socket.remoteAddress, ctx.get('x-forwarded-for'), trustedProxyHops)
 }
 
+/**
+ * Resolve the API-key label of the caller for request logs: the friendly name
+ * from the local API key list when the provided key matches an entry, otherwise
+ * the raw key itself (chars truncated as a guard against oversized junk).
+ */
+function getRequestApiKeyLabel(ctx: Context): string | undefined {
+  const rawHeader = ctx.get('Authorization')
+  const provided =
+    (rawHeader.startsWith('Bearer ') ? rawHeader.slice(7).trim() : '') ||
+    (ctx.query.api_key as string) ||
+    ctx.get('X-API-Key') ||
+    ''
+  const trimmed = String(provided).trim().slice(0, 64)
+  if (!trimmed) return undefined
+
+  const matched = (storeManager.getConfig().apiKeys || []).find((k) => k.key === trimmed && k.enabled)
+  if (matched) return matched.name
+  return trimmed
+}
+
 function normalizeSessionId(value: unknown, source: string): string | undefined {
   if (value === undefined || value === null) return undefined
   if (typeof value !== 'string') {
@@ -164,6 +184,7 @@ router.post('/completions', async (ctx: Context) => {
   const startTime = Date.now()
   const requestId = generateRequestId()
   const clientIP = getClientIP(ctx)
+  const apiKeyLabel = getRequestApiKeyLabel(ctx)
   ctx.set('X-Request-Id', requestId)
 
   let request: ChatCompletionRequest
@@ -441,6 +462,7 @@ router.post('/completions', async (ctx: Context) => {
         method: 'POST',
         clientIp: clientIP,
         egressNode: result.egressNode,
+        apiKey: apiKeyLabel,
         url: '/v1/chat/completions',
         model: request.model,
         actualModel: usedActualModel,
@@ -525,6 +547,7 @@ router.post('/completions', async (ctx: Context) => {
         method: 'POST',
         clientIp: clientIP,
         egressNode: result.egressNode,
+        apiKey: apiKeyLabel,
         url: '/v1/chat/completions',
         model: request.model,
         actualModel: usedActualModel,
@@ -731,6 +754,7 @@ router.post('/completions', async (ctx: Context) => {
         method: 'POST',
         clientIp: clientIP,
         egressNode: result.egressNode,
+        apiKey: apiKeyLabel,
         url: '/v1/chat/completions',
         model: request.model,
         actualModel: usedActualModel,
@@ -819,6 +843,7 @@ router.post('/completions', async (ctx: Context) => {
       method: 'POST',
       clientIp: clientIP,
       egressNode: resultEgressNode,
+      apiKey: apiKeyLabel,
       url: '/v1/chat/completions',
       model: request.model,
       actualModel,

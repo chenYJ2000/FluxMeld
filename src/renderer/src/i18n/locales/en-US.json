@@ -632,6 +632,7 @@
     "method": "Method",
     "clientIp": "Client IP",
     "egressNode": "Egress node",
+    "apiKey": "API Key",
     "url": "URL",
     "stream": "Stream",
     "responseStatus": "Response Status",

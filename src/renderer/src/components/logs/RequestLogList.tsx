@@ -29,6 +29,7 @@ interface RequestLogEntry {
   statusCode: number
   clientIp?: string
   egressNode?: string
+  apiKey?: string
   method: string
   url: string
   model: string
@@ -208,6 +209,14 @@ export function RequestLogList() {
                   <>
                     <span>·</span>
                     <span>{log.egressNode}</span>
+                  </>
+                )}
+                {log.apiKey && (
+                  <>
+                    <span>·</span>
+                    <span className="truncate max-w-48" title={log.apiKey}>
+                      {log.apiKey}
+                    </span>
                   </>
                 )}
               </div>

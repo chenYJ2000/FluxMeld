@@ -17,6 +17,7 @@ import {
   Brain,
   Network,
   ArrowUpRight,
+  KeyRound,
 } from 'lucide-react'
 
 interface RequestLogEntry {
@@ -26,6 +27,7 @@ interface RequestLogEntry {
   statusCode: number
   clientIp?: string
   egressNode?: string
+  apiKey?: string
   method: string
   url: string
   model: string
@@ -281,6 +283,11 @@ export function RequestLogDetail({ log, onClose }: RequestLogDetailProps) {
                   label={t('logs.egressNode')}
                   value={log.egressNode || '-'}
                   icon={<ArrowUpRight className="h-3 w-3" />}
+                />
+                <InfoItem
+                  label={t('logs.apiKey')}
+                  value={log.apiKey || '-'}
+                  icon={<KeyRound className="h-3 w-3" />}
                 />
                 <InfoItem
                   label={t('logs.method')}

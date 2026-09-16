@@ -149,6 +149,9 @@ export interface RequestLogEntry {
   /** Outbound exit used for the upstream call (Clash node name / exit IP); empty = direct */
   egressNode?: string
 
+  /** API key label used by the caller: local key-list name when matched, else the raw key */
+  apiKey?: string
+
   /** HTTP method */
   method: string
   /** Request URL path */

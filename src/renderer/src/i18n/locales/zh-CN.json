@@ -632,6 +632,7 @@
     "method": "方法",
     "clientIp": "源 IP",
     "egressNode": "出口节点",
+    "apiKey": "API Key",
     "url": "URL",
     "stream": "流式",
     "responseStatus": "响应状态",
