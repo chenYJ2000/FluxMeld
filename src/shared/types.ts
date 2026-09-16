@@ -479,6 +479,24 @@ export interface AccountsQueryResponse {
   items: Account[]
 }
 
+/** Per-entry failure detail for account import. */
+export interface AccountImportError {
+  index: number
+  name?: string
+  providerId?: string
+  code: string
+  message: string
+}
+
+/** Summary returned by account import; duplicates are counted as skipped. */
+export interface AccountImportResult {
+  total: number
+  succeeded: number
+  skipped: number
+  failed: number
+  errors: AccountImportError[]
+}
+
 export interface CreateApiKeyRequest {
   name: string
   description?: string

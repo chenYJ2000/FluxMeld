@@ -24,6 +24,7 @@ import type {
   RotationPolicy,
   EgressSourceConfig,
   ValidationResult,
+  AccountImportResult,
 } from './types'
 
 export interface ClientTransport {
@@ -481,6 +482,10 @@ export function createClientApi(
     } | null> => transport.invoke('accounts:getCredits', accountId),
     clearChats: (accountId: string): Promise<{ success: boolean; error?: string }> =>
       transport.invoke('accounts:clearChats', accountId),
+    export: (providerId?: string): Promise<string> =>
+      transport.invoke('accounts:export', providerId),
+    import: (jsonData: string, providerId?: string): Promise<AccountImportResult> =>
+      transport.invoke('accounts:import', jsonData, providerId),
   }
 
   const oauthAPI = {

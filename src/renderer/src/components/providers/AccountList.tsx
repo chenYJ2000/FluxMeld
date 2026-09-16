@@ -3,7 +3,7 @@
  * Displays all accounts under a provider with status and actions
  */
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,8 @@ import {
   Plus,
   Trash,
   ShieldCheck,
+  Download,
+  Upload,
 } from 'lucide-react'
 import {
   Dialog,
@@ -52,6 +54,10 @@ interface AccountListProps {
   onDeleteAccount: (id: string) => void
   onValidateAccount: (id: string) => void
   onViewDetail: (account: Account) => void
+  /** Export the provider's accounts (credentials included) to a JSON file. */
+  onExportAccounts?: () => void
+  /** Import accounts from a JSON export file's contents. */
+  onImportAccounts?: (jsonData: string) => void | Promise<void>
 }
 
 export function AccountList({
@@ -64,12 +70,16 @@ export function AccountList({
   onDeleteAccount,
   onValidateAccount,
   onViewDetail,
+  onExportAccounts,
+  onImportAccounts,
 }: AccountListProps) {
   const { t } = useTranslation()
   const [validatingIds, setValidatingIds] = useState<Set<string>>(new Set())
   const [clearingChatsId, setClearingChatsId] = useState<string | null>(null)
   const [showClearChatsDialog, setShowClearChatsDialog] = useState(false)
   const [selectedAccountForClear, setSelectedAccountForClear] = useState<Account | null>(null)
+  const [showExportWarning, setShowExportWarning] = useState(false)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   const statusConfig: Record<
     AccountStatus,
@@ -144,6 +154,23 @@ export function AccountList({
     }
   }
 
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file || !onImportAccounts) return
+
+    try {
+      const text = await file.text()
+      await onImportAccounts(text)
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  const confirmExport = () => {
+    setShowExportWarning(false)
+    onExportAccounts?.()
+  }
+
   const activeCount = accounts.filter((a) => a.status === 'active').length
   const totalCount = accounts.length
 
@@ -172,10 +199,27 @@ export function AccountList({
           <User className="h-12 w-12 text-muted-foreground opacity-50 mb-4" />
           <p className="text-lg font-medium text-muted-foreground">{t('common.noData')}</p>
           <p className="text-sm text-muted-foreground mb-4">{t('providers.clickToAddProvider')}</p>
-          <Button onClick={onAddAccount}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t('providers.addAccount')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={onAddAccount}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t('providers.addAccount')}
+            </Button>
+            {onImportAccounts && (
+              <>
+                <input
+                  ref={importInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={handleImportFile}
+                />
+                <Button variant="outline" onClick={() => importInputRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  {t('providers.importAccounts')}
+                </Button>
+              </>
+            )}
+          </div>
         </CardContent>
       </Card>
     )
@@ -208,6 +252,27 @@ export function AccountList({
               )}
               {isValidatingAll ? t('providers.validatingAll') : t('providers.validateAllAccounts')}
             </Button>
+          )}
+          {onExportAccounts && (
+            <Button variant="outline" size="sm" onClick={() => setShowExportWarning(true)}>
+              <Download className="mr-2 h-4 w-4" />
+              {t('providers.exportAccounts')}
+            </Button>
+          )}
+          {onImportAccounts && (
+            <>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <Button variant="outline" size="sm" onClick={() => importInputRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" />
+                {t('providers.importAccounts')}
+              </Button>
+            </>
           )}
           <Button size="sm" onClick={onAddAccount}>
             <Plus className="mr-2 h-4 w-4" />
@@ -357,6 +422,22 @@ export function AccountList({
           })}
         </div>
       </ScrollArea>
+
+      {/* Export Warning Dialog */}
+      <Dialog open={showExportWarning} onOpenChange={setShowExportWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('providers.exportAccountsWarningTitle')}</DialogTitle>
+            <DialogDescription>{t('providers.exportAccountsWarningDesc')}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportWarning(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={confirmExport}>{t('common.confirm')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Clear Chats Confirmation Dialog */}
       <Dialog open={showClearChatsDialog} onOpenChange={setShowClearChatsDialog}>

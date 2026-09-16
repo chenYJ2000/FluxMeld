@@ -592,6 +592,65 @@ export function Providers() {
     }
   }
 
+  const handleExportAccounts = async (providerId: string) => {
+    try {
+      const json = await window.electronAPI.accounts.export(providerId)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fluxmeld-accounts-${providerId}-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast({
+        title: t('common.success'),
+        description: t('providers.exportAccountsSuccess'),
+      })
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('providers.operationFailed'),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleImportAccounts = async (providerId: string, jsonData: string) => {
+    try {
+      const result = await window.electronAPI.accounts.import(jsonData, providerId)
+      const accounts = await window.electronAPI.accounts.getAll()
+      useProvidersStore.getState().setAccounts(accounts)
+
+      const countMap: Record<string, { total: number; active: number }> = {}
+      for (const account of accounts) {
+        const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
+        countMap[account.providerId] = {
+          total: providerAccounts.length,
+          active: providerAccounts.filter((a) => a.status === 'active').length,
+        }
+      }
+      useProvidersStore.getState().setAccountCounts(countMap)
+
+      toast({
+        title: t('providers.importAccountsComplete'),
+        description: t('providers.importAccountsSummary', {
+          added: result.succeeded,
+          skipped: result.skipped,
+          failed: result.failed,
+        }),
+      })
+    } catch (error) {
+      toast({
+        title: t('providers.importAccountsFailed'),
+        description: error instanceof Error ? error.message : t('providers.operationFailed'),
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleViewAccountDetail = (account: Account) => {
     store.setSelectedAccountId(account.id)
     setViewMode('account-detail')
@@ -690,6 +749,8 @@ export function Providers() {
           onDeleteAccount={handleDeleteAccount}
           onValidateAccount={handleValidateAccount}
           onViewDetail={handleViewAccountDetail}
+          onExportAccounts={() => handleExportAccounts(selectedProvider.id)}
+          onImportAccounts={(jsonData) => handleImportAccounts(selectedProvider.id, jsonData)}
         />
 
         <AddAccountDialog

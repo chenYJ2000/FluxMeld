@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSettingsStore, LogLevel } from '@/stores/settingsStore'
 import { useToast } from '@/hooks/use-toast'
-import { Database, Download, Upload, Trash2, RotateCcw, AlertTriangle } from 'lucide-react'
+import { Database, Download, Upload, Trash2, RotateCcw, AlertTriangle, Users } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -42,6 +42,9 @@ export function DataManagement() {
   const [isImporting, setIsImporting] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const [isExportingAccounts, setIsExportingAccounts] = useState(false)
+  const [isImportingAccounts, setIsImportingAccounts] = useState(false)
+  const [showAccountExportWarning, setShowAccountExportWarning] = useState(false)
 
   const requestLogConfig = config?.requestLogConfig ?? {
     enabled: true,
@@ -118,6 +121,63 @@ export function DataManagement() {
       })
     } finally {
       setIsImporting(false)
+      event.target.value = ''
+    }
+  }
+
+  const handleExportAccounts = async () => {
+    setIsExportingAccounts(true)
+    try {
+      const json = await window.electronAPI.accounts.export()
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `fluxmeld-accounts-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      toast({
+        title: t('common.success'),
+        description: t('settings.exportAccountsSuccess'),
+      })
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.exportAccountsFailed'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsExportingAccounts(false)
+      setShowAccountExportWarning(false)
+    }
+  }
+
+  const handleImportAccounts = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    setIsImportingAccounts(true)
+    try {
+      const text = await file.text()
+      const result = await window.electronAPI.accounts.import(text)
+      toast({
+        title: t('settings.importAccountsComplete'),
+        description: t('settings.importAccountsSummary', {
+          added: result.succeeded,
+          skipped: result.skipped,
+          failed: result.failed,
+        }),
+      })
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.importAccountsFailed'),
+        variant: 'destructive',
+      })
+    } finally {
+      setIsImportingAccounts(false)
       event.target.value = ''
     }
   }
@@ -348,6 +408,63 @@ export function DataManagement() {
               </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <div className="h-7 w-7 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-[var(--accent-primary)]" />
+            </div>
+            {t('settings.accountData')}
+          </CardTitle>
+          <CardDescription>{t('settings.accountDataDesc')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowAccountExportWarning(true)}
+              disabled={isExportingAccounts}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {isExportingAccounts ? t('settings.exporting') : t('settings.exportAccounts')}
+            </Button>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={handleImportAccounts}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                disabled={isImportingAccounts}
+              />
+              <Button
+                variant="outline"
+                disabled={isImportingAccounts}
+                className="flex items-center gap-2"
+              >
+                <Upload className="h-4 w-4" />
+                {isImportingAccounts ? t('settings.importing') : t('settings.importAccounts')}
+              </Button>
+            </div>
+          </div>
+
+          <Dialog open={showAccountExportWarning} onOpenChange={setShowAccountExportWarning}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('settings.exportAccountsWarningTitle')}</DialogTitle>
+                <DialogDescription>{t('settings.exportAccountsWarningDesc')}</DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowAccountExportWarning(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button onClick={handleExportAccounts}>{t('common.confirm')}</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </CardContent>
       </Card>
 

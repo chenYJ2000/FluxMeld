@@ -23,6 +23,7 @@ import type {
   LegacyToolPromptConfig,
   EffectiveModel,
   ValidationResult,
+  AccountImportResult,
 } from '../../../shared/types'
 
 export type { 
@@ -279,6 +280,8 @@ interface AccountsAPI {
     expiresAt?: number // Credit reset timestamp (milliseconds)
   } | null>
   clearChats: (accountId: string) => Promise<{ success: boolean; error?: string }>
+  export: (providerId?: string) => Promise<string>
+  import: (jsonData: string, providerId?: string) => Promise<AccountImportResult>
 }
 
 interface OAuthAPI {

@@ -32,6 +32,7 @@ import type {
   ProviderVendor,
   AppConfig,
   ValidationResult,
+  AccountImportResult,
 } from '../../shared/types'
 import type {
   SystemPrompt,
@@ -981,6 +982,17 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           error: error instanceof Error ? error.message : 'Failed to clear chats',
         }
       }
+    },
+  )
+
+  ipcMain.handle(IpcChannels.ACCOUNTS_EXPORT, async (_, providerId?: string): Promise<string> => {
+    return AccountManager.exportAccounts(providerId)
+  })
+
+  ipcMain.handle(
+    IpcChannels.ACCOUNTS_IMPORT,
+    async (_, jsonData: string, providerId?: string): Promise<AccountImportResult> => {
+      return AccountManager.importAccounts(jsonData, providerId)
     },
   )
 

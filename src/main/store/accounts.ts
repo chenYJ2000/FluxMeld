@@ -6,6 +6,13 @@
 import { storeManager } from './store'
 import { Account, AccountStatus, ValidationResult } from './types'
 import { validateCredentials } from './validator'
+import {
+  buildAccountExport,
+  findDuplicateAccount,
+  parseAccountExport,
+  serializeAccountExport,
+} from '../../shared/accountTransfer'
+import type { AccountImportResult } from '../../shared/types'
 
 /**
  * Account Manager class
@@ -92,6 +99,85 @@ export class AccountManager {
     })
 
     return account
+  }
+
+  /**
+   * Export accounts (credentials included) as a JSON string.
+   * @param providerId Optional, only export accounts of this provider
+   */
+  static exportAccounts(providerId?: string): string {
+    const accounts = providerId
+      ? storeManager.getAccountsByProviderId(providerId, true)
+      : storeManager.getAccounts(true)
+
+    return serializeAccountExport(buildAccountExport(accounts, providerId))
+  }
+
+  /**
+   * Import accounts from an export file. Accounts whose credentials already
+   * exist for the target provider are skipped rather than created again.
+   * @param jsonData Export file content
+   * @param providerIdOverride Optional, force every imported account onto this provider
+   * @returns Import summary
+   */
+  static importAccounts(jsonData: string, providerIdOverride?: string): AccountImportResult {
+    const file = parseAccountExport(jsonData)
+    const result: AccountImportResult = {
+      total: file.accounts.length,
+      succeeded: 0,
+      skipped: 0,
+      failed: 0,
+      errors: [],
+    }
+
+    file.accounts.forEach((item, index) => {
+      const providerId = providerIdOverride || item.providerId
+
+      if (!providerId || !storeManager.getProviderById(providerId)) {
+        result.failed++
+        result.errors.push({
+          index,
+          name: item.name,
+          providerId,
+          code: 'provider_not_found',
+          message: `Provider not found: ${providerId || '(unknown)'}`,
+        })
+        return
+      }
+
+      const existing = storeManager.getAccountsByProviderId(providerId, true)
+      if (findDuplicateAccount(existing, { ...item, providerId })) {
+        result.skipped++
+        return
+      }
+
+      try {
+        this.create({
+          providerId,
+          name: item.name,
+          email: item.email,
+          credentials: item.credentials,
+          dailyLimit: item.dailyLimit,
+        })
+        result.succeeded++
+      } catch (error) {
+        result.failed++
+        result.errors.push({
+          index,
+          name: item.name,
+          providerId,
+          code: 'create_failed',
+          message: error instanceof Error ? error.message : 'Failed to create account',
+        })
+      }
+    })
+
+    storeManager.addLog(
+      'info',
+      `Imported accounts: ${result.succeeded} added, ${result.skipped} skipped, ${result.failed} failed`,
+    )
+
+    return result
   }
 
   /**
