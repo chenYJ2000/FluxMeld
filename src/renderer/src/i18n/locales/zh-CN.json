@@ -981,9 +981,13 @@
       "saved": "代理源已保存",
       "clash": {
         "label": "Clash / mihomo",
-        "description": "通过本地 Clash 混合端口与外部控制器切换出口节点",
-        "controllerUrl": "控制器地址",
-        "controllerUrlHelp": "在 Clash Verge 中开启外部控制并填写地址（默认 127.0.0.1:9097）",
+        "description": "通过 Clash 代理端口与外部控制器切换出口节点",
+        "clashHost": "Clash 地址",
+        "clashHostHelp": "Clash 所在主机地址（默认 127.0.0.1）",
+        "controllerPort": "控制器端口",
+        "controllerPortHelp": "外部控制器端口（默认 9097）",
+        "proxyPort": "代理端口",
+        "proxyPortHelp": "Clash 混合代理端口（默认 7897）",
         "secret": "控制器密钥",
         "secretHelp": "外部控制器的 Bearer 密钥，未设置可留空"
       },

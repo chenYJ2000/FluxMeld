@@ -981,9 +981,13 @@
       "saved": "Proxy source saved",
       "clash": {
         "label": "Clash / mihomo",
-        "description": "Switch exit nodes via the local Clash mixed port and external controller",
-        "controllerUrl": "Controller address",
-        "controllerUrlHelp": "Enable the external controller in Clash Verge and set its address (default 127.0.0.1:9097)",
+        "description": "Switch exit nodes via the Clash proxy port and external controller",
+        "clashHost": "Clash address",
+        "clashHostHelp": "Host where Clash runs (default 127.0.0.1)",
+        "controllerPort": "Controller port",
+        "controllerPortHelp": "External controller port (default 9097)",
+        "proxyPort": "Proxy port",
+        "proxyPortHelp": "Clash mixed proxy port (default 7897)",
         "secret": "Controller secret",
         "secretHelp": "Bearer secret of the external controller; leave empty if unset"
       },

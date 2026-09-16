@@ -1,14 +1,14 @@
 /**
  * Clash/mihomo egress source.
  *
- * Routes through the local Clash mixed port and switches the controller's
+ * Routes through the configured Clash proxy port and switches the controller's
  * GLOBAL node to select the exit. The pre-existing routing mode/node are saved
  * on first apply and restored on deactivate.
  */
 
 import { ClashController, type ClashMode } from './controller.ts'
 import { CLASH_META } from './config.ts'
-import { canTcpConnect, discoverEnvProxies } from '../common/discovery.ts'
+import { canTcpConnect } from '../common/discovery.ts'
 import type {
   EgressExit,
   EgressProbeResult,
@@ -17,148 +17,128 @@ import type {
   EgressSourceModuleMeta,
 } from '../types.ts'
 
-const KNOWN_PROXY_PORTS = [7890, 7897, 7898, 7892, 9249, 1080]
-const KNOWN_CONTROLLER_PORTS = [9097, 9090, 9091, 9098, 6170, 6171]
+const DEFAULT_CLASH_HOST = '127.0.0.1'
+const DEFAULT_CONTROLLER_PORT = 9097
+const DEFAULT_PROXY_PORT = 7897
 const PROBE_TIMEOUT_MS = 1200
-const LOCAL_HOST = '127.0.0.1'
+
+function normalizePort(value: unknown, fallback: number): number {
+  const port = typeof value === 'number' ? value : Number(value)
+  return Number.isInteger(port) && port >= 1 && port <= 65535 ? port : fallback
+}
+
+interface ClashSettings {
+  host: string
+  controllerPort: number
+  proxyPort: number
+  secret: string
+}
 
 export class ClashSource implements EgressSource {
   readonly meta: EgressSourceModuleMeta = CLASH_META
 
   private controller: ClashController | null = null
-  private proxyHost: string | null = null
-  private proxyPort: number | null = null
+  private controllerSignature: string | null = null
+  private controllerVerified = false
   private modeBefore: ClashMode | null = null
   private nodeBefore: string | null = null
 
   constructor(private readonly services: EgressServices) {}
 
-  private getSettings(): { controllerUrl: string; secret: string } {
+  private getSettings(): ClashSettings {
     const settings = this.services.getSettings()
     return {
-      controllerUrl: String(settings.controllerUrl ?? '').trim(),
+      host: String(settings.clashHost ?? '').trim() || DEFAULT_CLASH_HOST,
+      controllerPort: normalizePort(settings.controllerPort, DEFAULT_CONTROLLER_PORT),
+      proxyPort: normalizePort(settings.proxyPort, DEFAULT_PROXY_PORT),
       secret: String(settings.secret ?? '').trim(),
     }
   }
 
-  private normalizeControllerUrl(value: string): string | null {
-    const trimmed = value.trim()
-    if (!trimmed) return null
-    try {
-      const url =
-        trimmed.startsWith('http://') || trimmed.startsWith('https://')
-          ? new URL(trimmed)
-          : new URL(`http://${trimmed}`)
-      return `${url.protocol}//${url.host}`
-    } catch {
-      return null
-    }
+  private getProxyAddress(): { host: string; port: number } {
+    const { host, proxyPort } = this.getSettings()
+    return { host, port: proxyPort }
+  }
+
+  private getController(): ClashController {
+    const { host, controllerPort, secret } = this.getSettings()
+    const baseUrl = `http://${host}:${controllerPort}`
+    const signature = `${baseUrl}|${secret}`
+    if (this.controller && this.controllerSignature === signature) return this.controller
+
+    this.controller = new ClashController(baseUrl, secret, PROBE_TIMEOUT_MS)
+    this.controllerSignature = signature
+    this.controllerVerified = false
+    return this.controller
   }
 
   private async discoverController(): Promise<ClashController | null> {
-    if (this.controller && (await this.controller.probe())) return this.controller
-
-    const { controllerUrl, secret } = this.getSettings()
-
-    if (controllerUrl) {
-      const url = this.normalizeControllerUrl(controllerUrl)
-      if (url) {
-        const candidate = new ClashController(url, secret, PROBE_TIMEOUT_MS)
-        if (await candidate.probe()) {
-          this.controller = candidate
-          return candidate
-        }
-      }
-    }
-
-    for (const port of KNOWN_CONTROLLER_PORTS) {
-      const candidate = new ClashController(`http://127.0.0.1:${port}`, secret, PROBE_TIMEOUT_MS)
-      if (await candidate.probe()) {
-        this.controller = candidate
-        return candidate
-      }
-    }
-
-    return null
-  }
-
-  private async discoverProxy(): Promise<{ host: string; port: number } | null> {
-    for (const port of KNOWN_PROXY_PORTS) {
-      if (await canTcpConnect(LOCAL_HOST, port, PROBE_TIMEOUT_MS)) {
-        return { host: LOCAL_HOST, port }
-      }
-    }
-    const env = discoverEnvProxies()
-    if (env.length > 0) {
-      return { host: env[0].host, port: env[0].port }
+    const controller = this.getController()
+    if (this.controllerVerified) return controller
+    if (await controller.probe()) {
+      this.controllerVerified = true
+      return controller
     }
     return null
-  }
-
-  private async ensureDiscovered(): Promise<void> {
-    if (this.proxyPort === null) {
-      const proxy = await this.discoverProxy()
-      if (proxy) {
-        this.proxyHost = proxy.host
-        this.proxyPort = proxy.port
-      }
-    }
-    if (!this.controller) {
-      await this.discoverController()
-    }
   }
 
   async probe(): Promise<EgressProbeResult> {
-    await this.ensureDiscovered()
+    const proxy = this.getProxyAddress()
+    const controller = await this.discoverController()
+    const proxyReachable = await canTcpConnect(proxy.host, proxy.port, PROBE_TIMEOUT_MS)
 
-    if (this.proxyPort === null) {
+    if (!proxyReachable) {
       return {
         available: false,
-        error: 'No local proxy (Clash) port detected. Start Clash and try again.',
+        error: `Clash proxy port unreachable: ${proxy.host}:${proxy.port}`,
+        details: { proxyHost: proxy.host, proxyPort: proxy.port },
       }
     }
-    if (!this.controller) {
+
+    if (!controller) {
+      const { host, controllerPort } = this.getSettings()
       return {
         available: false,
-        error:
-          'Clash controller not detected. Enable the external controller and set its address/secret in the egress source settings.',
-        details: { proxyPort: this.proxyPort },
+        error: `Clash controller unavailable: http://${host}:${controllerPort}`,
+        details: { proxyHost: proxy.host, proxyPort: proxy.port },
       }
     }
+
     return {
       available: true,
       details: {
-        controllerUrl: this.controller.baseUrl,
-        proxyHost: this.proxyHost,
-        proxyPort: this.proxyPort,
+        controllerUrl: controller.baseUrl,
+        proxyHost: proxy.host,
+        proxyPort: proxy.port,
       },
     }
   }
 
   async listExits(): Promise<EgressExit[]> {
-    await this.ensureDiscovered()
-    if (!this.controller || this.proxyPort === null || this.proxyHost === null) return []
+    const controller = await this.discoverController()
+    if (!controller) return []
 
-    const nodes = await this.controller.listNodes()
+    const proxy = this.getProxyAddress()
+    const nodes = await controller.listNodes()
     return nodes.map((name) => ({
       id: name,
       name,
       protocol: 'http',
-      host: this.proxyHost as string,
-      port: this.proxyPort as number,
+      host: proxy.host,
+      port: proxy.port,
     }))
   }
 
   async apply(exit: EgressExit): Promise<boolean> {
-    await this.ensureDiscovered()
-    if (!this.controller) return false
+    const controller = await this.discoverController()
+    if (!controller) return false
 
     if (this.modeBefore === null) {
-      this.modeBefore = await this.controller.getMode()
-      this.nodeBefore = await this.controller.getCurrentNode()
+      this.modeBefore = await controller.getMode()
+      this.nodeBefore = await controller.getCurrentNode()
     }
-    await this.controller.setMode('global')
-    return this.controller.changeNode(exit.id)
+    await controller.setMode('global')
+    return controller.changeNode(exit.id)
   }
 
   async deactivate(): Promise<void> {
