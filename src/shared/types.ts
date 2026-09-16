@@ -111,16 +111,29 @@ export interface EgressSourceConfig {
   settings: Record<string, unknown>
 }
 
+/** A named proxy group. Groups are global; the same group across providers
+ * shares one dynamically assigned exit. */
+export interface ProxyGroup {
+  id: string
+  name: string
+}
+
 /** Outbound proxy settings (sources, rotation, per-account grouping). */
 export interface OutboundProxySettings {
   /** Master switch, default off. */
   enabled: boolean
+  /**
+   * When false, all accounts route through the single active proxy exit.
+   * When true, accounts are routed by their assigned group (direct group stays
+   * strictly direct). Default false.
+   */
+  groupAssignmentEnabled: boolean
   /** Active egress source config id. */
   activeSourceId: string
   rotation: RotationPolicy
   sources: EgressSourceConfig[]
-  /** Maximum accounts per proxy group (column). */
-  maxAccountsPerGroup: number
+  /** Global proxy group definitions. */
+  groups: ProxyGroup[]
 }
 
 import type { LegacyToolPromptConfig, ToolCallingConfig } from './toolCalling'
@@ -169,9 +182,9 @@ export interface Provider {
   /** Serializable UI metadata (icon key, i18n prefix, notices) */
   ui?: ProviderUiMeta
   /**
-   * Per-account outbound proxy grouping. Maps accountId to an egress exit id,
-   * or null for a strict direct connection. When the whole map is absent the
-   * global on-demand proxy fallback applies to this provider's accounts.
+   * Per-account outbound proxy grouping. Maps accountId to a proxy group id, or
+   * null for the direct (strict direct) group. When the whole map is absent the
+   * provider falls back to the global outbound-proxy behaviour.
    */
   proxyAssignment?: Record<string, string | null>
 }

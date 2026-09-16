@@ -978,6 +978,7 @@
       "active": "Active",
       "setActive": "Set active",
       "saveFailed": "Failed to save proxy source",
+      "saved": "Proxy source saved",
       "clash": {
         "label": "Clash / mihomo",
         "description": "Switch exit nodes via the local Clash mixed port and external controller",
@@ -1009,18 +1010,26 @@
     },
     "assignment": {
       "title": "Proxy Assignment",
-      "description": "Assign accounts to proxy groups per provider (one column per group, sharing one exit)",
+      "description": "Assign provider accounts to global proxy groups; the same group shares one dynamic exit across providers",
       "selectProvider": "Select provider",
       "directGroup": "Direct group",
       "auto": "Auto assign",
       "clear": "Clear",
       "empty": "No accounts",
-      "assignTo": "Assign to",
-      "moveToDirect": "Move to direct group",
-      "groupFull": "This group is full",
       "autoDone": "Auto assignment complete",
-      "ruleTitle": "Move not allowed",
-      "ruleDesc": "Proxy groups cannot be swapped directly; move to the direct group first"
+      "groupAssignment": "Enable group assignment",
+      "groupAssignmentHelp": "Off: all accounts use one proxy exit. On: route by group; the direct group stays strictly direct",
+      "leftGroup": "Left group",
+      "rightGroup": "Right group",
+      "doubleClickHint": "Double-click a left account to move it right, and a right account to move it left",
+      "perGroupLimit": "Per-group limit",
+      "countScope": "Counting scope",
+      "scopeGlobal": "Global count",
+      "scopeProvider": "This provider only",
+      "groupsTitle": "Proxy groups",
+      "newGroupPlaceholder": "New group name",
+      "addGroup": "Add group",
+      "pendingExit": "Exit pending"
     }
   },
   "about": {

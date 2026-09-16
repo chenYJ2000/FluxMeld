@@ -24,6 +24,8 @@ export async function initializeEgress(): Promise<void> {
       storeManager.getProviderById(providerId)?.proxyAssignment,
     getAccountIds: (providerId) =>
       storeManager.getAccountsByProviderId(providerId).map((account) => account.id),
+    listProviderIds: () => storeManager.getProviders().map((provider) => provider.id),
+    getProviderName: (providerId) => storeManager.getProviderById(providerId)?.name ?? '',
     logger: {
       info: (message) => storeManager.addLog('info', message),
       warn: (message) => storeManager.addLog('warn', message),
@@ -33,7 +35,12 @@ export async function initializeEgress(): Promise<void> {
   try {
     const settings = storeManager.getConfig().outboundProxy
     if (settings?.enabled) {
-      await egressManager.reload()
+      if (settings.groupAssignmentEnabled) {
+        await egressManager.reload()
+      } else {
+        // Single-exit mode: proactively route all traffic through the proxy.
+        await egressManager.enterProxyMode()
+      }
     }
   } catch {
     // Startup should never fail because egress could not be prepared.

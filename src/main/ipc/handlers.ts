@@ -279,21 +279,14 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           rotation: { ...settings.rotation, ...rotation },
         },
       })
-      await egressManager.reload()
       return updated.outboundProxy.rotation
     },
   )
 
-  ipcMain.handle(
-    IpcChannels.OUTBOUND_PROXY_GET_ASSIGNMENT,
-    async (
-      _,
-      providerId: string,
-    ): Promise<{ assignment: Record<string, string | null>; exits: unknown[] }> => {
-      await egressManager.getExits()
-      return egressManager.getAssignment(providerId)
-    },
-  )
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_GET_ASSIGNMENT, async (_, providerId: string) => {
+    await egressManager.warmGroupExits()
+    return egressManager.getAssignmentOverview(providerId)
+  })
 
   ipcMain.handle(
     IpcChannels.OUTBOUND_PROXY_SET_ASSIGNMENT,
@@ -301,42 +294,98 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       _,
       providerId: string,
       accountId: string,
-      exitId: string | null,
+      groupId: string | null,
     ): Promise<Record<string, string | null>> => {
       const provider = storeManager.getProviderById(providerId)
       if (!provider) return {}
-      const next = { ...(provider.proxyAssignment ?? {}), [accountId]: exitId }
+      const next = { ...(provider.proxyAssignment ?? {}), [accountId]: groupId }
       storeManager.updateProvider(providerId, { proxyAssignment: next })
       return next
     },
   )
 
   ipcMain.handle(
-    IpcChannels.OUTBOUND_PROXY_SET_PROVIDER_ASSIGNMENT,
-    async (
-      _,
-      providerId: string,
-      assignment: Record<string, string | null>,
-    ): Promise<Record<string, string | null>> => {
-      storeManager.updateProvider(providerId, { proxyAssignment: assignment })
-      return assignment
-    },
-  )
-
-  ipcMain.handle(
     IpcChannels.OUTBOUND_PROXY_AUTO_ASSIGN,
-    async (_, providerId: string): Promise<Record<string, string | null>> => {
-      const assignment = await egressManager.autoAssign(providerId)
-      storeManager.updateProvider(providerId, { proxyAssignment: assignment })
-      return assignment
+    async (_, providerId: string, perGroupLimit: number, countScope: 'global' | 'provider') => {
+      const result = await egressManager.autoAssign(providerId, perGroupLimit, countScope)
+      storeManager.updateProvider(providerId, { proxyAssignment: result.assignment })
+      const settings = getOutboundSettings()
+      storeManager.updateConfig({
+        outboundProxy: { ...settings, groups: result.groups },
+      })
+      await egressManager.warmGroupExits()
+      return egressManager.getAssignmentOverview(providerId)
     },
   )
 
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_CLEAR_ASSIGNMENT, async (_, providerId: string) => {
+    storeManager.updateProvider(providerId, { proxyAssignment: undefined })
+    return egressManager.getAssignmentOverview(providerId)
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_ADD_GROUP, async (_, name: string) => {
+    const settings = getOutboundSettings()
+    const group = {
+      id: `grp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: name?.trim() || `Group ${settings.groups.length + 1}`,
+    }
+    storeManager.updateConfig({
+      outboundProxy: { ...settings, groups: [...settings.groups, group] },
+    })
+    return group
+  })
+
   ipcMain.handle(
-    IpcChannels.OUTBOUND_PROXY_CLEAR_ASSIGNMENT,
-    async (_, providerId: string): Promise<boolean> => {
-      storeManager.updateProvider(providerId, { proxyAssignment: undefined })
-      return true
+    IpcChannels.OUTBOUND_PROXY_RENAME_GROUP,
+    async (_, groupId: string, name: string) => {
+      const settings = getOutboundSettings()
+      const groups = settings.groups.map((group) =>
+        group.id === groupId ? { ...group, name: name.trim() || group.name } : group,
+      )
+      storeManager.updateConfig({ outboundProxy: { ...settings, groups } })
+      return groups
+    },
+  )
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_DELETE_GROUP, async (_, groupId: string) => {
+    const settings = getOutboundSettings()
+    const groups = settings.groups.filter((group) => group.id !== groupId)
+    storeManager.updateConfig({ outboundProxy: { ...settings, groups } })
+
+    // Move every account referencing the removed group to the direct group.
+    for (const provider of storeManager.getProviders()) {
+      const assignment = provider.proxyAssignment
+      if (!assignment) continue
+      if (!Object.values(assignment).some((value) => value === groupId)) continue
+      const next: Record<string, string | null> = { ...assignment }
+      for (const accountId of Object.keys(next)) {
+        if (next[accountId] === groupId) next[accountId] = null
+      }
+      storeManager.updateProvider(provider.id, { proxyAssignment: next })
+    }
+
+    egressManager.forgetGroup(groupId)
+    return groups
+  })
+
+  ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_SET_GROUP_ASSIGNMENT_ENABLED,
+    async (_, enabled: boolean) => {
+      const settings = getOutboundSettings()
+      storeManager.updateConfig({
+        outboundProxy: { ...settings, groupAssignmentEnabled: enabled },
+      })
+      if (enabled) {
+        // Release the single global exit before switching to group routing.
+        await egressManager.resetToDirect()
+        await egressManager.warmGroupExits()
+      } else {
+        await egressManager.resetToDirect()
+        if (settings.enabled) {
+          await egressManager.enterProxyMode()
+        }
+      }
+      return enabled
     },
   )
 
@@ -368,8 +417,9 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     syncProxyStatusEndpoint(newConfig)
 
     if (updates.outboundProxy) {
+      // Cheap synchronous invalidation only; the exit pool is refreshed lazily
+      // on the next actual use so typing in the settings UI stays responsive.
       egressManager.invalidateSource()
-      await egressManager.reload()
     }
 
     BrowserWindow.getAllWindows().forEach((win) => {

@@ -103,7 +103,10 @@ Never mutate `axios.defaults.proxy`. Instances that need it use
 `createEgressAxios()`.
 
 Providers may assign accounts to proxy groups via `Provider.proxyAssignment`
-(accountId → exitId | null). `null` is the strict-direct group.
+(accountId → groupId | null). `null` is the strict-direct group. Groups are
+global definitions (`outboundProxy.groups`); each group is bound to an exit
+dynamically at runtime. When `outboundProxy.groupAssignmentEnabled` is false all
+accounts use the single active exit instead.
 
 Sources expose `probe()` / `listExits()` / `apply(exit)` / `deactivate()`;
 `meta.fields` drives the renderer's source settings UI. Shared rotation helpers

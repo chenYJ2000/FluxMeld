@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Layers, Plus, Trash2, Loader2, CheckCircle2 } from 'lucide-react'
+import { Layers, Plus, Trash2, Loader2, CheckCircle2, Save, RotateCcw } from 'lucide-react'
 
 interface SourceField {
   key: string
@@ -50,6 +50,7 @@ export function SourceConfig() {
   const [sources, setSources] = useState<SourceEntry[]>([])
   const [activeSourceId, setActiveSourceId] = useState('')
   const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +58,7 @@ export function SourceConfig() {
       setMetas(result.metas)
       setSources(result.outboundProxy.sources)
       setActiveSourceId(result.outboundProxy.activeSourceId)
+      setDirty(false)
     } catch (error) {
       console.error('Failed to load egress sources:', error)
     }
@@ -66,20 +68,20 @@ export function SourceConfig() {
     void load()
   }, [load])
 
-  const persist = async (nextSources: SourceEntry[], nextActive = activeSourceId) => {
+  const handleSave = async () => {
     setSaving(true)
     try {
       const config = await window.electronAPI.config.get()
       const ok = await window.electronAPI.config.update({
         outboundProxy: {
           ...config.outboundProxy,
-          sources: nextSources,
-          activeSourceId: nextActive,
+          sources,
+          activeSourceId,
         },
       })
       if (ok) {
-        setSources(nextSources)
-        setActiveSourceId(nextActive)
+        setDirty(false)
+        toast({ title: t('common.success'), description: t('egress.sources.saved') })
       } else {
         toast({
           title: t('common.error'),
@@ -99,27 +101,34 @@ export function SourceConfig() {
     const meta = metas[0]
     if (!meta) return
     const entry: SourceEntry = { id: generateSourceId(), sourceId: meta.id, settings: {} }
-    void persist([...sources, entry], activeSourceId || entry.id)
+    setSources((prev) => [...prev, entry])
+    setActiveSourceId((prev) => prev || entry.id)
+    setDirty(true)
   }
 
   const handleRemove = (id: string) => {
-    const next = sources.filter((source) => source.id !== id)
-    const nextActive = activeSourceId === id ? (next[0]?.id ?? '') : activeSourceId
-    void persist(next, nextActive)
+    setSources((prev) => {
+      const next = prev.filter((source) => source.id !== id)
+      setActiveSourceId((active) => (active === id ? (next[0]?.id ?? '') : active))
+      return next
+    })
+    setDirty(true)
   }
 
   const handleModuleChange = (id: string, sourceId: string) => {
-    const next = sources.map((source) =>
-      source.id === id ? { ...source, sourceId, settings: {} } : source,
+    setSources((prev) =>
+      prev.map((source) => (source.id === id ? { ...source, sourceId, settings: {} } : source)),
     )
-    void persist(next)
+    setDirty(true)
   }
 
   const handleSettingChange = (id: string, key: string, value: unknown) => {
-    const next = sources.map((source) =>
-      source.id === id ? { ...source, settings: { ...source.settings, [key]: value } } : source,
+    setSources((prev) =>
+      prev.map((source) =>
+        source.id === id ? { ...source, settings: { ...source.settings, [key]: value } } : source,
+      ),
     )
-    void persist(next)
+    setDirty(true)
   }
 
   return (
@@ -129,12 +138,30 @@ export function SourceConfig() {
           <div className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-primary" />
             <CardTitle>{t('egress.sources.title')}</CardTitle>
-            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           </div>
-          <Button size="sm" onClick={handleAdd} disabled={metas.length === 0}>
-            <Plus className="h-3.5 w-3.5 mr-1" />
-            {t('egress.sources.add')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleAdd} disabled={metas.length === 0}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              {t('egress.sources.add')}
+            </Button>
+            <Button size="sm" onClick={handleSave} disabled={!dirty || saving}>
+              {saving ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              ) : (
+                <Save className="h-3.5 w-3.5 mr-1" />
+              )}
+              {t('common.save')}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => void load()}
+              disabled={saving || !dirty}
+              title={t('common.refresh')}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
         <CardDescription>{t('egress.sources.description')}</CardDescription>
       </CardHeader>
@@ -174,7 +201,10 @@ export function SourceConfig() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => void persist(sources, source.id)}
+                      onClick={() => {
+                        setActiveSourceId(source.id)
+                        setDirty(true)
+                      }}
                     >
                       {t('egress.sources.setActive')}
                     </Button>

@@ -408,7 +408,7 @@ export class RequestForwarder {
       try {
         // Resolve the exit this account must route through (null = direct) and
         // snapshot its identity for request-log attribution.
-        const accountExit = egressManager.resolveExitForAccount(
+        const accountExit = await egressManager.resolveExitForAccount(
           currentSelection.provider.id,
           currentSelection.account.id,
         )
@@ -595,12 +595,12 @@ export class RequestForwarder {
       if (shouldRouteThroughProxy(lastStatus, lastError)) {
         const providerId = currentSelection.provider.id
         const accountId = currentSelection.account.id
-        if (egressManager.hasAssignmentMap(providerId)) {
+        if (egressManager.isGroupAssignmentEnabled()) {
           // Grouped accounts rotate their own group; direct-group accounts are
           // never silently promoted to a proxy.
-          const assignedExitId = egressManager.getAssignedExitId(providerId, accountId)
-          if (assignedExitId) {
-            await egressManager.rotateExit(assignedExitId)
+          const groupId = egressManager.getAssignedGroupId(providerId, accountId)
+          if (groupId) {
+            await egressManager.rotateGroup(groupId)
           }
         } else if (egressManager.isProxyMode()) {
           await egressManager.rotateProxy()

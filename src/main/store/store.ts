@@ -342,6 +342,9 @@ export class StoreManager {
         sources: Array.isArray(rawConfig.outboundProxy?.sources)
           ? rawConfig.outboundProxy.sources
           : [],
+        groups: Array.isArray(rawConfig.outboundProxy?.groups)
+          ? rawConfig.outboundProxy.groups
+          : [],
       },
       toolCallingConfig: normalizeToolCallingConfig(rawToolCallingConfig),
       toolPromptConfig: undefined,

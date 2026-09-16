@@ -95,16 +95,26 @@ interface OutboundProxySourcesResult {
   metas: EgressSourceMeta[]
   outboundProxy: {
     enabled: boolean
+    groupAssignmentEnabled: boolean
     activeSourceId: string
     rotation: RotationPolicy
     sources: EgressSourceConfig[]
-    maxAccountsPerGroup: number
+    groups: ProxyGroupInfo[]
   }
 }
 
-interface OutboundProxyAssignmentResult {
+interface ProxyGroupInfo {
+  id: string
+  name: string
+}
+
+interface OutboundProxyOverview {
+  groups: ProxyGroupInfo[]
+  groupAssignmentEnabled: boolean
   assignment: Record<string, string | null>
-  exits: EgressExitInfo[]
+  providerTotals: { total: number; byGroup: Record<string, number> }
+  globalTotals: { total: number; byGroup: Record<string, number> }
+  groupExits: Record<string, EgressExitInfo | null>
 }
 
 interface TokenValidationResult {
@@ -354,23 +364,30 @@ export function createClientApi(
     getRotation: (): Promise<RotationPolicy> => transport.invoke('outboundProxy:getRotation'),
     setRotation: (rotation: Partial<RotationPolicy>): Promise<RotationPolicy> =>
       transport.invoke('outboundProxy:setRotation', rotation),
-    getAssignment: (providerId: string): Promise<OutboundProxyAssignmentResult> =>
+    getAssignment: (providerId: string): Promise<OutboundProxyOverview> =>
       transport.invoke('outboundProxy:getAssignment', providerId),
     setAssignment: (
       providerId: string,
       accountId: string,
-      exitId: string | null,
+      groupId: string | null,
     ): Promise<Record<string, string | null>> =>
-      transport.invoke('outboundProxy:setAssignment', providerId, accountId, exitId),
-    setProviderAssignment: (
+      transport.invoke('outboundProxy:setAssignment', providerId, accountId, groupId),
+    autoAssign: (
       providerId: string,
-      assignment: Record<string, string | null>,
-    ): Promise<Record<string, string | null>> =>
-      transport.invoke('outboundProxy:setProviderAssignment', providerId, assignment),
-    autoAssign: (providerId: string): Promise<Record<string, string | null>> =>
-      transport.invoke('outboundProxy:autoAssign', providerId),
-    clearAssignment: (providerId: string): Promise<boolean> =>
+      perGroupLimit: number,
+      countScope: 'global' | 'provider',
+    ): Promise<OutboundProxyOverview> =>
+      transport.invoke('outboundProxy:autoAssign', providerId, perGroupLimit, countScope),
+    clearAssignment: (providerId: string): Promise<OutboundProxyOverview> =>
       transport.invoke('outboundProxy:clearAssignment', providerId),
+    addGroup: (name: string): Promise<ProxyGroupInfo> =>
+      transport.invoke('outboundProxy:addGroup', name),
+    renameGroup: (groupId: string, name: string): Promise<ProxyGroupInfo[]> =>
+      transport.invoke('outboundProxy:renameGroup', groupId, name),
+    deleteGroup: (groupId: string): Promise<ProxyGroupInfo[]> =>
+      transport.invoke('outboundProxy:deleteGroup', groupId),
+    setGroupAssignmentEnabled: (enabled: boolean): Promise<boolean> =>
+      transport.invoke('outboundProxy:setGroupAssignmentEnabled', enabled),
   }
 
   const providersAPI = {

@@ -83,18 +83,34 @@ requires it (Clash switches controller nodes; the file source is a no-op).
 
 ## Proxy assignment (Phase 2)
 
-Each provider stores `proxyAssignment: Record<accountId, exitId | null>`.
-`EgressManager.resolveExitForAccount()` maps an account to its group's exit;
-`null` means strict direct (never silently promoted to a proxy).
+`OutboundProxySettings.groupAssignmentEnabled` selects the routing mode:
 
-- **Auto assign** chunks a provider's accounts by `maxAccountsPerGroup` and
-  allocates one exit per chunk through `ExitAllocator` (creating as many groups
-  as needed; the pool wraps when saturated).
-- **Manual moves** may only go group → direct → group; the renderer enforces it
-  and the backend validates group capacity.
-- Failure of a grouped request calls `rotateExit()`; a direct-group account is
-  left direct. Providers with no assignment map at all fall back to the global
-  on-demand proxy.
+| enabled | groupAssignmentEnabled | Behaviour |
+| --- | --- | --- |
+| false | — | everything direct |
+| true | false | all accounts share one proxy exit (Clash use case) |
+| true | true | route by group; the direct group stays strictly direct |
+
+Groups (`OutboundProxySettings.groups: ProxyGroup[]`) are **global**: the same
+group across providers shares one dynamically assigned exit. Each provider
+stores `proxyAssignment: Record<accountId, groupId | null>`; `null`/absent means
+the direct group.
+
+- **Dynamic binding** (runtime only): `EgressManager.groupExits` maps groupId to
+  an exit allocated through the shared `ExitAllocator` (skips in-use exits, wraps
+  when saturated). `ensureGroupExit()` allocates lazily; `rotateGroup()`
+  reallocates on failure. If no exit is available the request falls back to
+  direct with a warning.
+- **Auto assign** fills the provider's currently-unassigned accounts into
+  existing groups (skipping full ones, creating new groups when all are full).
+  The per-group limit and the counting scope (`global` across all providers or
+  `provider`-only) are chosen per run; groups themselves have no hard cap.
+- **Manual moves** use the swap panel (pick left/right group, double-click an
+  account to move it across). Deleting a group moves its accounts to the direct
+  group.
+- Clash cannot run distinct concurrent exits per group (a single GLOBAL node),
+  so group assignment is intended for config-file / IP-pool sources; for Clash
+  leave group assignment off.
 
 ## Checklist
 

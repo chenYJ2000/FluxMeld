@@ -496,6 +496,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   language: 'zh-CN',
   outboundProxy: {
     enabled: false,
+    groupAssignmentEnabled: false,
     activeSourceId: '',
     rotation: {
       strategy: 'roundRobin',
@@ -503,7 +504,7 @@ export const DEFAULT_CONFIG: AppConfig = {
       verifyBeforeUse: true,
     },
     sources: [],
-    maxAccountsPerGroup: 10,
+    groups: [],
   },
 }
 

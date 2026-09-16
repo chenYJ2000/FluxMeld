@@ -16,9 +16,12 @@ export const IpcChannels = {
   OUTBOUND_PROXY_SET_ROTATION: 'outboundProxy:setRotation',
   OUTBOUND_PROXY_GET_ASSIGNMENT: 'outboundProxy:getAssignment',
   OUTBOUND_PROXY_SET_ASSIGNMENT: 'outboundProxy:setAssignment',
-  OUTBOUND_PROXY_SET_PROVIDER_ASSIGNMENT: 'outboundProxy:setProviderAssignment',
   OUTBOUND_PROXY_AUTO_ASSIGN: 'outboundProxy:autoAssign',
   OUTBOUND_PROXY_CLEAR_ASSIGNMENT: 'outboundProxy:clearAssignment',
+  OUTBOUND_PROXY_ADD_GROUP: 'outboundProxy:addGroup',
+  OUTBOUND_PROXY_RENAME_GROUP: 'outboundProxy:renameGroup',
+  OUTBOUND_PROXY_DELETE_GROUP: 'outboundProxy:deleteGroup',
+  OUTBOUND_PROXY_SET_GROUP_ASSIGNMENT_ENABLED: 'outboundProxy:setGroupAssignmentEnabled',
 
   CONFIG_GET: 'config:get',
   CONFIG_UPDATE: 'config:update',

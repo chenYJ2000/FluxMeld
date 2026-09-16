@@ -382,11 +382,10 @@ export class ConfigManager {
       }
 
       if (
-        config.outboundProxy.maxAccountsPerGroup !== undefined &&
-        (!Number.isInteger(Number(config.outboundProxy.maxAccountsPerGroup)) ||
-          Number(config.outboundProxy.maxAccountsPerGroup) < 1)
+        config.outboundProxy.groupAssignmentEnabled !== undefined &&
+        typeof config.outboundProxy.groupAssignmentEnabled !== 'boolean'
       ) {
-        errors.push('outboundProxy.maxAccountsPerGroup must be a positive integer')
+        errors.push('outboundProxy.groupAssignmentEnabled must be a boolean')
       }
 
       if (
@@ -394,6 +393,13 @@ export class ConfigManager {
         !Array.isArray(config.outboundProxy.sources)
       ) {
         errors.push('outboundProxy.sources must be an array')
+      }
+
+      if (
+        config.outboundProxy.groups !== undefined &&
+        !Array.isArray(config.outboundProxy.groups)
+      ) {
+        errors.push('outboundProxy.groups must be an array')
       }
     }
 

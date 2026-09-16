@@ -3,6 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -12,7 +15,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
-import { Users, Wand2, Eraser, ArrowLeftRight } from 'lucide-react'
+import { Users, Wand2, Eraser, Plus, Trash2, ArrowLeftRight } from 'lucide-react'
 import type { Account, Provider } from '@/types/electron'
 
 interface ExitInfo {
@@ -23,7 +26,26 @@ interface ExitInfo {
   port: number
 }
 
+interface GroupInfo {
+  id: string
+  name: string
+}
+
+interface Overview {
+  groups: GroupInfo[]
+  groupAssignmentEnabled: boolean
+  assignment: Record<string, string | null>
+  providerTotals: { total: number; byGroup: Record<string, number> }
+  globalTotals: { total: number; byGroup: Record<string, number> }
+  groupExits: Record<string, ExitInfo | null>
+}
+
 const DIRECT = '__direct__'
+
+function exitLabel(exit: ExitInfo | null | undefined): string {
+  if (!exit) return ''
+  return exit.name ?? `${exit.host}:${exit.port}`
+}
 
 export function ProxyAssignment() {
   const { t } = useTranslation()
@@ -32,27 +54,26 @@ export function ProxyAssignment() {
   const [providers, setProviders] = useState<Provider[]>([])
   const [providerId, setProviderId] = useState('')
   const [accounts, setAccounts] = useState<Account[]>([])
-  const [assignment, setAssignment] = useState<Record<string, string | null>>({})
-  const [exits, setExits] = useState<ExitInfo[]>([])
-  const [maxPerGroup, setMaxPerGroup] = useState(10)
+  const [overview, setOverview] = useState<Overview | null>(null)
+  const [leftGroup, setLeftGroup] = useState(DIRECT)
+  const [rightGroup, setRightGroup] = useState(DIRECT)
+  const [newGroupName, setNewGroupName] = useState('')
+  const [autoLimit, setAutoLimit] = useState(10)
+  const [countScope, setCountScope] = useState<'global' | 'provider'>('global')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
     void (async () => {
       try {
-        const [list, config] = await Promise.all([
-          window.electronAPI.providers.getAll(),
-          window.electronAPI.config.get(),
-        ])
+        const list = await window.electronAPI.providers.getAll()
         setProviders(list.filter((provider) => provider.enabled))
-        setMaxPerGroup(config.outboundProxy?.maxAccountsPerGroup ?? 10)
       } catch (error) {
         console.error('Failed to load providers:', error)
       }
     })()
   }, [])
 
-  const loadAssignment = useCallback(async (id: string) => {
+  const loadOverview = useCallback(async (id: string) => {
     if (!id) return
     try {
       const [accountList, result] = await Promise.all([
@@ -60,62 +81,46 @@ export function ProxyAssignment() {
         window.electronAPI.outboundProxy.getAssignment(id),
       ])
       setAccounts(accountList)
-      setExits(result.exits)
-      setAssignment(result.assignment)
+      setOverview(result)
     } catch (error) {
       console.error('Failed to load assignment:', error)
     }
   }, [])
 
   useEffect(() => {
-    void loadAssignment(providerId)
-  }, [providerId, loadAssignment])
+    void loadOverview(providerId)
+  }, [providerId, loadOverview])
 
-  const groupOf = (accountId: string): string =>
-    assignment[accountId] === undefined || assignment[accountId] === null
-      ? DIRECT
-      : (assignment[accountId] as string)
+  const groups = overview?.groups ?? []
+  const groupOf = (accountId: string): string => overview?.assignment[accountId] ?? DIRECT
 
-  const countFor = (exitId: string): number =>
-    accounts.filter((account) => groupOf(account.id) === exitId).length
+  const accountsFor = (groupId: string): Account[] =>
+    accounts.filter((account) => groupOf(account.id) === groupId)
 
-  const handleAssign = async (accountId: string, exitId: string | null) => {
-    if (!providerId) return
-    // Rule: moving between proxy groups directly is forbidden; accounts must
-    // pass through the direct group first.
-    if (exitId && groupOf(accountId) !== DIRECT) {
-      toast({
-        title: t('egress.assignment.ruleTitle'),
-        description: t('egress.assignment.ruleDesc'),
-        variant: 'destructive',
-      })
-      return
-    }
-    if (exitId && countFor(exitId) >= maxPerGroup) {
-      toast({
-        title: t('common.error'),
-        description: t('egress.assignment.groupFull'),
-        variant: 'destructive',
-      })
-      return
-    }
-    const next = await window.electronAPI.outboundProxy.setAssignment(providerId, accountId, exitId)
-    setAssignment(next)
+  const move = async (accountId: string, targetGroupId: string) => {
+    if (!providerId || !overview) return
+    if (groupOf(accountId) === targetGroupId) return
+    const next = await window.electronAPI.outboundProxy.setAssignment(
+      providerId,
+      accountId,
+      targetGroupId === DIRECT ? null : targetGroupId,
+    )
+    setOverview({ ...overview, assignment: next })
   }
 
   const handleAutoAssign = async () => {
     if (!providerId) return
     setBusy(true)
     try {
-      const next = await window.electronAPI.outboundProxy.autoAssign(providerId)
-      setAssignment(next)
+      const result = await window.electronAPI.outboundProxy.autoAssign(
+        providerId,
+        autoLimit,
+        countScope,
+      )
+      setOverview(result)
       toast({ title: t('common.success'), description: t('egress.assignment.autoDone') })
     } catch (error) {
-      toast({
-        title: t('common.error'),
-        description: String(error),
-        variant: 'destructive',
-      })
+      toast({ title: t('common.error'), description: String(error), variant: 'destructive' })
     } finally {
       setBusy(false)
     }
@@ -123,73 +128,83 @@ export function ProxyAssignment() {
 
   const handleClear = async () => {
     if (!providerId) return
-    await window.electronAPI.outboundProxy.clearAssignment(providerId)
-    setAssignment({})
+    const result = await window.electronAPI.outboundProxy.clearAssignment(providerId)
+    setOverview(result)
   }
 
-  const renderAccount = (account: Account) => {
-    const group = groupOf(account.id)
-    const grouped = group !== DIRECT
-    return (
-      <div
-        key={account.id}
-        className="flex items-center justify-between gap-2 rounded-md border p-2 text-sm"
-      >
-        <span className="truncate">{account.name}</span>
-        {grouped ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2"
-            onClick={() => void handleAssign(account.id, null)}
-            title={t('egress.assignment.moveToDirect')}
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" />
-          </Button>
-        ) : (
-          <Select
-            value={DIRECT}
-            onValueChange={(value) =>
-              void handleAssign(account.id, value === DIRECT ? null : value)
-            }
-          >
-            <SelectTrigger className="h-7 w-[130px] text-xs">
-              <SelectValue placeholder={t('egress.assignment.assignTo')} />
-            </SelectTrigger>
-            <SelectContent>
-              {exits.map((exit) => {
-                const full = countFor(exit.id) >= maxPerGroup
-                return (
-                  <SelectItem key={exit.id} value={exit.id} disabled={full}>
-                    {exit.name ?? `${exit.host}:${exit.port}`}
-                    {` (${countFor(exit.id)}/${maxPerGroup})`}
-                  </SelectItem>
-                )
-              })}
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-    )
+  const handleAddGroup = async () => {
+    const result = await window.electronAPI.outboundProxy.addGroup(newGroupName)
+    setNewGroupName('')
+    if (!overview) return
+    setOverview({ ...overview, groups: [...overview.groups, result] })
   }
 
-  const columns = [
-    { id: DIRECT, label: t('egress.assignment.directGroup') },
-    ...exits.map((exit) => ({
-      id: exit.id,
-      label: exit.name ?? `${exit.host}:${exit.port}`,
-    })),
+  const handleRename = async (groupId: string, name: string) => {
+    const groupsNext = await window.electronAPI.outboundProxy.renameGroup(groupId, name)
+    if (overview) setOverview({ ...overview, groups: groupsNext })
+  }
+
+  const handleDeleteGroup = async (groupId: string) => {
+    const groupsNext = await window.electronAPI.outboundProxy.deleteGroup(groupId)
+    if (overview) setOverview({ ...overview, groups: groupsNext })
+    if (leftGroup === groupId) setLeftGroup(DIRECT)
+    if (rightGroup === groupId) setRightGroup(DIRECT)
+    await loadOverview(providerId)
+  }
+
+  const handleToggleGroupAssignment = async (enabled: boolean) => {
+    if (!overview) return
+    await window.electronAPI.outboundProxy.setGroupAssignmentEnabled(enabled)
+    setOverview({ ...overview, groupAssignmentEnabled: enabled })
+    await loadOverview(providerId)
+  }
+
+  const countLabel = (groupId: string): string => {
+    if (!overview) return ''
+    const p = overview.providerTotals.byGroup[groupId] ?? 0
+    const g = overview.globalTotals.byGroup[groupId] ?? 0
+    return `${p}/${overview.providerTotals.total}：${g}/${overview.globalTotals.total}`
+  }
+
+  const groupOptions = [
+    { id: DIRECT, name: t('egress.assignment.directGroup') },
+    ...groups.map((group) => ({ id: group.id, name: group.name })),
   ]
 
+  const renderSwapList = (groupId: string, targetGroupId: string) => (
+    <div className="flex-1 rounded-lg border p-2 min-w-[200px]">
+      <div className="mb-2 text-sm font-medium truncate">
+        {groupOptions.find((option) => option.id === groupId)?.name}
+      </div>
+      <ScrollArea className="h-[220px]">
+        <div className="space-y-1 pr-2">
+          {accountsFor(groupId).map((account) => (
+            <div
+              key={account.id}
+              onDoubleClick={() => void move(account.id, targetGroupId)}
+              title={t('egress.assignment.doubleClickHint')}
+              className="cursor-pointer select-none rounded-md border p-2 text-sm truncate hover:bg-accent"
+            >
+              {account.name}
+            </div>
+          ))}
+          {accountsFor(groupId).length === 0 && (
+            <p className="p-2 text-xs text-muted-foreground">{t('egress.assignment.empty')}</p>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
+  )
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5 text-primary" />
-            <CardTitle>{t('egress.assignment.title')}</CardTitle>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" />
+              <CardTitle>{t('egress.assignment.title')}</CardTitle>
+            </div>
             <Select value={providerId} onValueChange={setProviderId}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder={t('egress.assignment.selectProvider')} />
@@ -202,52 +217,242 @@ export function ProxyAssignment() {
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={handleAutoAssign} disabled={!providerId || busy}>
-              <Wand2 className="h-3.5 w-3.5 mr-1" />
-              {t('egress.assignment.auto')}
-            </Button>
-            <Button size="sm" variant="outline" onClick={handleClear} disabled={!providerId}>
-              <Eraser className="h-3.5 w-3.5 mr-1" />
-              {t('egress.assignment.clear')}
-            </Button>
           </div>
-        </div>
-        <CardDescription>{t('egress.assignment.description')}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        {!providerId ? (
-          <p className="text-sm text-muted-foreground">{t('egress.assignment.selectProvider')}</p>
-        ) : (
-          <ScrollArea className="w-full">
-            <div className="flex gap-4 pb-4">
-              {columns.map((column) => {
-                const columnAccounts = accounts.filter(
-                  (account) => groupOf(account.id) === column.id,
-                )
-                return (
-                  <div key={column.id} className="min-w-[220px] flex-1 rounded-lg border p-3">
-                    <div className="mb-2 flex items-center justify-between">
-                      <span className="text-sm font-medium truncate">{column.label}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {columnAccounts.length}/{maxPerGroup}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      {columnAccounts.map((account) => renderAccount(account))}
-                      {columnAccounts.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          {t('egress.assignment.empty')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+          <CardDescription>{t('egress.assignment.description')}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between space-x-2">
+            <div className="space-y-0.5">
+              <Label>{t('egress.assignment.groupAssignment')}</Label>
+              <p className="text-sm text-muted-foreground">
+                {t('egress.assignment.groupAssignmentHelp')}
+              </p>
             </div>
-          </ScrollArea>
+            <Switch
+              checked={overview?.groupAssignmentEnabled ?? false}
+              onCheckedChange={(value) => void handleToggleGroupAssignment(value)}
+              disabled={!providerId}
+            />
+          </div>
+
+          {providerId && overview?.groupAssignmentEnabled && (
+            <>
+              <div className="flex flex-wrap items-end gap-2 pt-2 border-t">
+                <div className="space-y-1">
+                  <Label>{t('egress.assignment.leftGroup')}</Label>
+                  <Select value={leftGroup} onValueChange={setLeftGroup}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groupOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <ArrowLeftRight className="mb-2 h-4 w-4 text-muted-foreground" />
+                <div className="space-y-1">
+                  <Label>{t('egress.assignment.rightGroup')}</Label>
+                  <Select value={rightGroup} onValueChange={setRightGroup}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {groupOptions.map((option) => (
+                        <SelectItem key={option.id} value={option.id}>
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex-1" />
+                <div className="space-y-1">
+                  <Label>{t('egress.assignment.perGroupLimit')}</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={autoLimit}
+                    onChange={(event) => setAutoLimit(Number(event.target.value))}
+                    className="w-[100px]"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>{t('egress.assignment.countScope')}</Label>
+                  <Select
+                    value={countScope}
+                    onValueChange={(value) => setCountScope(value as 'global' | 'provider')}
+                  >
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">{t('egress.assignment.scopeGlobal')}</SelectItem>
+                      <SelectItem value="provider">
+                        {t('egress.assignment.scopeProvider')}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button size="sm" onClick={handleAutoAssign} disabled={busy}>
+                  <Wand2 className="h-3.5 w-3.5 mr-1" />
+                  {t('egress.assignment.auto')}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleClear}>
+                  <Eraser className="h-3.5 w-3.5 mr-1" />
+                  {t('egress.assignment.clear')}
+                </Button>
+              </div>
+
+              <div className="flex gap-4">
+                {renderSwapList(leftGroup, rightGroup)}
+                {renderSwapList(rightGroup, leftGroup)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {t('egress.assignment.doubleClickHint')}
+              </p>
+            </>
+          )}
+
+          {!providerId && (
+            <p className="text-sm text-muted-foreground">{t('egress.assignment.selectProvider')}</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {providerId && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-base">{t('egress.assignment.groupsTitle')}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={newGroupName}
+                  onChange={(event) => setNewGroupName(event.target.value)}
+                  placeholder={t('egress.assignment.newGroupPlaceholder')}
+                  className="w-[180px]"
+                />
+                <Button size="sm" variant="outline" onClick={() => void handleAddGroup()}>
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  {t('egress.assignment.addGroup')}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="w-full">
+              <div className="flex gap-4 pb-4">
+                <GroupColumn
+                  groupId={DIRECT}
+                  name={t('egress.assignment.directGroup')}
+                  count={countLabel(DIRECT)}
+                  exitLabel=""
+                  editable={false}
+                  onRename={handleRename}
+                  onDelete={handleDeleteGroup}
+                />
+                {groups.map((group) => (
+                  <GroupColumn
+                    key={group.id}
+                    groupId={group.id}
+                    name={group.name}
+                    count={countLabel(group.id)}
+                    exitLabel={exitLabel(overview?.groupExits[group.id])}
+                    pendingLabel={t('egress.assignment.pendingExit')}
+                    editable
+                    onRename={handleRename}
+                    onDelete={handleDeleteGroup}
+                  />
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+interface GroupColumnProps {
+  groupId: string
+  name: string
+  count: string
+  exitLabel: string
+  pendingLabel?: string
+  editable: boolean
+  onRename: (groupId: string, name: string) => Promise<void>
+  onDelete: (groupId: string) => Promise<void>
+}
+
+function GroupColumn({
+  groupId,
+  name,
+  count,
+  exitLabel,
+  pendingLabel,
+  editable,
+  onRename,
+  onDelete,
+}: GroupColumnProps) {
+  const { t } = useTranslation()
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(name)
+
+  useEffect(() => {
+    setDraft(name)
+  }, [name])
+
+  const commit = () => {
+    setEditing(false)
+    if (draft.trim() && draft !== name) void onRename(groupId, draft.trim())
+  }
+
+  return (
+    <div className="min-w-[240px] flex-1 rounded-lg border p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        {editable && editing ? (
+          <Input
+            value={draft}
+            autoFocus
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={commit}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') commit()
+              if (event.key === 'Escape') {
+                setDraft(name)
+                setEditing(false)
+              }
+            }}
+            className="h-7"
+          />
+        ) : (
+          <span
+            className="text-sm font-medium truncate"
+            onDoubleClick={() => editable && setEditing(true)}
+          >
+            {name}
+          </span>
         )}
-      </CardContent>
-    </Card>
+        {editable && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => void onDelete(groupId)}
+            title={t('common.delete')}
+          >
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        )}
+      </div>
+      <Badge variant="outline" className="text-xs">
+        {count}
+      </Badge>
+      <p className="text-xs text-muted-foreground truncate">{exitLabel || pendingLabel || ''}</p>
+    </div>
   )
 }
 

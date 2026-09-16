@@ -126,9 +126,18 @@ interface EgressExitInfo {
   expiresAt?: number
 }
 
-interface OutboundProxyAssignmentResult {
+interface ProxyGroupInfo {
+  id: string
+  name: string
+}
+
+interface OutboundProxyOverview {
+  groups: ProxyGroupInfo[]
+  groupAssignmentEnabled: boolean
   assignment: Record<string, string | null>
-  exits: EgressExitInfo[]
+  providerTotals: { total: number; byGroup: Record<string, number> }
+  globalTotals: { total: number; byGroup: Record<string, number> }
+  groupExits: Record<string, EgressExitInfo | null>
 }
 
 interface OutboundProxyAPI {
@@ -140,10 +149,11 @@ interface OutboundProxyAPI {
     metas: EgressSourceMeta[]
     outboundProxy: {
       enabled: boolean
+      groupAssignmentEnabled: boolean
       activeSourceId: string
       rotation: { strategy: string; rotateEarlySeconds: number; verifyBeforeUse: boolean }
       sources: Array<{ id: string; sourceId: string; settings: Record<string, unknown> }>
-      maxAccountsPerGroup: number
+      groups: ProxyGroupInfo[]
     }
   }>
   listExits: () => Promise<EgressExitInfo[]>
@@ -153,18 +163,22 @@ interface OutboundProxyAPI {
     rotateEarlySeconds: number
     verifyBeforeUse: boolean
   }>
-  getAssignment: (providerId: string) => Promise<OutboundProxyAssignmentResult>
+  getAssignment: (providerId: string) => Promise<OutboundProxyOverview>
   setAssignment: (
     providerId: string,
     accountId: string,
-    exitId: string | null,
+    groupId: string | null,
   ) => Promise<Record<string, string | null>>
-  setProviderAssignment: (
+  autoAssign: (
     providerId: string,
-    assignment: Record<string, string | null>,
-  ) => Promise<Record<string, string | null>>
-  autoAssign: (providerId: string) => Promise<Record<string, string | null>>
-  clearAssignment: (providerId: string) => Promise<boolean>
+    perGroupLimit: number,
+    countScope: 'global' | 'provider',
+  ) => Promise<OutboundProxyOverview>
+  clearAssignment: (providerId: string) => Promise<OutboundProxyOverview>
+  addGroup: (name: string) => Promise<ProxyGroupInfo>
+  renameGroup: (groupId: string, name: string) => Promise<ProxyGroupInfo[]>
+  deleteGroup: (groupId: string) => Promise<ProxyGroupInfo[]>
+  setGroupAssignmentEnabled: (enabled: boolean) => Promise<boolean>
 }
 
 interface StoreAPI {
