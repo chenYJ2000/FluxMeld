@@ -3,13 +3,15 @@
  * Forwards requests to corresponding API based on provider configuration
  */
 
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
+import { AxiosError, type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import http2 from 'http2'
 import { PassThrough } from 'stream'
 import { Account, Provider } from '../store/types'
 import { AccountSelection, ForwardResult, ChatCompletionRequest, ProxyContext } from './types'
 import { proxyStatusManager } from './status'
-import { outboundProxyManager } from './outboundProxy'
+import { egressManager } from '../egress/manager'
+import { runWithEgress } from '../egress/context'
+import { createEgressAxios } from '../egress/http'
 import { loadBalancer } from './loadbalancer'
 import { storeManager } from '../store/store'
 import {
@@ -130,7 +132,7 @@ function recordAccountFailure(selection: AccountSelection, status: number | unde
  * Request Forwarder
  */
 export class RequestForwarder {
-  private axiosInstance = axios.create({
+  private axiosInstance = createEgressAxios({
     timeout: 1800000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity,
@@ -404,15 +406,21 @@ export class RequestForwarder {
       }
 
       try {
-        // Snapshot the outbound exit before the upstream call so request logs
-        // can attribute the response to the exit actually in effect here.
-        attemptEgressNode = outboundProxyManager.getEgressNodeName() ?? undefined
-        let result = await this.doForward(
-          modifiedRequest,
-          currentSelection.account,
-          currentSelection.provider,
-          currentSelection.actualModel,
-          context,
+        // Resolve the exit this account must route through (null = direct) and
+        // snapshot its identity for request-log attribution.
+        const accountExit = egressManager.resolveExitForAccount(
+          currentSelection.provider.id,
+          currentSelection.account.id,
+        )
+        attemptEgressNode = accountExit ? (accountExit.name ?? accountExit.id) : undefined
+        let result = await runWithEgress(accountExit, () =>
+          this.doForward(
+            modifiedRequest,
+            currentSelection.account,
+            currentSelection.provider,
+            currentSelection.actualModel,
+            context,
+          ),
         )
         throwIfAborted(context.signal)
 
@@ -461,12 +469,14 @@ export class RequestForwarder {
             },
           })
 
-          const rawRepaired = await this.doForward(
-            repairRequest,
-            currentSelection.account,
-            currentSelection.provider,
-            currentSelection.actualModel,
-            context,
+          const rawRepaired = await runWithEgress(accountExit, () =>
+            this.doForward(
+              repairRequest,
+              currentSelection.account,
+              currentSelection.provider,
+              currentSelection.actualModel,
+              context,
+            ),
           )
           throwIfAborted(context.signal)
           const constrainedRepair = enforceSingleToolRepairResult(
@@ -581,14 +591,21 @@ export class RequestForwarder {
 
       // The direct connection was rate-limited, blocked, or failed at the
       // transport layer. Route the reattempt through an outbound proxy so the
-      // next request leaves from a different IP. Await readiness (bounded) so
-      // this request's retry actually goes through the proxy. When already in
-      // proxy mode, rotate the Clash node to a different exit IP.
+      // next request leaves from a different IP.
       if (shouldRouteThroughProxy(lastStatus, lastError)) {
-        if (outboundProxyManager.isProxyMode()) {
-          await outboundProxyManager.rotateProxy()
+        const providerId = currentSelection.provider.id
+        const accountId = currentSelection.account.id
+        if (egressManager.hasAssignmentMap(providerId)) {
+          // Grouped accounts rotate their own group; direct-group accounts are
+          // never silently promoted to a proxy.
+          const assignedExitId = egressManager.getAssignedExitId(providerId, accountId)
+          if (assignedExitId) {
+            await egressManager.rotateExit(assignedExitId)
+          }
+        } else if (egressManager.isProxyMode()) {
+          await egressManager.rotateProxy()
         } else {
-          await outboundProxyManager.ensureProxyForRequest()
+          await egressManager.ensureProxyForRequest()
         }
       }
 

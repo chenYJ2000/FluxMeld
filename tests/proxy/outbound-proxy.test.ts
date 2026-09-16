@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { shouldRouteThroughProxy } from '../../src/main/proxy/forwarder.ts'
-import { filterRealClashNodes } from '../../src/main/proxy/outboundProxy.ts'
+import { filterRealClashNodes } from '../../src/main/egress/clash/nodes.ts'
 
 test('network-level failures (no status) trigger proxy routing', () => {
   assert.equal(shouldRouteThroughProxy(undefined), true)

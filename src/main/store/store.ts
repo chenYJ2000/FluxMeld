@@ -335,6 +335,13 @@ export class StoreManager {
       outboundProxy: {
         ...DEFAULT_CONFIG.outboundProxy,
         ...(rawConfig.outboundProxy ?? {}),
+        rotation: {
+          ...DEFAULT_CONFIG.outboundProxy.rotation,
+          ...(rawConfig.outboundProxy?.rotation ?? {}),
+        },
+        sources: Array.isArray(rawConfig.outboundProxy?.sources)
+          ? rawConfig.outboundProxy.sources
+          : [],
       },
       toolCallingConfig: normalizeToolCallingConfig(rawToolCallingConfig),
       toolPromptConfig: undefined,

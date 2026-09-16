@@ -11,6 +11,7 @@
     "dashboard": "仪表盘",
     "providers": "供应商",
     "proxy": "代理设置",
+    "egress": "出站代理",
     "models": "模型管理",
     "apiKeys": "API Key",
     "logs": "日志",
@@ -942,6 +943,85 @@
     "resetError": "恢复默认失败",
     "confirmReset": "确定要恢复默认模型吗？这将删除所有自定义模型和排除设置。",
     "confirmDelete": "确定要删除此模型吗？"
+  },
+  "egress": {
+    "title": "出站代理",
+    "subtitle": "按需或常开地将上游请求路由到本地/远程代理出口，支持账号分组分流",
+    "tabs": {
+      "general": "基本设置",
+      "sources": "代理源配置",
+      "rotation": "轮换策略",
+      "assignment": "代理分配"
+    },
+    "general": {
+      "title": "基本设置",
+      "description": "出站代理总开关。默认关闭，所有请求直连。",
+      "enable": "启用出站代理",
+      "enableDesc": "开启后，请求失败或命中代理分组时将走配置的出口",
+      "active": "已启用",
+      "check": "连通性检查",
+      "checkDesc": "检测当前代理源是否可用",
+      "checkButton": "检查",
+      "available": "代理源可用",
+      "unavailable": "代理源不可用",
+      "activeSource": "当前代理源",
+      "none": "无",
+      "enabledToast": "出站代理已启用",
+      "disabledToast": "出站代理已关闭",
+      "enableFailed": "出站代理启用失败"
+    },
+    "sources": {
+      "title": "代理源配置",
+      "description": "配置可提供出口的代理源（Clash 控制器 / 配置文件等）",
+      "add": "添加代理源",
+      "empty": "尚未配置代理源",
+      "active": "使用中",
+      "setActive": "设为当前",
+      "saveFailed": "代理源保存失败",
+      "clash": {
+        "label": "Clash / mihomo",
+        "description": "通过本地 Clash 混合端口与外部控制器切换出口节点",
+        "controllerUrl": "控制器地址",
+        "controllerUrlHelp": "在 Clash Verge 中开启外部控制并填写地址（默认 127.0.0.1:9097）",
+        "secret": "控制器密钥",
+        "secretHelp": "外部控制器的 Bearer 密钥，未设置可留空"
+      },
+      "configFile": {
+        "label": "配置文件",
+        "description": "从本地 JSON 文件读取代理列表并轮换",
+        "filePath": "配置文件路径",
+        "filePathHelp": "JSON 数组，每项包含 host、port，可选 protocol/username/password/name"
+      }
+    },
+    "rotation": {
+      "title": "轮换策略",
+      "description": "控制出口的挑选与更换方式",
+      "strategy": "轮换方式",
+      "strategyHelp": "决定从出口池中挑选出口的顺序",
+      "roundRobin": "顺序轮换",
+      "lowestLatency": "最低延迟优先",
+      "random": "随机",
+      "rotateEarly": "过期前自动更换（秒）",
+      "rotateEarlyHelp": "出口带有有效期时，在到期前该秒数自动更换（默认 30）",
+      "verify": "使用前验证",
+      "verifyHelp": "选择出口后先验证连通性再使用",
+      "saveFailed": "轮换策略保存失败"
+    },
+    "assignment": {
+      "title": "代理分配",
+      "description": "按供应商把账号分配到代理分组（每列一组，共用同一出口）",
+      "selectProvider": "选择供应商",
+      "directGroup": "直连组",
+      "auto": "自动分配",
+      "clear": "清空",
+      "empty": "暂无账号",
+      "assignTo": "分配到",
+      "moveToDirect": "移到直连组",
+      "groupFull": "该分组已满",
+      "autoDone": "自动分配完成",
+      "ruleTitle": "不允许的移动",
+      "ruleDesc": "代理分组之间不能直接互调，请先移到直连组再分配到其他分组"
+    }
   },
   "about": {
     "tagline": "多平台 AI 服务统一管理工具",

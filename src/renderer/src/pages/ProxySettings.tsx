@@ -1,15 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  ProxyConfigForm,
-  LoadBalanceConfig,
-  ProxyStatus,
-  AdvancedConfig,
-  OutboundProxyConfig,
-} from '@/components/proxy'
+import { ProxyConfigForm, LoadBalanceConfig, ProxyStatus, AdvancedConfig } from '@/components/proxy'
 import { useProxyStore } from '@/stores/proxyStore'
-import { Settings, Scale, Activity, Settings2, Router } from 'lucide-react'
+import { Settings, Scale, Activity, Settings2 } from 'lucide-react'
 
 export function ProxySettings() {
   const { t } = useTranslation()
@@ -56,13 +50,6 @@ export function ProxySettings() {
             <Settings2 className="h-4 w-4 flex-shrink-0" />
             <span className="hidden md:inline truncate">{t('proxy.advancedConfig')}</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="outbound"
-            className="flex items-center gap-2 py-2 px-3 flex-1 min-w-0"
-          >
-            <Router className="h-4 w-4 flex-shrink-0" />
-            <span className="hidden md:inline truncate">{t('proxy.outboundProxy')}</span>
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="status" className="mt-6">
@@ -79,10 +66,6 @@ export function ProxySettings() {
 
         <TabsContent value="advanced" className="mt-6">
           <AdvancedConfig />
-        </TabsContent>
-
-        <TabsContent value="outbound" className="mt-6">
-          <OutboundProxyConfig />
         </TabsContent>
       </Tabs>
     </div>

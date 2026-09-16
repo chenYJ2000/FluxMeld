@@ -10,7 +10,7 @@ import { getBuiltinProviders, getBuiltinProvider } from '../providers/builtin'
 import { oauthManager } from '../oauth/manager'
 import { ProxyServer } from '../proxy/server'
 import { proxyStatusManager } from '../proxy/status'
-import { outboundProxyManager } from '../proxy/outboundProxy'
+import { initializeEgress, egressManager } from '../egress'
 import { sessionManager } from '../proxy/sessionManager'
 import { TrayManager } from '../tray/TrayManager'
 import { ConfigManager } from '../store/config'
@@ -60,9 +60,15 @@ function syncProxyStatusEndpoint(config: AppConfig): void {
   }
 }
 
+/** Current outbound proxy settings from the store. */
+function getOutboundSettings(): AppConfig['outboundProxy'] {
+  return storeManager.getConfig().outboundProxy
+}
+
 export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Promise<void> {
   try {
     await storeManager.initialize()
+    await initializeEgress()
   } catch (error) {
     console.error('[IPC] Failed to initialize storage:', error)
 
@@ -209,16 +215,13 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     IpcChannels.OUTBOUND_PROXY_GET_STATUS,
     async (): Promise<{
       enabled: boolean
-      controllerUrl: string | null
+      sourceId: string | null
       proxyUrl: string
+      exitId: string | null
       node: string | null
+      expiresAt: number | null
     }> => {
-      return {
-        enabled: outboundProxyManager.isProxyMode(),
-        controllerUrl: outboundProxyManager.getControllerUrl(),
-        proxyUrl: outboundProxyManager.getProxyUrl(),
-        node: await outboundProxyManager.getClashNode(),
-      }
+      return egressManager.getStatus()
     },
   )
 
@@ -226,47 +229,114 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     IpcChannels.OUTBOUND_PROXY_CHECK,
     async (): Promise<{
       available: boolean
-      controllerUrl: string | null
-      proxyPorts: number[]
       error?: string
+      details?: Record<string, unknown>
     }> => {
-      return outboundProxyManager.checkAvailability()
+      return egressManager.checkAvailability()
     },
   )
 
   ipcMain.handle(
     IpcChannels.OUTBOUND_PROXY_ENABLE,
-    async (): Promise<{
-      success: boolean
-      error?: string
-      node?: string | null
-    }> => {
-      if (outboundProxyManager.isProxyMode()) {
-        return { success: true, node: await outboundProxyManager.getClashNode() }
+    async (): Promise<{ success: boolean; error?: string; node?: string | null }> => {
+      if (egressManager.isProxyMode()) {
+        return { success: true, node: egressManager.getEgressNodeName() }
       }
-      return outboundProxyManager.enable()
+      const result = await egressManager.enable()
+      storeManager.updateConfig({ outboundProxy: { ...getOutboundSettings(), enabled: true } })
+      return result
     },
   )
 
   ipcMain.handle(IpcChannels.OUTBOUND_PROXY_DISABLE, async (): Promise<{ success: boolean }> => {
-    return outboundProxyManager.disable()
+    const result = await egressManager.disable()
+    storeManager.updateConfig({ outboundProxy: { ...getOutboundSettings(), enabled: false } })
+    return result
   })
 
-  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_GET_NODES, async (): Promise<string[]> => {
-    return outboundProxyManager.getNodes()
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_GET_SOURCES, async () => {
+    return {
+      metas: egressManager.getEgressSourceMetas(),
+      outboundProxy: getOutboundSettings(),
+    }
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_LIST_EXITS, async () => {
+    return egressManager.getExits()
+  })
+
+  ipcMain.handle(IpcChannels.OUTBOUND_PROXY_GET_ROTATION, async () => {
+    return getOutboundSettings().rotation
   })
 
   ipcMain.handle(
-    IpcChannels.OUTBOUND_PROXY_SELECT_NODE,
+    IpcChannels.OUTBOUND_PROXY_SET_ROTATION,
+    async (_, rotation: Record<string, unknown>) => {
+      const settings = getOutboundSettings()
+      const updated = storeManager.updateConfig({
+        outboundProxy: {
+          ...settings,
+          rotation: { ...settings.rotation, ...rotation },
+        },
+      })
+      await egressManager.reload()
+      return updated.outboundProxy.rotation
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_GET_ASSIGNMENT,
     async (
       _,
-      name: string,
-    ): Promise<{
-      success: boolean
-      error?: string
-    }> => {
-      const ok = await outboundProxyManager.selectNode(name)
-      return ok ? { success: true } : { success: false, error: 'Failed to switch Clash node.' }
+      providerId: string,
+    ): Promise<{ assignment: Record<string, string | null>; exits: unknown[] }> => {
+      await egressManager.getExits()
+      return egressManager.getAssignment(providerId)
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_SET_ASSIGNMENT,
+    async (
+      _,
+      providerId: string,
+      accountId: string,
+      exitId: string | null,
+    ): Promise<Record<string, string | null>> => {
+      const provider = storeManager.getProviderById(providerId)
+      if (!provider) return {}
+      const next = { ...(provider.proxyAssignment ?? {}), [accountId]: exitId }
+      storeManager.updateProvider(providerId, { proxyAssignment: next })
+      return next
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_SET_PROVIDER_ASSIGNMENT,
+    async (
+      _,
+      providerId: string,
+      assignment: Record<string, string | null>,
+    ): Promise<Record<string, string | null>> => {
+      storeManager.updateProvider(providerId, { proxyAssignment: assignment })
+      return assignment
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_AUTO_ASSIGN,
+    async (_, providerId: string): Promise<Record<string, string | null>> => {
+      const assignment = await egressManager.autoAssign(providerId)
+      storeManager.updateProvider(providerId, { proxyAssignment: assignment })
+      return assignment
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.OUTBOUND_PROXY_CLEAR_ASSIGNMENT,
+    async (_, providerId: string): Promise<boolean> => {
+      storeManager.updateProvider(providerId, { proxyAssignment: undefined })
+      return true
     },
   )
 
@@ -296,6 +366,11 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
   ipcMain.handle(IpcChannels.CONFIG_UPDATE, async (_, updates: Partial<AppConfig>) => {
     const newConfig = storeManager.updateConfig(updates)
     syncProxyStatusEndpoint(newConfig)
+
+    if (updates.outboundProxy) {
+      egressManager.invalidateSource()
+      await egressManager.reload()
+    }
 
     BrowserWindow.getAllWindows().forEach((win) => {
       if (!win.isDestroyed()) {

@@ -14,6 +14,7 @@ import {
   Info,
   MessageSquare,
   AlertTriangle,
+  Router,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -39,6 +40,7 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.dashboard', href: '/', icon: LayoutDashboard },
   { titleKey: 'nav.providers', href: '/providers', icon: Server },
   { titleKey: 'nav.proxy', href: '/proxy', icon: Settings2 },
+  { titleKey: 'nav.egress', href: '/egress', icon: Router },
   { titleKey: 'nav.models', href: '/models', icon: Cpu },
   { titleKey: 'nav.session', href: '/session', icon: MessageSquare },
   { titleKey: 'nav.apiKeys', href: '/api-keys', icon: Key },

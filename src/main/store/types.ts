@@ -495,8 +495,15 @@ export const DEFAULT_CONFIG: AppConfig = {
   contextManagement: DEFAULT_CONTEXT_MANAGEMENT_CONFIG,
   language: 'zh-CN',
   outboundProxy: {
-    controllerUrl: '127.0.0.1:9097',
-    secret: '',
+    enabled: false,
+    activeSourceId: '',
+    rotation: {
+      strategy: 'roundRobin',
+      rotateEarlySeconds: 30,
+      verifyBeforeUse: true,
+    },
+    sources: [],
+    maxAccountsPerGroup: 10,
   },
 }
 

@@ -21,6 +21,8 @@ import type {
   SystemPrompt,
   PromptType,
   EffectiveModel,
+  RotationPolicy,
+  EgressSourceConfig,
 } from './types'
 
 export interface ClientTransport {
@@ -38,22 +40,71 @@ export interface ClientApiOptions {
 
 interface OutboundProxyStatus {
   enabled: boolean
-  controllerUrl: string | null
+  sourceId: string | null
   proxyUrl: string
+  exitId: string | null
   node: string | null
+  expiresAt: number | null
 }
 
 interface OutboundProxyCheckResult {
   available: boolean
-  controllerUrl: string | null
-  proxyPorts: number[]
   error?: string
+  details?: Record<string, unknown>
 }
 
 interface OutboundProxyActionResult {
   success: boolean
   error?: string
   node?: string | null
+}
+
+interface EgressFieldDescriptor {
+  key: string
+  type: string
+  labelKey: string
+  placeholder?: string
+  helpKey?: string
+  options?: Array<{ value: string; labelKey: string }>
+  defaultValue?: string | number | boolean
+}
+
+interface EgressSourceMeta {
+  id: string
+  labelKey: string
+  descriptionKey?: string
+  fields: EgressFieldDescriptor[]
+  capabilities: {
+    rotate: boolean
+    listExits: boolean
+    expiry: boolean
+    alwaysOn: boolean
+  }
+}
+
+interface EgressExitInfo {
+  id: string
+  name?: string
+  protocol: string
+  host: string
+  port: number
+  expiresAt?: number
+}
+
+interface OutboundProxySourcesResult {
+  metas: EgressSourceMeta[]
+  outboundProxy: {
+    enabled: boolean
+    activeSourceId: string
+    rotation: RotationPolicy
+    sources: EgressSourceConfig[]
+    maxAccountsPerGroup: number
+  }
+}
+
+interface OutboundProxyAssignmentResult {
+  assignment: Record<string, string | null>
+  exits: EgressExitInfo[]
 }
 
 interface TokenValidationResult {
@@ -297,9 +348,29 @@ export function createClientApi(
     check: (): Promise<OutboundProxyCheckResult> => transport.invoke('outboundProxy:check'),
     enable: (): Promise<OutboundProxyActionResult> => transport.invoke('outboundProxy:enable'),
     disable: (): Promise<{ success: boolean }> => transport.invoke('outboundProxy:disable'),
-    getNodes: (): Promise<string[]> => transport.invoke('outboundProxy:getNodes'),
-    selectNode: (name: string): Promise<OutboundProxyActionResult> =>
-      transport.invoke('outboundProxy:selectNode', name),
+    getSources: (): Promise<OutboundProxySourcesResult> =>
+      transport.invoke('outboundProxy:getSources'),
+    listExits: (): Promise<EgressExitInfo[]> => transport.invoke('outboundProxy:listExits'),
+    getRotation: (): Promise<RotationPolicy> => transport.invoke('outboundProxy:getRotation'),
+    setRotation: (rotation: Partial<RotationPolicy>): Promise<RotationPolicy> =>
+      transport.invoke('outboundProxy:setRotation', rotation),
+    getAssignment: (providerId: string): Promise<OutboundProxyAssignmentResult> =>
+      transport.invoke('outboundProxy:getAssignment', providerId),
+    setAssignment: (
+      providerId: string,
+      accountId: string,
+      exitId: string | null,
+    ): Promise<Record<string, string | null>> =>
+      transport.invoke('outboundProxy:setAssignment', providerId, accountId, exitId),
+    setProviderAssignment: (
+      providerId: string,
+      assignment: Record<string, string | null>,
+    ): Promise<Record<string, string | null>> =>
+      transport.invoke('outboundProxy:setProviderAssignment', providerId, assignment),
+    autoAssign: (providerId: string): Promise<Record<string, string | null>> =>
+      transport.invoke('outboundProxy:autoAssign', providerId),
+    clearAssignment: (providerId: string): Promise<boolean> =>
+      transport.invoke('outboundProxy:clearAssignment', providerId),
   }
 
   const providersAPI = {

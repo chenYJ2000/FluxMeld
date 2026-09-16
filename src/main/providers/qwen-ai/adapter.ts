@@ -4,7 +4,8 @@
  * Based on qwen3-reverse project
  */
 
-import axios, { AxiosResponse } from 'axios'
+import type { AxiosResponse } from 'axios'
+import { createEgressAxios } from '../../egress/http'
 import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
 import type { Account, Provider } from '../../store/types'
@@ -322,7 +323,7 @@ export function buildQwenAiPrompt(
 export class QwenAiAdapter {
   private provider: Provider
   private account: Account
-  private axiosInstance = axios.create({
+  private axiosInstance = createEgressAxios({
     timeout: 1800000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity,

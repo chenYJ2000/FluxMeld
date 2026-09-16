@@ -5,6 +5,7 @@
  */
 
 import axios, { AxiosResponse } from 'axios'
+import { createEgressAxios } from '../../egress/http'
 import { PassThrough } from 'stream'
 import { createGunzip, createInflate, createBrotliDecompress } from 'zlib'
 import * as ZstdCodec from 'zstd-codec'
@@ -102,7 +103,7 @@ function generateNonce(): string {
 export class QwenAdapter {
   private provider: Provider
   private account: Account
-  private axiosInstance = axios.create({
+  private axiosInstance = createEgressAxios({
     timeout: 1800000,
     maxBodyLength: Infinity,
     maxContentLength: Infinity,

@@ -18,6 +18,7 @@ src/
 │   │   ├── routes/       Proxy + management routes
 │   │   ├── services/     Context management, prompt generation
 │   │   └── toolCalling/  Prompt-based tool-calling engine
+│   ├── egress/           Pluggable outbound proxy sources + per-request routing
 │   ├── oauth/            OAuth/manual token authentication
 │   ├── providers/        Provider configs + built-in registry
 │   ├── store/            Persistence (electron-store)
@@ -63,6 +64,15 @@ streams and translate managed tool calls.
 
 `src/main/oauth/adapters/index.ts` maps each provider to an adapter factory via a
 registry map instead of a switch statement.
+
+### Egress sources (outbound proxy)
+
+`src/main/egress/` is a plugin registry of outbound proxy sources (`clash`,
+`config-file`, future IP pools). `EgressManager` allocates exits via the shared
+`ExitAllocator` and injects the effective exit per request through an
+async-local context + axios interceptor (never global axios defaults), so
+concurrent accounts can use different exits. Providers may assign accounts to
+proxy groups. See `docs/architecture/egress-plugin.md`.
 
 ### Persistence
 

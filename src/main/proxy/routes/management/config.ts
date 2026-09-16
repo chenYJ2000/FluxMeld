@@ -80,6 +80,25 @@ function maskConfig(config: AppConfig): Record<string, unknown> {
     }))
   }
 
+  if (masked.outboundProxy && typeof masked.outboundProxy === 'object') {
+    const outboundProxy = { ...(masked.outboundProxy as Record<string, unknown>) }
+    if (Array.isArray(outboundProxy.sources)) {
+      outboundProxy.sources = outboundProxy.sources.map((source) => {
+        if (!source || typeof source !== 'object') return source
+        const entry = { ...(source as Record<string, unknown>) }
+        if (entry.settings && typeof entry.settings === 'object') {
+          const settings = { ...(entry.settings as Record<string, unknown>) }
+          for (const key of Object.keys(settings)) {
+            if (/secret|password|passwd|token/i.test(key)) settings[key] = '***'
+          }
+          entry.settings = settings
+        }
+        return entry
+      })
+    }
+    masked.outboundProxy = outboundProxy
+  }
+
   return masked
 }
 

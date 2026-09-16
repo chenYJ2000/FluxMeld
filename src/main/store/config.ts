@@ -363,22 +363,37 @@ export class ConfigManager {
       }
     }
 
-    if (config.outboundProxy?.controllerUrl) {
-      const controllerUrl = String(config.outboundProxy.controllerUrl).trim()
-      if (controllerUrl) {
-        const normalized =
-          controllerUrl.startsWith('http://') || controllerUrl.startsWith('https://')
-            ? controllerUrl
-            : `http://${controllerUrl}`
-        try {
-          const parsed = new URL(normalized)
-          const port = parsed.port ? Number(parsed.port) : 80
-          if (!Number.isInteger(port) || port < 1 || port > 65535) {
-            errors.push('Clash controller port must be between 1-65535')
-          }
-        } catch {
-          errors.push('Clash controller address is invalid')
+    if (config.outboundProxy) {
+      const rotation = config.outboundProxy.rotation
+      if (rotation) {
+        if (
+          rotation.strategy !== undefined &&
+          !['roundRobin', 'lowestLatency', 'random'].includes(String(rotation.strategy))
+        ) {
+          errors.push('outboundProxy.rotation.strategy must be roundRobin, lowestLatency or random')
         }
+        if (
+          rotation.rotateEarlySeconds !== undefined &&
+          (!Number.isFinite(Number(rotation.rotateEarlySeconds)) ||
+            Number(rotation.rotateEarlySeconds) < 0)
+        ) {
+          errors.push('outboundProxy.rotation.rotateEarlySeconds must be a non-negative number')
+        }
+      }
+
+      if (
+        config.outboundProxy.maxAccountsPerGroup !== undefined &&
+        (!Number.isInteger(Number(config.outboundProxy.maxAccountsPerGroup)) ||
+          Number(config.outboundProxy.maxAccountsPerGroup) < 1)
+      ) {
+        errors.push('outboundProxy.maxAccountsPerGroup must be a positive integer')
+      }
+
+      if (
+        config.outboundProxy.sources !== undefined &&
+        !Array.isArray(config.outboundProxy.sources)
+      ) {
+        errors.push('outboundProxy.sources must be an array')
       }
     }
 

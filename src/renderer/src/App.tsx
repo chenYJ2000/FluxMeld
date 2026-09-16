@@ -18,6 +18,9 @@ const About = lazy(() => import('@/pages/About').then((m) => ({ default: m.About
 const SessionManagement = lazy(() =>
   import('@/pages/SessionManagement').then((m) => ({ default: m.SessionManagement })),
 )
+const EgressSettings = lazy(() =>
+  import('@/pages/EgressSettings').then((m) => ({ default: m.EgressSettings })),
+)
 
 function PageLoader() {
   return (
@@ -91,6 +94,14 @@ function App() {
             element={
               <Suspense fallback={<PageLoader />}>
                 <SessionManagement />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/egress"
+            element={
+              <Suspense fallback={<PageLoader />}>
+                <EgressSettings />
               </Suspense>
             }
           />

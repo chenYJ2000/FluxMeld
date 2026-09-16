@@ -95,6 +95,7 @@
     "react-i18next": "^16.5.4",
     "react-router-dom": "^6.28.0",
     "react-window": "^2.2.7",
+    "socks-proxy-agent": "^10.1.0",
     "tailwind-merge": "^2.5.4",
     "zstd-codec": "^0.1.5",
     "zustand": "^5.0.1"

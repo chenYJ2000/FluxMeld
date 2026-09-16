@@ -47,6 +47,13 @@ src/
 │   │   ├── registry.ts     # Single registration point
 │   │   ├── builtin/        # Config-only aggregation for the store
 │   │   └── custom.ts       # Custom provider support
+│   ├── egress/             # Outbound proxy source plugins (the extension point)
+│   │   ├── <id>/           # One self-contained folder per source (clash, config-file)
+│   │   ├── registry.ts     # Single registration point
+│   │   ├── manager.ts      # EgressManager: allocation + per-request routing
+│   │   ├── allocation.ts   # ExitAllocator (cursor + wrap)
+│   │   ├── context.ts      # AsyncLocalStorage request-scoped exit
+│   │   └── http.ts         # axios per-request proxy injection
 │   ├── store/              # Persistent storage (electron-store)
 │   │   ├── store.ts        # Main store manager with IPC bridge
 │   │   ├── types.ts        # Type definitions and default values
@@ -81,6 +88,28 @@ A provider declares managed tool-calling support via
 consume that flag.
 
 To add or modify a provider, see `docs/architecture/provider-plugin.md`.
+
+### Egress Sources (Outbound Proxy)
+
+Each way of producing outbound proxy exits is a self-contained plugin under
+`src/main/egress/<id>/` (config, source, parser, ...) exposed through an
+`index.ts` module. `src/main/egress/registry.ts` is the one registration point;
+`EgressManager` allocates exits through the shared `ExitAllocator` and never
+branches on a source id.
+
+The effective exit is injected **per request** via `runWithEgress()` (an
+async-local context) plus an axios interceptor installed by `egress/http.ts`.
+Never mutate `axios.defaults.proxy`. Instances that need it use
+`createEgressAxios()`.
+
+Providers may assign accounts to proxy groups via `Provider.proxyAssignment`
+(accountId → exitId | null). `null` is the strict-direct group.
+
+Sources expose `probe()` / `listExits()` / `apply(exit)` / `deactivate()`;
+`meta.fields` drives the renderer's source settings UI. Shared rotation helpers
+live in `src/main/egress/common/`.
+
+To add or modify an egress source, see `docs/architecture/egress-plugin.md`.
 
 ### IPC Communication
 All main-renderer communication uses IPC channels defined in `src/main/ipc/channels.ts`. The naming convention is `domain:action` (e.g., `proxy:start`, `accounts:add`).

@@ -11,6 +11,7 @@
     "dashboard": "Dashboard",
     "providers": "Providers",
     "proxy": "Proxy Settings",
+    "egress": "Outbound Proxy",
     "models": "Models",
     "apiKeys": "API Keys",
     "logs": "Logs",
@@ -942,6 +943,85 @@
     "resetError": "Failed to reset models",
     "confirmReset": "Are you sure you want to reset to default? This will remove all custom models and exclusion settings.",
     "confirmDelete": "Are you sure you want to delete this model?"
+  },
+  "egress": {
+    "title": "Outbound Proxy",
+    "subtitle": "Route upstream requests through local/remote egress exits, with per-account grouping",
+    "tabs": {
+      "general": "General",
+      "sources": "Proxy Sources",
+      "rotation": "Rotation Policy",
+      "assignment": "Assignment"
+    },
+    "general": {
+      "title": "General",
+      "description": "Master switch for the outbound proxy. Off by default; all requests go direct.",
+      "enable": "Enable outbound proxy",
+      "enableDesc": "When enabled, failed requests or grouped accounts use a configured exit",
+      "active": "Active",
+      "check": "Connectivity check",
+      "checkDesc": "Probe whether the current proxy source is available",
+      "checkButton": "Check",
+      "available": "Proxy source available",
+      "unavailable": "Proxy source unavailable",
+      "activeSource": "Active source",
+      "none": "None",
+      "enabledToast": "Outbound proxy enabled",
+      "disabledToast": "Outbound proxy disabled",
+      "enableFailed": "Failed to enable outbound proxy"
+    },
+    "sources": {
+      "title": "Proxy Sources",
+      "description": "Configure sources that provide exits (Clash controller / config file, ...)",
+      "add": "Add source",
+      "empty": "No proxy source configured yet",
+      "active": "Active",
+      "setActive": "Set active",
+      "saveFailed": "Failed to save proxy source",
+      "clash": {
+        "label": "Clash / mihomo",
+        "description": "Switch exit nodes via the local Clash mixed port and external controller",
+        "controllerUrl": "Controller address",
+        "controllerUrlHelp": "Enable the external controller in Clash Verge and set its address (default 127.0.0.1:9097)",
+        "secret": "Controller secret",
+        "secretHelp": "Bearer secret of the external controller; leave empty if unset"
+      },
+      "configFile": {
+        "label": "Config file",
+        "description": "Read a proxy list from a local JSON file and rotate over it",
+        "filePath": "Config file path",
+        "filePathHelp": "A JSON array whose items contain host, port and optional protocol/username/password/name"
+      }
+    },
+    "rotation": {
+      "title": "Rotation Policy",
+      "description": "Controls how exits are selected and changed",
+      "strategy": "Strategy",
+      "strategyHelp": "Order in which exits are picked from the exit pool",
+      "roundRobin": "Round robin",
+      "lowestLatency": "Lowest latency first",
+      "random": "Random",
+      "rotateEarly": "Auto-rotate before expiry (seconds)",
+      "rotateEarlyHelp": "For exits with a lifetime, rotate this many seconds before expiry (default 30)",
+      "verify": "Verify before use",
+      "verifyHelp": "Verify connectivity before routing traffic through a chosen exit",
+      "saveFailed": "Failed to save rotation policy"
+    },
+    "assignment": {
+      "title": "Proxy Assignment",
+      "description": "Assign accounts to proxy groups per provider (one column per group, sharing one exit)",
+      "selectProvider": "Select provider",
+      "directGroup": "Direct group",
+      "auto": "Auto assign",
+      "clear": "Clear",
+      "empty": "No accounts",
+      "assignTo": "Assign to",
+      "moveToDirect": "Move to direct group",
+      "groupFull": "This group is full",
+      "autoDone": "Auto assignment complete",
+      "ruleTitle": "Move not allowed",
+      "ruleDesc": "Proxy groups cannot be swapped directly; move to the direct group first"
+    }
   },
   "about": {
     "tagline": "Multi-platform AI Service Unified Management Tool",

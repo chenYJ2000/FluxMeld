@@ -75,16 +75,17 @@ interface ProxyAPI {
 
 interface OutboundProxyStatus {
   enabled: boolean
-  controllerUrl: string | null
+  sourceId: string | null
   proxyUrl: string
+  exitId: string | null
   node: string | null
+  expiresAt: number | null
 }
 
 interface OutboundProxyCheckResult {
   available: boolean
-  controllerUrl: string | null
-  proxyPorts: number[]
   error?: string
+  details?: Record<string, unknown>
 }
 
 interface OutboundProxyActionResult {
@@ -93,13 +94,77 @@ interface OutboundProxyActionResult {
   node?: string | null
 }
 
+interface EgressFieldDescriptor {
+  key: string
+  type: string
+  labelKey: string
+  placeholder?: string
+  helpKey?: string
+  options?: Array<{ value: string; labelKey: string }>
+  defaultValue?: string | number | boolean
+}
+
+interface EgressSourceMeta {
+  id: string
+  labelKey: string
+  descriptionKey?: string
+  fields: EgressFieldDescriptor[]
+  capabilities: {
+    rotate: boolean
+    listExits: boolean
+    expiry: boolean
+    alwaysOn: boolean
+  }
+}
+
+interface EgressExitInfo {
+  id: string
+  name?: string
+  protocol: string
+  host: string
+  port: number
+  expiresAt?: number
+}
+
+interface OutboundProxyAssignmentResult {
+  assignment: Record<string, string | null>
+  exits: EgressExitInfo[]
+}
+
 interface OutboundProxyAPI {
   getStatus: () => Promise<OutboundProxyStatus>
   check: () => Promise<OutboundProxyCheckResult>
   enable: () => Promise<OutboundProxyActionResult>
   disable: () => Promise<{ success: boolean }>
-  getNodes: () => Promise<string[]>
-  selectNode: (name: string) => Promise<OutboundProxyActionResult>
+  getSources: () => Promise<{
+    metas: EgressSourceMeta[]
+    outboundProxy: {
+      enabled: boolean
+      activeSourceId: string
+      rotation: { strategy: string; rotateEarlySeconds: number; verifyBeforeUse: boolean }
+      sources: Array<{ id: string; sourceId: string; settings: Record<string, unknown> }>
+      maxAccountsPerGroup: number
+    }
+  }>
+  listExits: () => Promise<EgressExitInfo[]>
+  getRotation: () => Promise<{ strategy: string; rotateEarlySeconds: number; verifyBeforeUse: boolean }>
+  setRotation: (rotation: Record<string, unknown>) => Promise<{
+    strategy: string
+    rotateEarlySeconds: number
+    verifyBeforeUse: boolean
+  }>
+  getAssignment: (providerId: string) => Promise<OutboundProxyAssignmentResult>
+  setAssignment: (
+    providerId: string,
+    accountId: string,
+    exitId: string | null,
+  ) => Promise<Record<string, string | null>>
+  setProviderAssignment: (
+    providerId: string,
+    assignment: Record<string, string | null>,
+  ) => Promise<Record<string, string | null>>
+  autoAssign: (providerId: string) => Promise<Record<string, string | null>>
+  clearAssignment: (providerId: string) => Promise<boolean>
 }
 
 interface StoreAPI {

@@ -95,10 +95,32 @@ export interface ContextManagementConfig {
   executionOrder: ('slidingWindow' | 'tokenLimit' | 'summary')[]
 }
 
-/** Clash/mihomo external controller settings for the outbound proxy manager */
+/** Rotation policy applied by the outbound proxy manager. */
+export interface RotationPolicy {
+  strategy: 'roundRobin' | 'lowestLatency' | 'random'
+  /** Auto-rotate this many seconds before an exit expires (0 disables). */
+  rotateEarlySeconds: number
+  /** Verify an exit before routing traffic through it. */
+  verifyBeforeUse: boolean
+}
+
+/** Persisted settings for one configured outbound proxy source instance. */
+export interface EgressSourceConfig {
+  id: string
+  sourceId: string
+  settings: Record<string, unknown>
+}
+
+/** Outbound proxy settings (sources, rotation, per-account grouping). */
 export interface OutboundProxySettings {
-  controllerUrl: string
-  secret: string
+  /** Master switch, default off. */
+  enabled: boolean
+  /** Active egress source config id. */
+  activeSourceId: string
+  rotation: RotationPolicy
+  sources: EgressSourceConfig[]
+  /** Maximum accounts per proxy group (column). */
+  maxAccountsPerGroup: number
 }
 
 import type { LegacyToolPromptConfig, ToolCallingConfig } from './toolCalling'
@@ -146,6 +168,12 @@ export interface Provider {
   capabilities?: ProviderCapabilities
   /** Serializable UI metadata (icon key, i18n prefix, notices) */
   ui?: ProviderUiMeta
+  /**
+   * Per-account outbound proxy grouping. Maps accountId to an egress exit id,
+   * or null for a strict direct connection. When the whole map is absent the
+   * global on-demand proxy fallback applies to this provider's accounts.
+   */
+  proxyAssignment?: Record<string, string | null>
 }
 
 export interface ModelMapping {
