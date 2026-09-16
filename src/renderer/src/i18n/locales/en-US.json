@@ -1028,8 +1028,7 @@
       "scopeProvider": "This provider only",
       "groupsTitle": "Proxy groups",
       "newGroupPlaceholder": "New group name",
-      "addGroup": "Add group",
-      "pendingExit": "Exit pending"
+      "addGroup": "Add group"
     }
   },
   "about": {

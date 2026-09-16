@@ -1028,8 +1028,7 @@
       "scopeProvider": "本供应商计数",
       "groupsTitle": "代理分组",
       "newGroupPlaceholder": "新分组名称",
-      "addGroup": "新增分组",
-      "pendingExit": "待分配出口"
+      "addGroup": "新增分组"
     }
   },
   "about": {

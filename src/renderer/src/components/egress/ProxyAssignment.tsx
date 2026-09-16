@@ -42,11 +42,6 @@ interface Overview {
 
 const DIRECT = '__direct__'
 
-function exitLabel(exit: ExitInfo | null | undefined): string {
-  if (!exit) return ''
-  return exit.name ?? `${exit.host}:${exit.port}`
-}
-
 export function ProxyAssignment() {
   const { t } = useTranslation()
   const { toast } = useToast()
@@ -173,8 +168,13 @@ export function ProxyAssignment() {
 
   const renderSwapList = (groupId: string, targetGroupId: string) => (
     <div className="flex-1 rounded-lg border p-2 min-w-[200px]">
-      <div className="mb-2 text-sm font-medium truncate">
-        {groupOptions.find((option) => option.id === groupId)?.name}
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-sm font-medium truncate">
+          {groupOptions.find((option) => option.id === groupId)?.name}
+        </span>
+        <Badge variant="outline" className="shrink-0 text-xs">
+          {countLabel(groupId)}
+        </Badge>
       </div>
       <ScrollArea className="h-[220px]">
         <div className="space-y-1 pr-2">
@@ -349,7 +349,7 @@ export function ProxyAssignment() {
                   groupId={DIRECT}
                   name={t('egress.assignment.directGroup')}
                   count={countLabel(DIRECT)}
-                  exitLabel=""
+                  accounts={accountsFor(DIRECT)}
                   editable={false}
                   onRename={handleRename}
                   onDelete={handleDeleteGroup}
@@ -360,8 +360,7 @@ export function ProxyAssignment() {
                     groupId={group.id}
                     name={group.name}
                     count={countLabel(group.id)}
-                    exitLabel={exitLabel(overview?.groupExits[group.id])}
-                    pendingLabel={t('egress.assignment.pendingExit')}
+                    accounts={accountsFor(group.id)}
                     editable
                     onRename={handleRename}
                     onDelete={handleDeleteGroup}
@@ -380,8 +379,7 @@ interface GroupColumnProps {
   groupId: string
   name: string
   count: string
-  exitLabel: string
-  pendingLabel?: string
+  accounts: Account[]
   editable: boolean
   onRename: (groupId: string, name: string) => Promise<void>
   onDelete: (groupId: string) => Promise<void>
@@ -391,8 +389,7 @@ function GroupColumn({
   groupId,
   name,
   count,
-  exitLabel,
-  pendingLabel,
+  accounts,
   editable,
   onRename,
   onDelete,
@@ -412,7 +409,7 @@ function GroupColumn({
 
   return (
     <div className="min-w-[240px] flex-1 rounded-lg border p-3 space-y-2">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
         {editable && editing ? (
           <Input
             value={draft}
@@ -430,17 +427,20 @@ function GroupColumn({
           />
         ) : (
           <span
-            className="text-sm font-medium truncate"
+            className="flex-1 text-sm font-medium truncate"
             onDoubleClick={() => editable && setEditing(true)}
           >
             {name}
           </span>
         )}
+        <Badge variant="outline" className="shrink-0 text-xs">
+          {count}
+        </Badge>
         {editable && (
           <Button
             variant="ghost"
             size="icon"
-            className="h-7 w-7"
+            className="h-7 w-7 shrink-0"
             onClick={() => void onDelete(groupId)}
             title={t('common.delete')}
           >
@@ -448,10 +448,22 @@ function GroupColumn({
           </Button>
         )}
       </div>
-      <Badge variant="outline" className="text-xs">
-        {count}
-      </Badge>
-      <p className="text-xs text-muted-foreground truncate">{exitLabel || pendingLabel || ''}</p>
+      <ScrollArea className="h-[200px]">
+        <div className="space-y-1 pr-2">
+          {accounts.map((account) => (
+            <div
+              key={account.id}
+              className="rounded-md border p-2 text-sm truncate"
+              title={account.name}
+            >
+              {account.name}
+            </div>
+          ))}
+          {accounts.length === 0 && (
+            <p className="p-2 text-xs text-muted-foreground">{t('egress.assignment.empty')}</p>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   )
 }
