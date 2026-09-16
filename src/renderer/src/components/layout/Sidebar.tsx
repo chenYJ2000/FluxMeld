@@ -29,6 +29,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 
 interface NavItem {
   titleKey: string
@@ -48,18 +54,6 @@ const navItems: NavItem[] = [
   { titleKey: 'nav.settings', href: '/settings', icon: Settings },
   { titleKey: 'nav.about', href: '/about', icon: Info },
 ]
-
-function Tooltip({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="tooltip-container">
-      {children}
-      <div className="tooltip-content">
-        {label}
-        <div className="tooltip-arrow" />
-      </div>
-    </div>
-  )
-}
 
 export function Sidebar() {
   const { t } = useTranslation()
@@ -133,7 +127,14 @@ export function Sidebar() {
     )
 
     if (sidebarCollapsed) {
-      return <Tooltip label={title}>{buttonContent}</Tooltip>
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            {title}
+          </TooltipContent>
+        </Tooltip>
+      )
     }
     return buttonContent
   }
@@ -157,10 +158,12 @@ export function Sidebar() {
         </div>
 
         <nav className="command-nav flex-1 overflow-x-hidden overflow-y-auto">
-          {!sidebarCollapsed && <p className="command-nav-label">WORKSPACE</p>}
-          {navItems.map((item) => (
-            <NavButton key={item.href} item={item} />
-          ))}
+          <TooltipProvider delayDuration={200}>
+            {!sidebarCollapsed && <p className="command-nav-label">WORKSPACE</p>}
+            {navItems.map((item) => (
+              <NavButton key={item.href} item={item} />
+            ))}
+          </TooltipProvider>
         </nav>
 
         <div className="command-rail-footer">

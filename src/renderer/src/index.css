@@ -1092,6 +1092,7 @@ html[data-theme='light'] .command-shell {
 
 .command-brand.is-collapsed {
   justify-content: center;
+  gap: 0;
   padding-inline: 0;
 }
 
