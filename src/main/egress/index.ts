@@ -35,9 +35,12 @@ export async function initializeEgress(): Promise<void> {
   try {
     const settings = storeManager.getConfig().outboundProxy
     if (settings?.enabled) {
-      // Activate on startup (single-exit mode enters proxy mode; group mode
-      // is activated lazily per request).
-      await egressManager.enable()
+      // Activate on startup (single-exit mode enters proxy mode; group mode is
+      // activated lazily per request). Leased sources may block until an exit
+      // is available, so this must not block app startup.
+      void egressManager.enable().catch(() => {
+        // Startup should never fail because egress could not be prepared.
+      })
     }
   } catch {
     // Startup should never fail because egress could not be prepared.

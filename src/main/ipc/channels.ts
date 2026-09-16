@@ -28,6 +28,8 @@ export const IpcChannels = {
   CONFIG_UPDATE: 'config:update',
   CONFIG_CHANGED: 'config:changed',
 
+  DIALOG_PICK_FILE: 'dialog:pickFile',
+
   STORE_GET: 'store:get',
   STORE_SET: 'store:set',
   STORE_DELETE: 'store:delete',

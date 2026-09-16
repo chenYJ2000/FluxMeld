@@ -31,7 +31,8 @@ src/main/egress/
 │   ├── verification.ts      # verifyExit
 │   └── discovery.ts         # env proxy parsing + TCP probing
 ├── clash/                   # Clash/mihomo controller source
-└── config-file/             # JSON config-file source
+├── config-file/             # JSON config-file source
+└── ip-pool/                 # Proxy-layer gateway IP pool source (leased exits)
 ```
 
 ## How requests are proxied
@@ -64,12 +65,39 @@ A source instance only has to expose its exits and apply a chosen one:
 | `probe()` | is the source usable right now? |
 | `listExits()` | enumerate available exits (ordered as preferred) |
 | `apply(exit)` | make an exit effective (Clash: switch node; file: no-op) |
-| `deactivate()` | restore previous network state |
+| `deactivate()` | restore previous network state (leased sources release their leases) |
 | `verifyExit?(exit)` | optional source-specific verification |
+| `acquireExit?(signal)` | optional: lease one fresh exit on demand (IP pools) |
+| `disposeExit?(exit)` | optional: delete/release a leased exit the manager drops |
 
 The manager owns allocation and rotation, so a source normally reuses the shared
 `ExitAllocator`. A source may override rotation behaviour when its protocol
 requires it (Clash switches controller nodes; the file source is a no-op).
+
+## Leased sources (IP pool)
+
+Sources whose exits must be leased (and may expire) implement the optional
+`acquireExit()` / `disposeExit()` hooks. The manager detects them via
+`isAcquireMode` and switches selection strategy:
+
+- `acquireExit(signal)` is called per candidate (bounded by `maxExitAttempts` /
+  the source default); the manager applies and verifies the leased exit, and
+  calls `disposeExit()` when it is unusable or replaced. A blocked acquisition
+  is aborted through the signal when the proxy is disabled or the source
+  changes.
+- `listExits()` becomes a read-only view of currently-held leases (used by the
+  UI); the manager never fills a pool from it.
+- rotation deletes the previous IP (`disposeExit`) before leasing a new one;
+  `deactivate()` returns every held lease.
+- `refreshPool`, the empty-table guard, and expiry scheduling behave as for
+  table sources (the IP pool sets `expiresAt` from `created_at + ttl`).
+
+The `ip-pool` source talks to the proxy-layer gateway (`USAGE.md`):
+`POST /{site}/ips/acquire?strategy=remaining_desc&min_remaining_sec=...`,
+`DELETE /{site}/ips/{id}` (change IP), `POST /{site}/ips/{id}/release`
+(deactivate) and `GET /{site}/count` (probe). Unsupported protocols (`socks4`)
+are deleted and re-acquired; an empty pool (`40402`) is retried every
+`emptyPoolWaitMs` until aborted.
 
 Each source implements its own `probe()` connectivity check (Clash: controller +
 proxy port; config-file: file exists + parses). The "Proxy Sources" page exposes
@@ -120,7 +148,13 @@ within the candidate budget.
    (and helpers, e.g. `parser.ts`).
 2. Add the module to `egressSourceModules` in `src/main/egress/registry.ts`.
 3. Field descriptors on `meta.fields` drive the generic settings UI — no
-   renderer branch is needed.
+   renderer branch is needed. A descriptor declares `key`, `type`
+   (`text` | `textarea` | `password` | `number` | `boolean` | `file` |
+   `select`), i18n `labelKey`/`helpKey`, optional `placeholder`,
+   `defaultValue`, `min`/`max`/`step` (number), `options` (select) and a
+   `visibleWhen` rule (`{ key, equals?, in? }`) to show a field only when
+   another field's value matches. A `file` field renders a native picker
+   button (Electron only; the web build falls back to a text input).
 4. Add i18n strings under `egress.sources.<id>.*` in
    `src/renderer/src/i18n/locales/{zh-CN,en-US}.json`.
 

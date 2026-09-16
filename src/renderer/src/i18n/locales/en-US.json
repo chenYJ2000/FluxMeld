@@ -1009,6 +1009,7 @@
       "check": "Check",
       "checkOk": "Reachable",
       "checkFailed": "Not reachable",
+      "browse": "Browse…",
       "clash": {
         "label": "Clash / mihomo",
         "description": "Switch exit nodes via the Clash proxy port and external controller",
@@ -1026,6 +1027,18 @@
         "description": "Read a proxy list from a local JSON file and rotate over it",
         "filePath": "Config file path",
         "filePathHelp": "A JSON array whose items contain host, port and optional protocol/username/password/name"
+      },
+      "ipPool": {
+        "label": "IP Pool",
+        "description": "Lease exit IPs from the IP pool gateway, preferring the longest remaining lifetime and deleting the old IP on change",
+        "baseUrl": "Gateway URL",
+        "baseUrlHelp": "Proxy-layer gateway base path (default http://127.0.0.1:9000/api/v1)",
+        "site": "Site",
+        "siteHelp": "Proxy-layer route site, default glm",
+        "minRemainingSeconds": "Minimum remaining time (s)",
+        "minRemainingSecondsHelp": "Only lease IPs whose remaining lifetime exceeds this value (default 120)",
+        "emptyPoolWaitMs": "Empty-pool wait (ms)",
+        "emptyPoolWaitMsHelp": "When no free IP is available, wait this long and retry until the proxy is disabled or the source is changed (default 20000)"
       }
     },
     "rotation": {

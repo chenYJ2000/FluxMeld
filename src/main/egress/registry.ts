@@ -8,6 +8,7 @@
 
 import { clashSourceModule } from './clash/index.ts'
 import { configFileSourceModule } from './config-file/index.ts'
+import { ipPoolSourceModule } from './ip-pool/index.ts'
 import type {
   EgressServices,
   EgressSource,
@@ -19,7 +20,11 @@ import type {
 export type { EgressSourceModule } from './types.ts'
 
 /** All registered egress source modules, in display order. */
-export const egressSourceModules: EgressSourceModule[] = [clashSourceModule, configFileSourceModule]
+export const egressSourceModules: EgressSourceModule[] = [
+  clashSourceModule,
+  configFileSourceModule,
+  ipPoolSourceModule,
+]
 
 const moduleMap: Record<string, EgressSourceModule> = Object.fromEntries(
   egressSourceModules.map((module) => [module.meta.id, module]),

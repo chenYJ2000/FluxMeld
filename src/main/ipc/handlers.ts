@@ -1,4 +1,4 @@
-import { ipcMain, app, BrowserWindow, shell } from 'electron'
+import { ipcMain, app, BrowserWindow, dialog, shell } from 'electron'
 import axios from 'axios'
 import { IpcChannels } from './channels'
 import { storeManager } from '../store/store'
@@ -429,6 +429,24 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
   ipcMain.handle(IpcChannels.PROXY_RESET_STATISTICS, async (): Promise<void> => {
     proxyStatusManager.resetStatistics()
   })
+
+  ipcMain.handle(
+    IpcChannels.DIALOG_PICK_FILE,
+    async (
+      _,
+      options?: { filters?: Array<{ name: string; extensions: string[] }> },
+    ): Promise<string | null> => {
+      // The headless server shim has no dialog implementation; fall back to a
+      // plain text input there.
+      if (typeof dialog?.showOpenDialog !== 'function') return null
+      const result = await dialog.showOpenDialog({
+        properties: ['openFile'],
+        filters: options?.filters,
+      })
+      if (result.canceled || result.filePaths.length === 0) return null
+      return result.filePaths[0]
+    },
+  )
 
   ipcMain.handle(IpcChannels.CONFIG_GET, async () => {
     return storeManager.getConfig()

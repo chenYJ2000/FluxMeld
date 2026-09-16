@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import {
   Select,
   SelectContent,
@@ -25,6 +26,12 @@ import {
   XCircle,
 } from 'lucide-react'
 
+interface SourceFieldVisibility {
+  key: string
+  equals?: string | number | boolean
+  in?: Array<string | number | boolean>
+}
+
 interface SourceField {
   key: string
   type: string
@@ -33,6 +40,10 @@ interface SourceField {
   helpKey?: string
   options?: Array<{ value: string; labelKey: string }>
   defaultValue?: string | number | boolean
+  min?: number
+  max?: number
+  step?: number
+  visibleWhen?: SourceFieldVisibility
 }
 
 interface SourceMeta {
@@ -50,6 +61,20 @@ interface SourceEntry {
 
 function generateSourceId(): string {
   return `src-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
+}
+
+function resolveFieldValue(source: SourceEntry, field: SourceField): unknown {
+  return source.settings[field.key] ?? field.defaultValue
+}
+
+/** Evaluate a field's `visibleWhen` rule against its controlling field. */
+function isFieldVisible(source: SourceEntry, field: SourceField, fields: SourceField[]): boolean {
+  const rule = field.visibleWhen
+  if (!rule) return true
+  const controller = fields.find((candidate) => candidate.key === rule.key)
+  const value = controller ? resolveFieldValue(source, controller) : undefined
+  if (rule.in) return rule.in.some((candidate) => candidate === value)
+  return value === rule.equals
 }
 
 export function SourceConfig() {
@@ -172,6 +197,13 @@ export function SourceConfig() {
     setDirty(true)
   }
 
+  const handleBrowse = async (id: string, field: SourceField) => {
+    const selected = await window.electronAPI?.dialog?.pickFile()
+    if (selected) handleSettingChange(id, field.key, selected)
+  }
+
+  const isWeb = window.electronAPI?.platform === 'web'
+
   return (
     <Card>
       <CardHeader>
@@ -292,59 +324,96 @@ export function SourceConfig() {
               )}
 
               <div className="space-y-3">
-                {(meta?.fields ?? []).map((field) => (
-                  <div key={field.key} className="space-y-1">
-                    <Label>{t(field.labelKey)}</Label>
-                    {field.type === 'boolean' ? (
-                      <Switch
-                        checked={Boolean(source.settings[field.key] ?? field.defaultValue ?? false)}
-                        onCheckedChange={(value) =>
-                          handleSettingChange(source.id, field.key, value)
-                        }
-                      />
-                    ) : field.type === 'select' ? (
-                      <Select
-                        value={String(source.settings[field.key] ?? field.defaultValue ?? '')}
-                        onValueChange={(value) => handleSettingChange(source.id, field.key, value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(field.options ?? []).map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {t(option.labelKey)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        type={
-                          field.type === 'password'
-                            ? 'password'
-                            : field.type === 'number'
-                              ? 'number'
-                              : 'text'
-                        }
-                        value={String(source.settings[field.key] ?? field.defaultValue ?? '')}
-                        placeholder={field.placeholder}
-                        onChange={(event) =>
-                          handleSettingChange(
-                            source.id,
-                            field.key,
-                            field.type === 'number'
-                              ? Number(event.target.value)
-                              : event.target.value,
-                          )
-                        }
-                      />
-                    )}
-                    {field.helpKey && (
-                      <p className="text-xs text-muted-foreground">{t(field.helpKey)}</p>
-                    )}
-                  </div>
-                ))}
+                {(meta?.fields ?? [])
+                  .filter((field) => isFieldVisible(source, field, meta?.fields ?? []))
+                  .map((field) => {
+                    const value = String(resolveFieldValue(source, field) ?? '')
+                    return (
+                      <div key={field.key} className="space-y-1">
+                        <Label>{t(field.labelKey)}</Label>
+                        {field.type === 'boolean' ? (
+                          <Switch
+                            checked={Boolean(resolveFieldValue(source, field) ?? false)}
+                            onCheckedChange={(checked) =>
+                              handleSettingChange(source.id, field.key, checked)
+                            }
+                          />
+                        ) : field.type === 'select' ? (
+                          <Select
+                            value={value}
+                            onValueChange={(next) =>
+                              handleSettingChange(source.id, field.key, next)
+                            }
+                          >
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(field.options ?? []).map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {t(option.labelKey)}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : field.type === 'textarea' ? (
+                          <Textarea
+                            value={value}
+                            placeholder={field.placeholder}
+                            onChange={(event) =>
+                              handleSettingChange(source.id, field.key, event.target.value)
+                            }
+                          />
+                        ) : field.type === 'file' ? (
+                          <div className="flex gap-2">
+                            <Input
+                              value={value}
+                              placeholder={field.placeholder}
+                              onChange={(event) =>
+                                handleSettingChange(source.id, field.key, event.target.value)
+                              }
+                            />
+                            {!isWeb && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => void handleBrowse(source.id, field)}
+                              >
+                                {t('egress.sources.browse')}
+                              </Button>
+                            )}
+                          </div>
+                        ) : (
+                          <Input
+                            type={
+                              field.type === 'password'
+                                ? 'password'
+                                : field.type === 'number'
+                                  ? 'number'
+                                  : 'text'
+                            }
+                            value={value}
+                            placeholder={field.placeholder}
+                            min={field.min}
+                            max={field.max}
+                            step={field.step}
+                            onChange={(event) =>
+                              handleSettingChange(
+                                source.id,
+                                field.key,
+                                field.type === 'number'
+                                  ? Number(event.target.value)
+                                  : event.target.value,
+                              )
+                            }
+                          />
+                        )}
+                        {field.helpKey && (
+                          <p className="text-xs text-muted-foreground">{t(field.helpKey)}</p>
+                        )}
+                      </div>
+                    )
+                  })}
               </div>
             </div>
           )

@@ -1009,6 +1009,7 @@
       "check": "连通性检查",
       "checkOk": "连通正常",
       "checkFailed": "连通失败",
+      "browse": "浏览…",
       "clash": {
         "label": "Clash / mihomo",
         "description": "通过 Clash 代理端口与外部控制器切换出口节点",
@@ -1026,6 +1027,18 @@
         "description": "从本地 JSON 文件读取代理列表并轮换",
         "filePath": "配置文件路径",
         "filePathHelp": "JSON 数组，每项包含 host、port，可选 protocol/username/password/name"
+      },
+      "ipPool": {
+        "label": "IP 池",
+        "description": "从 IP 池网关租用出口 IP，优先剩余时间最长者，更换时删除旧 IP",
+        "baseUrl": "网关地址",
+        "baseUrlHelp": "代理层网关基路径（默认 http://127.0.0.1:9000/api/v1）",
+        "site": "站点标识",
+        "siteHelp": "代理层路由站点，默认 glm",
+        "minRemainingSeconds": "最小剩余时间（秒）",
+        "minRemainingSecondsHelp": "仅租用剩余存活时间大于该值的 IP（默认 120 秒）",
+        "emptyPoolWaitMs": "空池等待（毫秒）",
+        "emptyPoolWaitMsHelp": "池中无可用 IP 时等待该毫秒数后重试，直到关闭出站代理或更换代理源（默认 20000）"
       }
     },
     "rotation": {

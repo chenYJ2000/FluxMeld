@@ -97,6 +97,12 @@ interface OutboundProxyActionResult {
   node?: string | null
 }
 
+interface EgressFieldVisibility {
+  key: string
+  equals?: string | number | boolean
+  in?: Array<string | number | boolean>
+}
+
 interface EgressFieldDescriptor {
   key: string
   type: string
@@ -105,6 +111,10 @@ interface EgressFieldDescriptor {
   helpKey?: string
   options?: Array<{ value: string; labelKey: string }>
   defaultValue?: string | number | boolean
+  min?: number
+  max?: number
+  step?: number
+  visibleWhen?: EgressFieldVisibility
 }
 
 interface EgressSourceMeta {
@@ -589,9 +599,16 @@ interface ToolCallingAPI {
   runSmoke: (input: { clientAdapterId: string }) => Promise<{ success: boolean; data?: unknown; error?: { message?: string } }>
 }
 
+interface DialogAPI {
+  pickFile: (options?: {
+    filters?: Array<{ name: string; extensions: string[] }>
+  }) => Promise<string | null>
+}
+
 interface ElectronAPI {
   platform: 'electron' | 'web'
   proxy: ProxyAPI
+  dialog: DialogAPI
   outboundProxy: OutboundProxyAPI
   store: StoreAPI
   providers: ProvidersAPI

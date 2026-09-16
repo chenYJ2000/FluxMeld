@@ -38,11 +38,22 @@ export interface EgressExit {
 }
 
 /** Serializable field descriptor that drives the generic source settings UI. */
-export type EgressFieldType = 'text' | 'password' | 'number' | 'boolean' | 'file' | 'select'
+export type EgressFieldType =
+  'text' | 'textarea' | 'password' | 'number' | 'boolean' | 'file' | 'select'
 
 export interface EgressFieldOption {
   value: string
   labelKey: string
+}
+
+/** Conditionally show a field based on the current value of another field. */
+export interface EgressFieldVisibility {
+  /** Key of the controlling field. */
+  key: string
+  /** Visible only when the controlling value equals this. */
+  equals?: string | number | boolean
+  /** Visible only when the controlling value is one of these. */
+  in?: Array<string | number | boolean>
 }
 
 export interface EgressFieldDescriptor {
@@ -53,6 +64,14 @@ export interface EgressFieldDescriptor {
   helpKey?: string
   options?: EgressFieldOption[]
   defaultValue?: string | number | boolean
+  /** Lower bound for `number` fields. */
+  min?: number
+  /** Upper bound for `number` fields. */
+  max?: number
+  /** Step for `number` fields. */
+  step?: number
+  /** Show this field only when another field's current value matches. */
+  visibleWhen?: EgressFieldVisibility
 }
 
 /** What a source can do; consumed by the manager and the renderer. */
@@ -125,6 +144,18 @@ export interface EgressSource {
   deactivate(): Promise<void>
   /** Optional source-specific verification; falls back to the shared verifier. */
   verifyExit?(exit: EgressExit): Promise<boolean>
+  /**
+   * Lease one fresh exit on demand (IP pools, metered services). When
+   * implemented, the manager acquires, applies and verifies candidates one at
+   * a time instead of scanning a pre-listed exit table, and disposes unusable
+   * candidates through `disposeExit`.
+   *
+   * `signal` aborts a blocking acquisition (proxy disabled / source changed);
+   * returning null means acquisition was aborted or unavailable.
+   */
+  acquireExit?(signal?: AbortSignal): Promise<EgressExit | null>
+  /** Dispose a leased exit the manager no longer uses (rotation / forgetting). */
+  disposeExit?(exit: EgressExit): Promise<void>
 }
 
 export interface EgressSourceModule {

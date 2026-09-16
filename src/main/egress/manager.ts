@@ -150,6 +150,10 @@ export class EgressManager {
   private rotationPromise: Promise<string | null> | null = null
   private readonly groupEnsurePromises = new Map<string, Promise<EgressExit | null>>()
   private readonly groupRotatePromises = new Map<string, Promise<string | null>>()
+  /** Aborts blocking `acquireExit()` calls when the source/mode changes. */
+  private abortController: AbortController | null = null
+  /** Identity of the currently-cached source (id|sourceId|settings). */
+  private activeSourceSignature: string | null = null
   private consecutiveFailures = 0
   private cooldownUntil = 0
   private lastRotateAt = 0
@@ -159,9 +163,18 @@ export class EgressManager {
     this.deps = deps
   }
 
-  /** Drop all runtime state so the next call rebuilds from config. */
+  /**
+   * Drop all runtime state so the next call rebuilds from config. Aborts any
+   * blocking acquisition; when the resolved active source actually changed its
+   * leases are released (rotation/assignment-only edits leave it untouched).
+   */
   invalidateSource(): void {
+    const config = this.resolveActiveSourceConfig(this.getSettings())
+    const nextSignature = config ? this.sourceSignature(config) : null
+    const previous = this.activeSource
+    const changed = previous !== null && this.activeSourceSignature !== nextSignature
     this.resetRuntime()
+    if (changed && previous) this.disposeSource(previous)
   }
 
   /** Clear the failure cooldown (manual enable, config save, successful check). */
@@ -173,7 +186,10 @@ export class EgressManager {
   /** Forget a deleted group's runtime exit binding. */
   forgetGroup(groupId: string): void {
     const exit = this.groupExits.get(groupId)
-    if (exit) this.allocator.release(exit.id)
+    if (exit) {
+      this.allocator.release(exit.id)
+      this.disposeExit(exit)
+    }
     this.groupExits.delete(groupId)
     this.groupEnsurePromises.delete(groupId)
     this.groupRotatePromises.delete(groupId)
@@ -181,6 +197,8 @@ export class EgressManager {
   }
 
   private resetRuntime(): void {
+    this.abortController?.abort()
+    this.abortController = null
     this.generation += 1
     this.activationPromise = null
     this.rotationPromise = null
@@ -189,6 +207,7 @@ export class EgressManager {
     this.lastGroupRotateAt.clear()
     this.activeSource = null
     this.activeSourceConfigId = null
+    this.activeSourceSignature = null
     this.pool = []
     this.groupExits.clear()
     this.globalExit = null
@@ -232,15 +251,70 @@ export class EgressManager {
 
   private getActiveSource(settings: OutboundProxySettings): EgressSource | null {
     const config = this.resolveActiveSourceConfig(settings)
-    if (!config) return null
-    if (this.activeSource && this.activeSourceConfigId === config.id) return this.activeSource
+    if (!config) {
+      this.clearActiveSource()
+      return null
+    }
 
+    const signature = this.sourceSignature(config)
+    if (this.activeSource && this.activeSourceSignature === signature) return this.activeSource
+
+    // The resolved source changed: drop the previous one (releasing any leases).
+    this.clearActiveSource()
     this.activeSource = createEgressSource(config, this.buildServices(settings))
     this.activeSourceConfigId = config.id
+    this.activeSourceSignature = signature
+    return this.activeSource
+  }
+
+  private sourceSignature(config: EgressSourceConfig): string {
+    let settings = ''
+    try {
+      settings = JSON.stringify(config.settings ?? {})
+    } catch {
+      settings = ''
+    }
+    return `${config.id}|${config.sourceId}|${settings}`
+  }
+
+  private clearActiveSource(): void {
+    const previous = this.activeSource
+    this.abortController?.abort()
+    this.abortController = null
+    this.activeSource = null
+    this.activeSourceConfigId = null
+    this.activeSourceSignature = null
     this.pool = []
     this.groupExits.clear()
     this.allocator.reset()
-    return this.activeSource
+    if (previous) this.disposeSource(previous)
+  }
+
+  /** Sources that lease exits implement `acquireExit` and are manager-driven. */
+  private isAcquireMode(source: EgressSource): boolean {
+    return typeof source.acquireExit === 'function'
+  }
+
+  /** Release all source-side leases (best-effort, fire-and-forget). */
+  private disposeSource(source: EgressSource): void {
+    if (!this.isAcquireMode(source)) return
+    void source.deactivate().catch(() => {
+      // ignore release failures
+    })
+  }
+
+  /** Dispose a single leased exit the manager no longer uses (best-effort). */
+  private disposeExit(exit: EgressExit): void {
+    const source = this.activeSource
+    if (!source || !this.isAcquireMode(source) || !source.disposeExit) return
+    void source.disposeExit(exit).catch(() => {
+      // ignore dispose failures
+    })
+  }
+
+  private getAbortSignal(): AbortSignal | undefined {
+    if (!this.abortController) this.abortController = new AbortController()
+    return this.abortController.signal
   }
 
   // ---------- status ----------
@@ -311,6 +385,8 @@ export class EgressManager {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source) return []
+    // Leased sources expose their currently-held exits (no acquisition here).
+    if (this.isAcquireMode(source)) return source.listExits()
     await this.refreshPool(source)
     // Expose only real, selectable, live exits (skip policy groups / dead nodes).
     return this.pool.filter((exit) => exit.selectable !== false && exit.alive !== false)
@@ -406,12 +482,51 @@ export class EgressManager {
     return null
   }
 
-  /** Scan for the single global exit, restoring the previous node on failure. */
+  /**
+   * Lease-mode selection: acquire a fresh exit, apply and verify it; unusable
+   * candidates are disposed and replaced, up to the candidate budget. Blocks
+   * inside `acquireExit` until an IP is available or acquisition is aborted.
+   */
+  private async acquireUsableExit(
+    source: EgressSource,
+    settings: OutboundProxySettings,
+    gen: number,
+  ): Promise<EgressExit | null> {
+    const acquire = source.acquireExit
+    if (!acquire) return null
+
+    const budget = this.resolveMaxAttempts(settings, source, 1)
+    const signal = this.getAbortSignal()
+
+    for (let attempt = 0; attempt < budget; attempt += 1) {
+      if (gen !== this.generation) return null
+      const exit = await acquire.call(source, signal)
+      if (gen !== this.generation || !exit) return null
+
+      const applied = await source.apply(exit)
+      if (gen !== this.generation) return null
+      if (applied && (await this.verify(exit, source, settings))) {
+        this.allocator.markInUse(exit.id)
+        return exit
+      }
+
+      this.log(`Exit unusable, discarding: ${exit.name ?? exit.id}`)
+      if (source.disposeExit) await source.disposeExit(exit)
+    }
+
+    return null
+  }
+
+  /** Pick a usable exit (leased sources acquire; table sources scan). */
   private async pickUsableExit(
     source: EgressSource,
     settings: OutboundProxySettings,
     gen: number,
   ): Promise<EgressExit | null> {
+    if (this.isAcquireMode(source)) {
+      return this.acquireUsableExit(source, settings, gen)
+    }
+
     const previous = this.globalExit
     const exit = await this.scanTable(source, settings, gen)
     if (gen !== this.generation) return null
@@ -482,6 +597,8 @@ export class EgressManager {
     if (!source) return false
     const probe = await source.probe()
     if (!probe.available) return false
+    // Leased sources acquire per group lazily; a reachable gateway is enough.
+    if (this.isAcquireMode(source)) return true
     await this.refreshPool(source)
     return this.pool.length > 0
   }
@@ -503,12 +620,14 @@ export class EgressManager {
       return false
     }
 
-    await this.refreshPool(source)
-    if (gen !== this.generation) return false
-    if (this.pool.length === 0) {
-      this.log('Egress source reported no exits; keeping direct connection')
-      this.noteFailure()
-      return false
+    if (!this.isAcquireMode(source)) {
+      await this.refreshPool(source)
+      if (gen !== this.generation) return false
+      if (this.pool.length === 0) {
+        this.log('Egress source reported no exits; keeping direct connection')
+        this.noteFailure()
+        return false
+      }
     }
 
     const exit = await this.pickUsableExit(source, settings, gen)
@@ -555,15 +674,31 @@ export class EgressManager {
   private async doRotateProxy(gen: number): Promise<string | null> {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
-    if (!source || this.pool.length === 0) return null
+    if (!source) return null
+    const acquireMode = this.isAcquireMode(source)
+    if (!acquireMode && this.pool.length === 0) return null
 
-    // Release the current selection so the scan can move to another node.
-    if (this.globalExit) this.allocator.release(this.globalExit.id)
+    // Release the current selection so another exit can be chosen. Leased
+    // sources delete the old IP (it is never returned to the pool).
+    if (this.globalExit) {
+      this.allocator.release(this.globalExit.id)
+      if (acquireMode) {
+        const previous = this.globalExit
+        this.globalExit = null
+        if (source.disposeExit) await source.disposeExit(previous)
+      }
+    }
 
     const exit = await this.pickUsableExit(source, settings, gen)
     if (gen !== this.generation) return null
     if (!exit) {
-      this.log('All exits failed verification; keeping current selection')
+      if (acquireMode) {
+        this.globalExit = null
+        this.proxyMode = false
+        this.log('No replacement exit acquired; outbound proxy idle')
+      } else {
+        this.log('All exits failed verification; keeping current selection')
+      }
       return null
     }
 
@@ -660,6 +795,15 @@ export class EgressManager {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source) return null
+
+    if (this.isAcquireMode(source)) {
+      const leased = await this.acquireUsableExit(source, settings, gen)
+      if (gen !== this.generation || !leased) return null
+      this.groupExits.set(groupId, leased)
+      this.log(`Group ${groupId} assigned exit: ${leased.name ?? leased.id}`)
+      return leased
+    }
+
     if (this.pool.length === 0) await this.refreshPool(source)
     if (gen !== this.generation) return null
     if (this.pool.length === 0) {
@@ -722,7 +866,10 @@ export class EgressManager {
     if (gen !== this.generation) return null
 
     const current = this.groupExits.get(groupId)
-    if (current) this.allocator.release(current.id)
+    if (current) {
+      this.allocator.release(current.id)
+      if (source.disposeExit) await source.disposeExit(current)
+    }
     this.groupExits.delete(groupId)
 
     const exit = await this.doEnsureGroupExit(groupId, gen)
@@ -833,6 +980,7 @@ export class EgressManager {
     if (!settings.enabled) return
     const source = this.getActiveSource(settings)
     if (!source) return
+    if (this.isAcquireMode(source)) return
     await this.refreshPool(source)
   }
 

@@ -61,6 +61,12 @@ interface OutboundProxyActionResult {
   node?: string | null
 }
 
+interface EgressFieldVisibility {
+  key: string
+  equals?: string | number | boolean
+  in?: Array<string | number | boolean>
+}
+
 interface EgressFieldDescriptor {
   key: string
   type: string
@@ -69,6 +75,10 @@ interface EgressFieldDescriptor {
   helpKey?: string
   options?: Array<{ value: string; labelKey: string }>
   defaultValue?: string | number | boolean
+  min?: number
+  max?: number
+  step?: number
+  visibleWhen?: EgressFieldVisibility
 }
 
 interface EgressSourceMeta {
@@ -697,9 +707,17 @@ export function createClientApi(
     quitApp: (): void => transport.send('tray:quit-app'),
   }
 
+  const dialogAPI = {
+    /** Native file picker; resolves null when cancelled or unsupported (web). */
+    pickFile: (options?: {
+      filters?: Array<{ name: string; extensions: string[] }>
+    }): Promise<string | null> => transport.invoke('dialog:pickFile', options),
+  }
+
   return {
     platform: options.platform || 'electron',
     proxy: proxyAPI,
+    dialog: dialogAPI,
     outboundProxy: outboundProxyAPI,
     store: storeAPI,
     providers: providersAPI,
