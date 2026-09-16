@@ -398,9 +398,9 @@ export class ConfigManager {
         if (
           rotation.maxExitAttempts !== undefined &&
           (!Number.isInteger(Number(rotation.maxExitAttempts)) ||
-            Number(rotation.maxExitAttempts) < 1)
+            Number(rotation.maxExitAttempts) < 0)
         ) {
-          errors.push('outboundProxy.rotation.maxExitAttempts must be a positive integer')
+          errors.push('outboundProxy.rotation.maxExitAttempts must be a non-negative integer')
         }
       }
 

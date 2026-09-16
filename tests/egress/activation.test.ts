@@ -4,9 +4,24 @@ import assert from 'node:assert/strict'
 import { EgressManager } from '../../src/main/egress/manager.ts'
 import type { EgressManagerDeps, OutboundProxySettings } from '../../src/main/egress/manager.ts'
 import type { EgressExit, EgressSource } from '../../src/main/egress/types.ts'
+import type { RotationPolicy } from '../../src/shared/types.ts'
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function rotationWith(overrides: Partial<RotationPolicy> = {}): RotationPolicy {
+  return {
+    strategy: 'roundRobin',
+    rotateEarlySeconds: 30,
+    verifyBeforeUse: false,
+    verifyTimeoutMs: 2000,
+    maxExitAttempts: 0,
+    rotateMinIntervalMs: 3000,
+    cooldownBaseMs: 1000,
+    cooldownMaxMs: 30000,
+    ...overrides,
+  }
 }
 
 function makeSettings(overrides: Partial<OutboundProxySettings> = {}): OutboundProxySettings {
@@ -14,16 +29,7 @@ function makeSettings(overrides: Partial<OutboundProxySettings> = {}): OutboundP
     enabled: true,
     groupAssignmentEnabled: false,
     activeSourceId: 's1',
-    rotation: {
-      strategy: 'roundRobin',
-      rotateEarlySeconds: 30,
-      verifyBeforeUse: false,
-      verifyTimeoutMs: 5000,
-      maxExitAttempts: 8,
-      rotateMinIntervalMs: 3000,
-      cooldownBaseMs: 1000,
-      cooldownMaxMs: 30000,
-    },
+    rotation: rotationWith(),
     sources: [{ id: 's1', sourceId: 'config-file', settings: {} }],
     groups: [],
     ...overrides,
@@ -48,8 +54,8 @@ function exit(id: string): EgressExit {
 function stubSource(
   source: EgressSource,
   manager: EgressManager,
-): { probe: number; apply: number; listExits: number } {
-  const calls = { probe: 0, apply: 0, listExits: 0 }
+): { probe: number; apply: number; listExits: number; appliedIds: string[] } {
+  const calls = { probe: 0, apply: 0, listExits: 0, appliedIds: [] as string[] }
   const wrapped: EgressSource = {
     meta: source.meta,
     probe: async () => {
@@ -62,6 +68,7 @@ function stubSource(
     },
     apply: async (e) => {
       calls.apply += 1
+      calls.appliedIds.push(e.id)
       return source.apply(e)
     },
     deactivate: () => source.deactivate(),
@@ -114,16 +121,7 @@ test('failed activation sets a cooldown that suppresses immediate retries', asyn
   manager.setDeps(
     makeDeps(
       makeSettings({
-        rotation: {
-          strategy: 'roundRobin',
-          rotateEarlySeconds: 30,
-          verifyBeforeUse: false,
-          verifyTimeoutMs: 5000,
-          maxExitAttempts: 8,
-          rotateMinIntervalMs: 3000,
-          cooldownBaseMs: 60000,
-          cooldownMaxMs: 60000,
-        },
+        rotation: rotationWith({ cooldownBaseMs: 60000, cooldownMaxMs: 60000 }),
       }),
     ),
   )
@@ -139,22 +137,7 @@ test('failed activation sets a cooldown that suppresses immediate retries', asyn
 
 test('maxExitAttempts caps the number of candidates tried', async () => {
   const manager = new EgressManager()
-  manager.setDeps(
-    makeDeps(
-      makeSettings({
-        rotation: {
-          strategy: 'roundRobin',
-          rotateEarlySeconds: 30,
-          verifyBeforeUse: false,
-          verifyTimeoutMs: 5000,
-          maxExitAttempts: 3,
-          rotateMinIntervalMs: 3000,
-          cooldownBaseMs: 1000,
-          cooldownMaxMs: 30000,
-        },
-      }),
-    ),
-  )
+  manager.setDeps(makeDeps(makeSettings({ rotation: rotationWith({ maxExitAttempts: 3 }) })))
   const candidates = Array.from({ length: 10 }, (_, index) => exit(`n${index}`))
   const calls = stubSource(
     fakeSource({ listExits: async () => candidates, apply: async () => false }),
@@ -163,6 +146,66 @@ test('maxExitAttempts caps the number of candidates tried', async () => {
 
   assert.equal(await manager.ensureProxyForRequest(), false)
   assert.equal(calls.apply, 3)
+})
+
+test('dead nodes are skipped without consuming candidate budget', async () => {
+  const manager = new EgressManager()
+  manager.setDeps(makeDeps(makeSettings({ rotation: rotationWith({ maxExitAttempts: 1 }) })))
+  const table: EgressExit[] = [
+    { ...exit('dead-1'), alive: false },
+    exit('alive-1'),
+    exit('alive-2'),
+  ]
+  const calls = stubSource(
+    fakeSource({ listExits: async () => table, apply: async () => false }),
+    manager,
+  )
+
+  assert.equal(await manager.ensureProxyForRequest(), false)
+  assert.deepEqual(calls.appliedIds, ['alive-1'])
+})
+
+test('non-selectable entries consume candidate budget without being tried', async () => {
+  const manager = new EgressManager()
+  manager.setDeps(makeDeps(makeSettings({ rotation: rotationWith({ maxExitAttempts: 1 }) })))
+  const table: EgressExit[] = [{ ...exit('group-1'), selectable: false }, exit('alive-1')]
+  const calls = stubSource(
+    fakeSource({ listExits: async () => table, apply: async () => false }),
+    manager,
+  )
+
+  assert.equal(await manager.ensureProxyForRequest(), false)
+  assert.equal(calls.apply, 0)
+})
+
+test("auto budget ('all') scans the whole table", async () => {
+  const manager = new EgressManager()
+  manager.setDeps(makeDeps(makeSettings({ rotation: rotationWith({ maxExitAttempts: 0 }) })))
+  const table = Array.from({ length: 5 }, (_, index) => exit(`n${index}`))
+  const calls = stubSource(
+    fakeSource({
+      meta: { ...fakeSource().meta, defaultMaxExitAttempts: 'all' },
+      listExits: async () => table,
+      apply: async () => false,
+    }),
+    manager,
+  )
+
+  assert.equal(await manager.ensureProxyForRequest(), false)
+  assert.equal(calls.apply, 5)
+})
+
+test('auto budget falls back to 10 when the source declares no default', async () => {
+  const manager = new EgressManager()
+  manager.setDeps(makeDeps(makeSettings({ rotation: rotationWith({ maxExitAttempts: 0 }) })))
+  const table = Array.from({ length: 15 }, (_, index) => exit(`n${index}`))
+  const calls = stubSource(
+    fakeSource({ listExits: async () => table, apply: async () => false }),
+    manager,
+  )
+
+  assert.equal(await manager.ensureProxyForRequest(), false)
+  assert.equal(calls.apply, 10)
 })
 
 test('invalidation during activation discards the in-flight result', async () => {

@@ -42,6 +42,20 @@ export class ExitAllocator {
     this.inUse.add(exitId)
   }
 
+  isInUse(exitId: string): boolean {
+    return this.inUse.has(exitId)
+  }
+
+  /** Current cursor position within the exit table. */
+  position(): number {
+    return this.cursor
+  }
+
+  /** Move the cursor (used by the table-scan selection algorithm). */
+  setPosition(index: number): void {
+    this.cursor = index
+  }
+
   getInUse(): string[] {
     return [...this.inUse]
   }

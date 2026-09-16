@@ -27,6 +27,14 @@ export interface EgressExit {
   password?: string
   /** Absolute epoch ms at which this exit stops working; undefined = no expiry. */
   expiresAt?: number
+  /**
+   * Whether this table entry can actually be selected. Policy groups, DIRECT,
+   * REJECT and subscription banners are listed (so they consume candidate
+   * budget) but are not selectable.
+   */
+  selectable?: boolean
+  /** Liveness hint from the source (Clash `alive`). undefined = assume alive. */
+  alive?: boolean
 }
 
 /** Serializable field descriptor that drives the generic source settings UI. */
@@ -69,6 +77,11 @@ export interface EgressSourceModuleMeta {
   /** Serializable settings fields for the generic UI. */
   fields: EgressFieldDescriptor[]
   capabilities: EgressSourceCapabilities
+  /**
+   * Default candidate cap when `rotation.maxExitAttempts` is 0 (auto).
+   * `'all'` means the whole exit table length; a number caps the scan.
+   */
+  defaultMaxExitAttempts?: number | 'all'
 }
 
 /**

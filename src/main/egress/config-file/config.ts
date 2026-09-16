@@ -18,4 +18,5 @@ export const CONFIG_FILE_META: EgressSourceModuleMeta = {
     expiry: false,
     alwaysOn: true,
   },
+  defaultMaxExitAttempts: 10,
 }

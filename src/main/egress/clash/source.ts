@@ -119,13 +119,15 @@ export class ClashSource implements EgressSource {
     if (!controller) return []
 
     const proxy = this.getProxyAddress()
-    const nodes = await controller.listNodes()
-    return nodes.map((name) => ({
-      id: name,
-      name,
+    const entries = await controller.listNodes()
+    return entries.map((entry) => ({
+      id: entry.name,
+      name: entry.name,
       protocol: 'http',
       host: proxy.host,
       port: proxy.port,
+      selectable: entry.selectable,
+      alive: entry.alive,
     }))
   }
 

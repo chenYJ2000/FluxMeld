@@ -84,11 +84,18 @@ tested).
   (`activate()` / `activationPromise`), so they never race on the shared exit
   allocator or thrash the source. Per-group allocation is single-flight too
   (`Map<groupId, Promise>`), so a group never gets two exits.
-- **Apply then verify**: `pickUsableExit()` applies each candidate *before*
-  verifying it. This is required for sources whose exits share one endpoint
-  (Clash): verifying before applying would test the current node, not the
-  candidate, and could never skip a dead node. At most `MAX_EXIT_ATTEMPTS`
-  candidates are tried; on total failure the previous exit is re-applied.
+- **Table-scan selection**: each activation/rotation re-reads the source's exit
+  table (Clash `/proxies`, in original order). Starting at the shared cursor it
+  scans entries and consumes one candidate for: non-selectable entries (policy
+  groups, DIRECT/REJECT, banners) and already-in-use exits; dead entries
+  (`alive === false`) are skipped *without* consuming a candidate; a selectable
+  live entry is applied then verified (apply-before-verify, needed because Clash
+  exits share one endpoint), and a failed test consumes a candidate. On success
+  the entry is claimed and the cursor advances past it; on total failure the
+  previous exit is re-applied.
+- **Candidate budget**: `maxExitAttempts`; `0` (auto) uses the source's
+  `meta.defaultMaxExitAttempts` (`'all'` = whole table length; Clash `'all'`,
+  config-file / IP pool `10`).
 - **Cooldown**: a failed activation backs off (1s doubling to 30s) so a down
   source is not hammered; it resets on success, manual enable, config save, or a
   successful source check.
@@ -101,11 +108,11 @@ tested).
   silently falling back to a (possibly blocked) direct connection.
 
 These knobs live on `outboundProxy.rotation` and are editable on the "Rotation
-Policy" page: `verifyTimeoutMs` (5000), `maxExitAttempts` (8),
+Policy" page: `verifyTimeoutMs` (2000), `maxExitAttempts` (0 = auto),
 `rotateMinIntervalMs` (3000), `cooldownBaseMs` (1000), `cooldownMaxMs` (30000).
 An *activation failure* (which drives the cooldown) is any of: no source
-configured; source probe unavailable; empty exit pool; no usable exit found
-within the candidate cap.
+configured; source probe unavailable; empty exit table; no usable exit found
+within the candidate budget.
 
 ## Registration
 

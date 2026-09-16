@@ -147,7 +147,7 @@ export function RotationPolicyConfig() {
             'maxExitAttempts',
             'egress.rotation.maxExitAttempts',
             'egress.rotation.maxExitAttemptsHelp',
-            1,
+            0,
           )}
           {numberField(
             'rotateMinIntervalMs',

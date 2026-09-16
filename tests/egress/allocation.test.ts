@@ -53,3 +53,18 @@ test('allocator returns null for an empty pool', () => {
   const allocator = new ExitAllocator()
   assert.equal(allocator.allocate([]), null)
 })
+
+test('allocator exposes cursor position and in-use tracking', () => {
+  const allocator = new ExitAllocator()
+  assert.equal(allocator.position(), 0)
+
+  allocator.setPosition(2)
+  assert.equal(allocator.position(), 2)
+
+  allocator.markInUse('a')
+  assert.equal(allocator.isInUse('a'), true)
+  assert.equal(allocator.isInUse('b'), false)
+
+  allocator.release('a')
+  assert.equal(allocator.isInUse('a'), false)
+})

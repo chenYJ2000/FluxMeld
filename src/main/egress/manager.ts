@@ -40,8 +40,7 @@ export const DIRECT_GROUP = '__direct__'
 export const EGRESS_FAIL_FAST = true
 
 /** Defaults for the configurable rotation policy values. */
-const MAX_EXIT_ATTEMPTS = 8
-const VERIFY_TIMEOUT_MS = 5000
+const VERIFY_TIMEOUT_MS = 2000
 const COOLDOWN_BASE_MS = 1000
 const COOLDOWN_MAX_MS = 30000
 const MIN_ROTATE_INTERVAL_MS = 3000
@@ -118,7 +117,7 @@ const DEFAULT_ROTATION: RotationPolicy = {
   rotateEarlySeconds: 30,
   verifyBeforeUse: true,
   verifyTimeoutMs: VERIFY_TIMEOUT_MS,
-  maxExitAttempts: MAX_EXIT_ATTEMPTS,
+  maxExitAttempts: 0,
   rotateMinIntervalMs: MIN_ROTATE_INTERVAL_MS,
   cooldownBaseMs: COOLDOWN_BASE_MS,
   cooldownMaxMs: COOLDOWN_MAX_MS,
@@ -313,7 +312,8 @@ export class EgressManager {
     const source = this.getActiveSource(settings)
     if (!source) return []
     await this.refreshPool(source)
-    return [...this.pool]
+    // Expose only real, selectable, live exits (skip policy groups / dead nodes).
+    return this.pool.filter((exit) => exit.selectable !== false && exit.alive !== false)
   }
 
   private async refreshPool(source: EgressSource): Promise<void> {
@@ -334,48 +334,95 @@ export class EgressManager {
   }
 
   /**
-   * Apply each candidate before verifying it, so a source whose exits share one
-   * local endpoint (Clash) can actually skip dead nodes. Failed candidates are
-   * released; on total failure the previous exit is re-applied.
+   * Resolve the candidate budget for one scan. `maxExitAttempts > 0` is an
+   * explicit cap; `0` (auto) falls back to the source default (`'all'` = whole
+   * table length, otherwise the source's number, default 10).
    */
+  private resolveMaxAttempts(
+    settings: OutboundProxySettings,
+    source: EgressSource,
+    tableLength: number,
+  ): number {
+    const configured = clampInt(settings.rotation.maxExitAttempts, 0, 0, 100000)
+    if (configured > 0) return configured
+    const fallback = source.meta.defaultMaxExitAttempts ?? 10
+    return fallback === 'all' ? tableLength : Math.max(1, fallback)
+  }
+
+  /**
+   * Scan the exit table starting at the shared cursor:
+   *   - policy groups / DIRECT / REJECT / banners and in-use exits are skipped
+   *     and consume one candidate;
+   *   - dead exits (`alive === false`) are skipped without consuming a candidate;
+   *   - a live exit is applied then verified; success claims it, failure
+   *     consumes a candidate.
+   * The candidate budget is `maxExitAttempts` (or the source default when 0).
+   */
+  private async scanTable(
+    source: EgressSource,
+    settings: OutboundProxySettings,
+    gen: number,
+  ): Promise<EgressExit | null> {
+    const table = this.pool
+    const total = table.length
+    if (total === 0) return null
+
+    const start = this.allocator.position()
+    let remaining = this.resolveMaxAttempts(settings, source, total)
+    let inspected = 0
+
+    while (inspected < total && remaining > 0) {
+      if (gen !== this.generation) return null
+
+      const index = (start + inspected) % total
+      const entry = table[index]
+      inspected += 1
+
+      if (entry.selectable === false) {
+        remaining -= 1
+        continue
+      }
+      if (entry.alive === false) {
+        // Dead node: skipped, no candidate consumed.
+        continue
+      }
+      if (this.allocator.isInUse(entry.id)) {
+        remaining -= 1
+        continue
+      }
+
+      const applied = await source.apply(entry)
+      if (gen !== this.generation) return null
+      if (applied && (await this.verify(entry, source, settings))) {
+        this.allocator.markInUse(entry.id)
+        this.allocator.setPosition((index + 1) % total)
+        return entry
+      }
+      this.log(`Exit unusable, skipping: ${entry.name ?? entry.id}`)
+      remaining -= 1
+    }
+
+    this.allocator.setPosition((start + inspected) % total)
+    return null
+  }
+
+  /** Scan for the single global exit, restoring the previous node on failure. */
   private async pickUsableExit(
     source: EgressSource,
     settings: OutboundProxySettings,
     gen: number,
   ): Promise<EgressExit | null> {
     const previous = this.globalExit
-    const limit = Math.min(
-      this.pool.length,
-      clampInt(settings.rotation.maxExitAttempts, MAX_EXIT_ATTEMPTS, 1, 1000),
-    )
-    const tried: EgressExit[] = []
-
-    for (let i = 0; i < limit; i++) {
-      if (gen !== this.generation) return null
-      const exit = this.allocator.allocate(this.pool)
-      if (!exit) break
-      tried.push(exit)
-
-      const applied = await source.apply(exit)
-      if (gen !== this.generation) return null
-      if (applied && (await this.verify(exit, source, settings))) {
-        for (const candidate of tried) {
-          if (candidate.id !== exit.id) this.allocator.release(candidate.id)
-        }
-        return exit
-      }
-      this.log(`Exit unusable, skipping: ${exit.id}`)
-    }
-
-    for (const candidate of tried) this.allocator.release(candidate.id)
-    if (previous) {
+    const exit = await this.scanTable(source, settings, gen)
+    if (gen !== this.generation) return null
+    if (!exit && previous) {
       try {
         await source.apply(previous)
       } catch {
         // best-effort restore
       }
     }
-    return null
+    return exit
   }
 
   private noteFailure(): void {
@@ -510,6 +557,9 @@ export class EgressManager {
     const source = this.getActiveSource(settings)
     if (!source || this.pool.length === 0) return null
 
+    // Release the current selection so the scan can move to another node.
+    if (this.globalExit) this.allocator.release(this.globalExit.id)
+
     const exit = await this.pickUsableExit(source, settings, gen)
     if (gen !== this.generation) return null
     if (!exit) {
@@ -617,31 +667,11 @@ export class EgressManager {
       return null
     }
 
-    const limit = Math.min(
-      this.pool.length,
-      clampInt(settings.rotation.maxExitAttempts, MAX_EXIT_ATTEMPTS, 1, 1000),
-    )
-    const tried: EgressExit[] = []
-
-    for (let i = 0; i < limit; i++) {
-      const exit = this.allocator.allocate(this.pool)
-      if (!exit) break
-      tried.push(exit)
-
-      const applied = await source.apply(exit)
-      if (gen !== this.generation) return null
-      if (applied && (await this.verify(exit, source, settings))) {
-        for (const candidate of tried) {
-          if (candidate.id !== exit.id) this.allocator.release(candidate.id)
-        }
-        this.groupExits.set(groupId, exit)
-        this.log(`Group ${groupId} assigned exit: ${exit.name ?? exit.id}`)
-        return exit
-      }
-    }
-
-    for (const candidate of tried) this.allocator.release(candidate.id)
-    return null
+    const exit = await this.scanTable(source, settings, gen)
+    if (!exit) return null
+    this.groupExits.set(groupId, exit)
+    this.log(`Group ${groupId} assigned exit: ${exit.name ?? exit.id}`)
+    return exit
   }
 
   /** Pre-allocate dynamic exits for every group (used by the assignment UI). */

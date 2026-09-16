@@ -6,7 +6,7 @@
  */
 
 import axios, { type AxiosResponse } from 'axios'
-import { filterRealClashNodes, type ClashProxyEntry } from './nodes.ts'
+import { parseClashNodeTable, type ClashNodeTableEntry, type ClashProxyEntry } from './nodes.ts'
 
 export type ClashMode = 'rule' | 'global' | 'direct'
 
@@ -62,11 +62,11 @@ export class ClashController {
     return !!response && response.status >= 200 && response.status < 300
   }
 
-  async listNodes(): Promise<string[]> {
+  async listNodes(): Promise<ClashNodeTableEntry[]> {
     const response = await this.request('get', '/proxies', undefined, this.timeoutMs * 2)
     if (!response) return []
     const allProxies: Record<string, ClashProxyEntry> = response.data?.proxies ?? {}
-    return filterRealClashNodes(allProxies)
+    return parseClashNodeTable(allProxies)
   }
 
   async getCurrentNode(): Promise<string | null> {

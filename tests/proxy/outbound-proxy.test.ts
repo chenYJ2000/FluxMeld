@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { shouldRouteThroughProxy } from '../../src/main/proxy/forwarder.ts'
-import { filterRealClashNodes } from '../../src/main/egress/clash/nodes.ts'
+import { parseClashNodeTable } from '../../src/main/egress/clash/nodes.ts'
 
 test('network-level failures (no status) trigger proxy routing', () => {
   assert.equal(shouldRouteThroughProxy(undefined), true)
@@ -33,7 +33,7 @@ test('other client errors do NOT trigger proxy routing', () => {
   assert.equal(shouldRouteThroughProxy(422), false)
 })
 
-test('filterRealClashNodes keeps real nodes and drops policy groups', () => {
+test('parseClashNodeTable keeps the original order and marks non-selectable entries', () => {
   const proxies = {
     DIRECT: { type: 'Direct' },
     REJECT: { type: 'Reject' },
@@ -47,30 +47,43 @@ test('filterRealClashNodes keeps real nodes and drops policy groups', () => {
     COMPATIBLE: { type: 'Compatible' },
     PASS: { type: 'Pass' },
   }
-  const nodes = filterRealClashNodes(proxies)
-  assert.equal(nodes.length, 2)
-  assert.ok(nodes.includes('日本JP-HY2'))
-  assert.ok(nodes.includes('新加坡-优化2-Gemini-GPT'))
+  const table = parseClashNodeTable(proxies)
+  // Every entry is kept so it can consume candidate budget.
+  assert.equal(table.length, 11)
+  assert.deepEqual(
+    table.map((entry) => entry.name),
+    Object.keys(proxies),
+  )
+  const byName = Object.fromEntries(table.map((entry) => [entry.name, entry]))
+  assert.equal(byName['日本JP-HY2'].selectable, true)
+  assert.equal(byName['新加坡-优化2-Gemini-GPT'].selectable, true)
+  assert.equal(byName['节点选择'].selectable, false)
+  assert.equal(byName['自动选择'].selectable, false)
+  assert.equal(byName.DIRECT.selectable, false)
+  assert.equal(byName.REJECT.selectable, false)
+  assert.equal(byName['REJECT-DROP'].selectable, false)
+  assert.equal(byName['剩余流量：40.37 GB'].selectable, false)
+  assert.equal(byName['套餐到期：长期有效'].selectable, false)
+  assert.equal(byName.COMPATIBLE.selectable, false)
+  assert.equal(byName.PASS.selectable, false)
 })
 
-test('filterRealClashNodes tolerates empty and missing payloads', () => {
-  assert.deepEqual(filterRealClashNodes({}), [])
-  assert.deepEqual(filterRealClashNodes({ foo: {} }), [])
+test('parseClashNodeTable tolerates empty and missing payloads', () => {
+  assert.deepEqual(parseClashNodeTable({}), [])
+  assert.deepEqual(parseClashNodeTable({ foo: {} }), [])
 })
 
-test('filterRealClashNodes ranks alive nodes first but keeps dead ones eligible', () => {
+test('parseClashNodeTable marks dead nodes without dropping them', () => {
   const proxies = {
     '美国-慢在线': { type: 'Vmess', alive: true, history: [{ delay: 500 }] },
-    '美国-快在线': { type: 'Vmess', alive: true, history: [{ delay: 100 }] },
-    '美国-已死（可能复活）': { type: 'Vmess', alive: false },
+    '美国-已死': { type: 'Vmess', alive: false },
     '日本-未知状态': { type: 'Vmess' },
   }
-  const nodes = filterRealClashNodes(proxies)
-  // Dead node stays in the pool so it can be used again after recovery,
-  // but alive nodes sort before it.
-  assert.ok(nodes.includes('美国-已死（可能复活）'))
-  assert.equal(nodes[0], '美国-快在线')
-  const deadIndex = nodes.indexOf('美国-已死（可能复活）')
-  const aliveSlowIndex = nodes.indexOf('美国-慢在线')
-  assert.ok(deadIndex > aliveSlowIndex, 'dead node ranks after alive nodes')
+  const table = parseClashNodeTable(proxies)
+  const byName = Object.fromEntries(table.map((entry) => [entry.name, entry]))
+  assert.equal(byName['美国-已死'].alive, false)
+  assert.equal(byName['美国-已死'].selectable, true)
+  assert.equal(byName['美国-慢在线'].alive, true)
+  assert.equal(byName['日本-未知状态'].alive, true)
+  assert.equal(byName['美国-慢在线'].delay, 500)
 })

@@ -42,4 +42,7 @@ export const CLASH_META: EgressSourceModuleMeta = {
     expiry: false,
     alwaysOn: true,
   },
+  // Clash scans the whole node table by default (dead nodes / policy groups are
+  // skipped during the scan).
+  defaultMaxExitAttempts: 'all',
 }
