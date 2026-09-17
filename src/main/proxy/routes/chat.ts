@@ -489,6 +489,7 @@ router.post('/completions', async (ctx: Context) => {
         request.model,
         usedProvider.id,
         usedAccount.id,
+        apiKeyLabel,
       )
 
       return
@@ -583,6 +584,7 @@ router.post('/completions', async (ctx: Context) => {
           request.model,
           usedProvider.id,
           usedAccount.id,
+          apiKeyLabel,
         )
         storeManager.updateRequestLog(logEntry.id, {
           status: 'success',
@@ -619,6 +621,7 @@ router.post('/completions', async (ctx: Context) => {
           request.model,
           usedProvider.id,
           usedAccount.id,
+          apiKeyLabel,
         )
 
         const errorEvent = {
@@ -747,6 +750,7 @@ router.post('/completions', async (ctx: Context) => {
         request.model,
         usedProvider.id,
         usedAccount.id,
+        apiKeyLabel,
       )
       storeManager.addRequestLog({
         timestamp: startTime,
@@ -865,7 +869,14 @@ router.post('/completions', async (ctx: Context) => {
       errorStack,
     })
 
-    storeManager.recordRequestInStats(false, latency, request.model, provider.id, account.id)
+    storeManager.recordRequestInStats(
+      false,
+      latency,
+      request.model,
+      provider.id,
+      account.id,
+      apiKeyLabel,
+    )
   } finally {
     requestDeadline.dispose()
     ctx.req.removeListener('aborted', abortForClientDisconnect)

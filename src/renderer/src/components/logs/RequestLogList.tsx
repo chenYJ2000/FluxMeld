@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/dialog'
 import { RequestLogDetail } from './RequestLogDetail'
 import { RequestLogStats } from './RequestLogStats'
-import { Trash2 } from 'lucide-react'
+import { Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 
 interface RequestLogEntry {
   id: string
@@ -57,12 +57,18 @@ interface RequestLogStatsData {
   todayError: number
 }
 
+interface RequestLogFilterOptionsData {
+  apiKeys: string[]
+  models: string[]
+}
+
 interface RowProps {
   logs: RequestLogEntry[]
   onSelectLog: (log: RequestLogEntry) => void
 }
 
 const ITEM_HEIGHT = 72
+const PAGE_SIZE = 200
 
 function getStatusColor(status: 'success' | 'error', statusCode: number) {
   if (status === 'success') return 'bg-green-500/10 text-green-500 border-green-500/20'
@@ -89,43 +95,74 @@ export function RequestLogList() {
   const { t } = useTranslation()
   const [logs, setLogs] = useState<RequestLogEntry[]>([])
   const [stats, setStats] = useState<RequestLogStatsData | null>(null)
+  const [filterOptions, setFilterOptions] = useState<RequestLogFilterOptionsData>({
+    apiKeys: [],
+    models: [],
+  })
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
   const [selectedLog, setSelectedLog] = useState<RequestLogEntry | null>(null)
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'error'>('all')
+  const [apiKeyFilter, setApiKeyFilter] = useState('all')
+  const [modelFilter, setModelFilter] = useState('all')
   const [isLoading, setIsLoading] = useState(true)
   const [showClearDialog, setShowClearDialog] = useState(false)
   const logsRef = useRef<RequestLogEntry[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ width: 800, height: 400 })
 
+  const buildFilter = useCallback(() => {
+    return {
+      ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
+      ...(apiKeyFilter !== 'all' ? { apiKey: apiKeyFilter } : {}),
+      ...(modelFilter !== 'all' ? { model: modelFilter } : {}),
+    }
+  }, [statusFilter, apiKeyFilter, modelFilter])
+
   const fetchLogs = useCallback(async () => {
     try {
-      const filter = statusFilter === 'all' ? {} : { status: statusFilter }
-      const result = await window.electronAPI?.requestLogs?.get({ ...filter, limit: 200 })
+      const result = await window.electronAPI?.requestLogs?.query({
+        ...buildFilter(),
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      })
       if (result) {
-        if (JSON.stringify(result) !== JSON.stringify(logsRef.current)) {
-          logsRef.current = result
-          setLogs(result)
+        if (JSON.stringify(result.logs) !== JSON.stringify(logsRef.current)) {
+          logsRef.current = result.logs
+          setLogs(result.logs)
         }
+        setTotal(result.total)
       }
     } catch (error) {
       console.error('Failed to fetch request logs:', error)
     }
-  }, [statusFilter])
+  }, [buildFilter, page])
 
   const fetchStats = useCallback(async () => {
     try {
-      const result = await window.electronAPI?.requestLogs?.getStats()
+      const result = await window.electronAPI?.requestLogs?.getStats(buildFilter())
       if (result) {
         setStats(result)
       }
     } catch (error) {
       console.error('Failed to fetch request log stats:', error)
     }
+  }, [buildFilter])
+
+  const fetchFilterOptions = useCallback(async () => {
+    try {
+      const result = await window.electronAPI?.requestLogs?.getFilterOptions()
+      if (result) {
+        setFilterOptions(result)
+      }
+    } catch (error) {
+      console.error('Failed to fetch request log filter options:', error)
+    }
   }, [])
 
   const refreshLogs = useCallback(async () => {
-    await Promise.all([fetchLogs(), fetchStats()])
-  }, [fetchLogs, fetchStats])
+    await Promise.all([fetchLogs(), fetchStats(), fetchFilterOptions()])
+  }, [fetchLogs, fetchStats, fetchFilterOptions])
 
   useEffect(() => {
     setIsLoading(true)
@@ -133,13 +170,16 @@ export function RequestLogList() {
   }, [refreshLogs])
 
   useEffect(() => {
+    // Only the first page auto-refreshes; other pages refresh on demand so the
+    // list does not jump while the user is browsing history.
+    if (page !== 1) return
     const interval = setInterval(() => {
       refreshLogs().catch((error) => {
         console.error('Failed to refresh request logs:', error)
       })
     }, 3000)
     return () => clearInterval(interval)
-  }, [refreshLogs])
+  }, [refreshLogs, page])
 
   useEffect(() => {
     const updateSize = () => {
@@ -159,13 +199,32 @@ export function RequestLogList() {
     await window.electronAPI?.requestLogs?.clear()
     logsRef.current = []
     setLogs([])
-    fetchStats()
+    setTotal(0)
+    setPage(1)
+    await refreshLogs()
     setShowClearDialog(false)
   }
 
   const handleSelectLog = useCallback((log: RequestLogEntry) => {
     setSelectedLog(log)
   }, [])
+
+  const handleStatusChange = (value: 'all' | 'success' | 'error') => {
+    setStatusFilter(value)
+    setPage(1)
+  }
+
+  const handleApiKeyChange = (value: string) => {
+    setApiKeyFilter(value)
+    setPage(1)
+  }
+
+  const handleModelChange = (value: string) => {
+    setModelFilter(value)
+    setPage(1)
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const RowComponent = useCallback(
     ({
@@ -243,13 +302,10 @@ export function RequestLogList() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-semibold">{t('logs.requestLogs')}</h2>
-          <Select
-            value={statusFilter}
-            onValueChange={(v) => setStatusFilter(v as 'all' | 'success' | 'error')}
-          >
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold mr-1">{t('logs.requestLogs')}</h2>
+          <Select value={statusFilter} onValueChange={handleStatusChange}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder={t('logs.filter')} />
             </SelectTrigger>
@@ -257,6 +313,36 @@ export function RequestLogList() {
               <SelectItem value="all">{t('logs.all')}</SelectItem>
               <SelectItem value="success">{t('common.success')}</SelectItem>
               <SelectItem value="error">{t('common.error')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={apiKeyFilter} onValueChange={handleApiKeyChange}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder={t('logs.filterApiKey')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('logs.allApiKeys')}</SelectItem>
+              {filterOptions.apiKeys.map((key) => (
+                <SelectItem key={key} value={key}>
+                  <span className="truncate max-w-60" title={key}>
+                    {key}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={modelFilter} onValueChange={handleModelChange}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder={t('logs.filterModel')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('logs.allModels')}</SelectItem>
+              {filterOptions.models.map((model) => (
+                <SelectItem key={model} value={model}>
+                  <span className="truncate max-w-60" title={model}>
+                    {model}
+                  </span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -294,6 +380,33 @@ export function RequestLogList() {
             className="scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent"
           />
         )}
+      </div>
+
+      <div className="flex items-center justify-between mt-3">
+        <span className="text-xs text-muted-foreground">
+          {t('logs.totalCount', { count: total })}
+        </span>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {t('logs.pageOf', { page, total: totalPages })}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page >= totalPages}
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {selectedLog && <RequestLogDetail log={selectedLog} onClose={() => setSelectedLog(null)} />}

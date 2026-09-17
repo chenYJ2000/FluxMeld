@@ -212,7 +212,20 @@ interface RequestLogEntry {
 interface RequestLogFilter {
   status?: 'success' | 'error'
   providerId?: string
+  apiKey?: string
+  model?: string
   limit?: number
+  offset?: number
+}
+
+interface RequestLogQueryResult {
+  logs: RequestLogEntry[]
+  total: number
+}
+
+interface RequestLogFilterOptions {
+  apiKeys: string[]
+  models: string[]
 }
 
 interface RequestLogStats {
@@ -251,6 +264,8 @@ interface DailyStatistics {
   failedRequests: number
   totalLatency: number
   activeAccounts?: number
+  modelStats?: Record<string, { total: number; success: number; failed: number }>
+  apiKeyStats?: Record<string, { total: number; success: number; failed: number }>
   modelUsage: Record<string, number>
   providerUsage: Record<string, number>
 }
@@ -552,9 +567,14 @@ export function createClientApi(
   const requestLogsAPI = {
     get: (filter?: RequestLogFilter): Promise<RequestLogEntry[]> =>
       transport.invoke('requestLogs:get', filter),
+    query: (filter?: RequestLogFilter): Promise<RequestLogQueryResult> =>
+      transport.invoke('requestLogs:query', filter),
+    getFilterOptions: (): Promise<RequestLogFilterOptions> =>
+      transport.invoke('requestLogs:getFilterOptions'),
     getById: (id: string): Promise<RequestLogEntry | undefined> =>
       transport.invoke('requestLogs:getById', id),
-    getStats: (): Promise<RequestLogStats> => transport.invoke('requestLogs:getStats'),
+    getStats: (filter?: RequestLogFilter): Promise<RequestLogStats> =>
+      transport.invoke('requestLogs:getStats', filter),
     getTrend: (days?: number): Promise<RequestLogTrend[]> =>
       transport.invoke('requestLogs:getTrend', days),
     clear: (): Promise<void> => transport.invoke('requestLogs:clear'),

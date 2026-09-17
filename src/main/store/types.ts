@@ -218,6 +218,15 @@ export interface RequestLogEntry {
 }
 
 /**
+ * Per-dimension request counts for a single day, split by outcome.
+ */
+export interface DailyUsageBucket {
+  total: number
+  success: number
+  failed: number
+}
+
+/**
  * Daily Statistics Interface
  * Statistics for a single day
  */
@@ -237,6 +246,10 @@ export interface DailyStatistics {
    * during this day. Used for the dashboard "vs yesterday" comparison.
    */
   activeAccounts?: number
+  /** Per-model request counts (outcome split) */
+  modelStats?: Record<string, DailyUsageBucket>
+  /** Per-API-key-label request counts (outcome split) */
+  apiKeyStats?: Record<string, DailyUsageBucket>
   /** Model usage count */
   modelUsage: Record<string, number>
   /** Provider usage count */

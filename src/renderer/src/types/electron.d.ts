@@ -467,6 +467,9 @@ interface RequestLogEntry {
   timestamp: number
   status: 'success' | 'error'
   statusCode: number
+  clientIp?: string
+  egressNode?: string
+  apiKey?: string
   method: string
   url: string
   model: string
@@ -494,7 +497,20 @@ interface RequestLogEntry {
 interface RequestLogFilter {
   status?: 'success' | 'error'
   providerId?: string
+  apiKey?: string
+  model?: string
   limit?: number
+  offset?: number
+}
+
+interface RequestLogQueryResult {
+  logs: RequestLogEntry[]
+  total: number
+}
+
+interface RequestLogFilterOptions {
+  apiKeys: string[]
+  models: string[]
 }
 
 interface RequestLogStats {
@@ -516,8 +532,10 @@ interface RequestLogTrend {
 
 interface RequestLogsAPI {
   get: (filter?: RequestLogFilter) => Promise<RequestLogEntry[]>
+  query: (filter?: RequestLogFilter) => Promise<RequestLogQueryResult>
+  getFilterOptions: () => Promise<RequestLogFilterOptions>
   getById: (id: string) => Promise<RequestLogEntry | undefined>
-  getStats: () => Promise<RequestLogStats>
+  getStats: (filter?: RequestLogFilter) => Promise<RequestLogStats>
   getTrend: (days?: number) => Promise<RequestLogTrend[]>
   clear: () => Promise<void>
   onNewLog: (callback: (log: RequestLogEntry) => void) => () => void
@@ -535,6 +553,12 @@ interface PersistentStatistics {
   dailyStats: Record<string, DailyStatistics>
 }
 
+interface DailyUsageBucket {
+  total: number
+  success: number
+  failed: number
+}
+
 interface DailyStatistics {
   date: string
   totalRequests: number
@@ -542,6 +566,8 @@ interface DailyStatistics {
   failedRequests: number
   totalLatency: number
   activeAccounts?: number
+  modelStats?: Record<string, DailyUsageBucket>
+  apiKeyStats?: Record<string, DailyUsageBucket>
   modelUsage: Record<string, number>
   providerUsage: Record<string, number>
 }

@@ -5,6 +5,7 @@ import type { RequestLogEntry } from '../store/types.ts'
 import type {
   RequestLogConfig,
   RequestLogFilter,
+  RequestLogFilterOptions,
   RequestLogStats,
   RequestLogTrendPoint,
 } from './types.ts'
@@ -110,8 +111,46 @@ export class RequestLogManager {
     return true
   }
 
-  getRequestLogs(limit?: number, filter?: RequestLogFilter): RequestLogEntry[] {
+  getRequestLogs(limit?: number, filter?: RequestLogFilter, offset: number = 0): RequestLogEntry[] {
     this.ensureInitialized()
+    const result = this.filterRequestLogs(filter)
+
+    result.sort((a, b) => b.timestamp - a.timestamp)
+
+    const start = offset > 0 ? offset : 0
+    if (limit && limit > 0) {
+      return result.slice(start, start + limit)
+    }
+
+    return start > 0 ? result.slice(start) : result
+  }
+
+  countRequestLogs(filter?: RequestLogFilter): number {
+    this.ensureInitialized()
+    return this.filterRequestLogs(filter).length
+  }
+
+  /**
+   * Distinct API-key labels and models currently present in the retained logs.
+   * Used to populate the log-page filter dropdowns with values that exist.
+   */
+  getRequestLogFilterOptions(): RequestLogFilterOptions {
+    this.ensureInitialized()
+    const apiKeys = new Set<string>()
+    const models = new Set<string>()
+
+    for (const entry of this.requestLogs) {
+      if (entry.apiKey) apiKeys.add(entry.apiKey)
+      if (entry.model) models.add(entry.model)
+    }
+
+    return {
+      apiKeys: Array.from(apiKeys).sort((a, b) => a.localeCompare(b)),
+      models: Array.from(models).sort((a, b) => a.localeCompare(b)),
+    }
+  }
+
+  private filterRequestLogs(filter?: RequestLogFilter): RequestLogEntry[] {
     let result = [...this.requestLogs]
 
     if (filter?.status) {
@@ -122,10 +161,12 @@ export class RequestLogManager {
       result = result.filter((entry) => entry.providerId === filter.providerId)
     }
 
-    result.sort((a, b) => b.timestamp - a.timestamp)
+    if (filter?.apiKey) {
+      result = result.filter((entry) => entry.apiKey === filter.apiKey)
+    }
 
-    if (limit && result.length > limit) {
-      return result.slice(0, limit)
+    if (filter?.model) {
+      result = result.filter((entry) => entry.model === filter.model)
     }
 
     return result
@@ -142,18 +183,19 @@ export class RequestLogManager {
     this.schedulePersist()
   }
 
-  getRequestLogStats(): RequestLogStats {
+  getRequestLogStats(filter?: RequestLogFilter): RequestLogStats {
     this.ensureInitialized()
     const todayStart = localDayStart()
     const todayEnd = localDayStartOffset(1)
-    const todayLogs = this.requestLogs.filter(
+    const matching = this.filterRequestLogs(filter)
+    const todayLogs = matching.filter(
       (entry) => entry.timestamp >= todayStart && entry.timestamp < todayEnd,
     )
 
     return {
-      total: this.requestLogs.length,
-      success: this.requestLogs.filter((entry) => entry.status === 'success').length,
-      error: this.requestLogs.filter((entry) => entry.status === 'error').length,
+      total: matching.length,
+      success: matching.filter((entry) => entry.status === 'success').length,
+      error: matching.filter((entry) => entry.status === 'error').length,
       todayTotal: todayLogs.length,
       todaySuccess: todayLogs.filter((entry) => entry.status === 'success').length,
       todayError: todayLogs.filter((entry) => entry.status === 'error').length,

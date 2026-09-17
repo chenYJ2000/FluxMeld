@@ -1180,20 +1180,57 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       filter?: {
         status?: 'success' | 'error'
         providerId?: string
+        apiKey?: string
+        model?: string
         limit?: number
+        offset?: number
       },
     ) => {
       return storeManager.getRequestLogs(filter?.limit, filter)
     },
   )
 
+  ipcMain.handle(
+    IpcChannels.REQUEST_LOGS_QUERY,
+    async (
+      _,
+      filter?: {
+        status?: 'success' | 'error'
+        providerId?: string
+        apiKey?: string
+        model?: string
+        limit?: number
+        offset?: number
+      },
+    ) => {
+      const logs = storeManager.getRequestLogs(filter?.limit, filter)
+      const total = storeManager.countRequestLogs(filter)
+      return { logs, total }
+    },
+  )
+
+  ipcMain.handle(IpcChannels.REQUEST_LOGS_FILTER_OPTIONS, async () => {
+    return storeManager.getRequestLogFilterOptions()
+  })
+
   ipcMain.handle(IpcChannels.REQUEST_LOGS_GET_BY_ID, async (_, id: string) => {
     return storeManager.getRequestLogById(id)
   })
 
-  ipcMain.handle(IpcChannels.REQUEST_LOGS_GET_STATS, async () => {
-    return storeManager.getRequestLogStats()
-  })
+  ipcMain.handle(
+    IpcChannels.REQUEST_LOGS_GET_STATS,
+    async (
+      _,
+      filter?: {
+        status?: 'success' | 'error'
+        providerId?: string
+        apiKey?: string
+        model?: string
+      },
+    ) => {
+      return storeManager.getRequestLogStats(filter)
+    },
+  )
 
   ipcMain.handle(IpcChannels.REQUEST_LOGS_GET_TREND, async (_, days?: number) => {
     return storeManager.getRequestLogTrend(days)

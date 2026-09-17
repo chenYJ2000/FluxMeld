@@ -91,6 +91,8 @@ export const IpcChannels = {
   LOGS_NEW_LOG: 'logs:newLog',
 
   REQUEST_LOGS_GET: 'requestLogs:get',
+  REQUEST_LOGS_QUERY: 'requestLogs:query',
+  REQUEST_LOGS_FILTER_OPTIONS: 'requestLogs:getFilterOptions',
   REQUEST_LOGS_GET_BY_ID: 'requestLogs:getById',
   REQUEST_LOGS_GET_STATS: 'requestLogs:getStats',
   REQUEST_LOGS_GET_TREND: 'requestLogs:getTrend',

@@ -26,6 +26,7 @@ import {
   RequestLogConfig,
   PersistentStatistics,
   DailyStatistics,
+  DailyUsageBucket,
   DEFAULT_STATISTICS,
   EffectiveModel,
   ProviderModelOverrides,
@@ -42,6 +43,7 @@ import {
 import { BUILTIN_PROMPTS } from '../data/builtin-prompts'
 import { RequestLogManager } from '../requestLogs/manager'
 import { normalizeRequestLogConfig } from '../requestLogs/types'
+import type { RequestLogFilter, RequestLogFilterOptions } from '../requestLogs/types'
 import { normalizeToolCallingConfig } from '../../shared/toolCalling'
 import { localDateKey, localDateKeyOffset } from '../../shared/date'
 import { AppLogManager } from '../appLogs/manager'
@@ -131,6 +133,18 @@ function normalizeContextManagementConfig(value: unknown): ContextManagementConf
       },
     },
     executionOrder,
+  }
+}
+
+/**
+ * Accumulate one request into a per-dimension daily usage bucket.
+ */
+function accumulateUsage(bucket: DailyUsageBucket | undefined, success: boolean): DailyUsageBucket {
+  const base = bucket || { total: 0, success: 0, failed: 0 }
+  return {
+    total: base.total + 1,
+    success: success ? base.success + 1 : base.success,
+    failed: success ? base.failed : base.failed + 1,
   }
 }
 
@@ -1075,12 +1089,25 @@ export class StoreManager {
   /**
    * Get Request Logs
    */
-  getRequestLogs(
-    limit?: number,
-    filter?: { status?: 'success' | 'error'; providerId?: string },
-  ): RequestLogEntry[] {
+  getRequestLogs(limit?: number, filter?: RequestLogFilter): RequestLogEntry[] {
     this.ensureInitialized()
-    return this.getRequestLogManager().getRequestLogs(limit, filter)
+    return this.getRequestLogManager().getRequestLogs(limit, filter, filter?.offset)
+  }
+
+  /**
+   * Count Request Logs (after filtering, ignoring pagination)
+   */
+  countRequestLogs(filter?: RequestLogFilter): number {
+    this.ensureInitialized()
+    return this.getRequestLogManager().countRequestLogs(filter)
+  }
+
+  /**
+   * Distinct API-key labels and models present in the retained request logs
+   */
+  getRequestLogFilterOptions(): RequestLogFilterOptions {
+    this.ensureInitialized()
+    return this.getRequestLogManager().getRequestLogFilterOptions()
   }
 
   /**
@@ -1103,7 +1130,7 @@ export class StoreManager {
   /**
    * Get Request Log Statistics
    */
-  getRequestLogStats(): {
+  getRequestLogStats(filter?: RequestLogFilter): {
     total: number
     success: number
     error: number
@@ -1112,7 +1139,54 @@ export class StoreManager {
     todayError: number
   } {
     this.ensureInitialized()
-    return this.getRequestLogManager().getRequestLogStats()
+    const retained = this.getRequestLogManager().getRequestLogStats(filter)
+
+    // Today's counters prefer the uncapped per-day statistics. The combined
+    // apiKey+model filter cannot be derived from the per-day buckets, so it
+    // falls back to the (retention-bounded) request-log counts instead.
+    const bucket = this.getTodayUsageBucket(filter)
+    if (!bucket) {
+      return retained
+    }
+
+    const status = filter?.status
+    return {
+      ...retained,
+      todayTotal:
+        status === 'success' ? bucket.success : status === 'error' ? bucket.failed : bucket.total,
+      todaySuccess: status === 'error' ? 0 : bucket.success,
+      todayError: status === 'success' ? 0 : bucket.failed,
+    }
+  }
+
+  /**
+   * Today's usage for the given filter derived from the per-day statistics.
+   * Returns null when it cannot be derived (combined apiKey+model filter, or no
+   * bucket recorded for today) so callers can fall back to retained logs.
+   */
+  private getTodayUsageBucket(filter?: RequestLogFilter): DailyUsageBucket | null {
+    const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
+    const day = stats.dailyStats[localDateKey()]
+    if (!day) {
+      return null
+    }
+
+    const empty: DailyUsageBucket = { total: 0, success: 0, failed: 0 }
+
+    if (filter?.apiKey && filter?.model) {
+      return null
+    }
+    if (filter?.model) {
+      return day.modelStats?.[filter.model] || empty
+    }
+    if (filter?.apiKey) {
+      return day.apiKeyStats?.[filter.apiKey] || empty
+    }
+    return {
+      total: day.totalRequests,
+      success: day.successRequests,
+      failed: day.failedRequests,
+    }
   }
 
   /**
@@ -1159,6 +1233,7 @@ export class StoreManager {
     model?: string,
     providerId?: string,
     accountId?: string,
+    apiKey?: string,
   ): PersistentStatistics {
     this.ensureInitialized()
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
@@ -1199,27 +1274,41 @@ export class StoreManager {
         activeAccounts: 0,
         modelUsage: {},
         providerUsage: {},
+        modelStats: {},
+        apiKeyStats: {},
+      }
+    } else {
+      const previous = newStats.dailyStats[today]
+      newStats.dailyStats[today] = {
+        ...previous,
+        modelUsage: { ...previous.modelUsage },
+        providerUsage: { ...previous.providerUsage },
+        modelStats: { ...(previous.modelStats || {}) },
+        apiKeyStats: { ...(previous.apiKeyStats || {}) },
       }
     }
 
-    newStats.dailyStats[today].activeAccounts = this.getActiveAccounts().length
-
-    newStats.dailyStats[today].totalRequests++
+    const dayStats = newStats.dailyStats[today]
+    dayStats.activeAccounts = this.getActiveAccounts().length
+    dayStats.totalRequests++
     if (success) {
-      newStats.dailyStats[today].successRequests++
-      newStats.dailyStats[today].totalLatency += latency
+      dayStats.successRequests++
+      dayStats.totalLatency += latency
     } else {
-      newStats.dailyStats[today].failedRequests++
+      dayStats.failedRequests++
     }
 
     if (model) {
-      newStats.dailyStats[today].modelUsage[model] =
-        (newStats.dailyStats[today].modelUsage[model] || 0) + 1
+      dayStats.modelUsage[model] = (dayStats.modelUsage[model] || 0) + 1
+      dayStats.modelStats![model] = accumulateUsage(dayStats.modelStats![model], success)
     }
 
     if (providerId) {
-      newStats.dailyStats[today].providerUsage[providerId] =
-        (newStats.dailyStats[today].providerUsage[providerId] || 0) + 1
+      dayStats.providerUsage[providerId] = (dayStats.providerUsage[providerId] || 0) + 1
+    }
+
+    if (apiKey) {
+      dayStats.apiKeyStats![apiKey] = accumulateUsage(dayStats.apiKeyStats![apiKey], success)
     }
 
     this.store!.set('statistics', newStats)
