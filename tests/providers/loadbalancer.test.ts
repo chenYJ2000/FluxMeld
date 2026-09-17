@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import { LoadBalancer } from '../../src/main/proxy/loadbalancer.ts'
 import { storeManager } from '../../src/main/store/store.ts'
+import { localDateKey } from '../../src/shared/date.ts'
 
 function installStoreFixture(t: TestContext) {
   const provider = {
@@ -129,6 +130,8 @@ test('least-recently-used strategy breaks lastUsed ties by todayUsed', (t) => {
   accounts[1].lastUsed = 2000
   accounts[0].todayUsed = 50
   accounts[1].todayUsed = 10
+  accounts[0].todayUsedDate = localDateKey()
+  accounts[1].todayUsedDate = localDateKey()
 
   const selected = loadBalancer.selectAccount('Qwen3.6-Plus', 'least-recently-used', provider.id)
   assert.equal(selected?.account.id, 'account-b')
