@@ -250,6 +250,7 @@ interface DailyStatistics {
   successRequests: number
   failedRequests: number
   totalLatency: number
+  activeAccounts?: number
   modelUsage: Record<string, number>
   providerUsage: Record<string, number>
 }

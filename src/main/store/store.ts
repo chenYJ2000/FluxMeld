@@ -724,6 +724,7 @@ export class StoreManager {
 
     accounts.push(encryptedAccount)
     this.store!.set('accounts', accounts)
+    this.refreshDailyActiveAccountsSnapshot()
   }
 
   /**
@@ -757,6 +758,7 @@ export class StoreManager {
 
     accounts[index] = updatedAccount
     this.store!.set('accounts', accounts)
+    this.refreshDailyActiveAccountsSnapshot()
 
     // Verify save was successful
     const savedAccounts = this.store!.get('accounts') as Account[]
@@ -786,6 +788,7 @@ export class StoreManager {
 
     accounts.splice(index, 1)
     this.store!.set('accounts', accounts)
+    this.refreshDailyActiveAccountsSnapshot()
     return true
   }
 
@@ -1193,10 +1196,13 @@ export class StoreManager {
         successRequests: 0,
         failedRequests: 0,
         totalLatency: 0,
+        activeAccounts: 0,
         modelUsage: {},
         providerUsage: {},
       }
     }
+
+    newStats.dailyStats[today].activeAccounts = this.getActiveAccounts().length
 
     newStats.dailyStats[today].totalRequests++
     if (success) {
@@ -1234,10 +1240,47 @@ export class StoreManager {
         successRequests: 0,
         failedRequests: 0,
         totalLatency: 0,
+        activeAccounts: this.getActiveAccounts().length,
         modelUsage: {},
         providerUsage: {},
       }
     )
+  }
+
+  /**
+   * Refresh today's active-account snapshot.
+   * Called when accounts change (added/removed/enabled) so the dashboard
+   * "vs yesterday" comparison stays accurate even on days without traffic.
+   */
+  refreshDailyActiveAccountsSnapshot(): void {
+    this.ensureInitialized()
+    const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
+    const today = localDateKey()
+    const activeAccounts = this.getActiveAccounts().length
+
+    if (stats.dailyStats[today]?.activeAccounts === activeAccounts) {
+      return
+    }
+
+    const newStats: PersistentStatistics = {
+      ...stats,
+      dailyStats: { ...stats.dailyStats },
+    }
+
+    newStats.dailyStats[today] = {
+      ...(newStats.dailyStats[today] || {
+        date: today,
+        totalRequests: 0,
+        successRequests: 0,
+        failedRequests: 0,
+        totalLatency: 0,
+        modelUsage: {},
+        providerUsage: {},
+      }),
+      activeAccounts,
+    }
+
+    this.store!.set('statistics', newStats)
   }
 
   /**

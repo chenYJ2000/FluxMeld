@@ -228,41 +228,82 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         accounts?.filter((a: Account) => a.status === 'active' && a.enabled !== false).length ?? 0
 
       const yesterday = localDateKeyOffset(-1)
+      const yesterdayStats = persistentStats?.dailyStats?.[yesterday]
 
-      const useRequestLogTrends = requestLogTrends && requestLogTrends.length > 0
+      // `persistentStats.dailyStats` is the uncapped, per-local-day record of
+      // every request, so it is the authoritative source for today vs
+      // yesterday comparisons. The request/app log trends are only a fallback
+      // for installs that predate daily stats; the request-log buffer is capped
+      // (maxEntries) and would otherwise report an empty "yesterday".
+      const useDailyStats = Boolean(todayStats || yesterdayStats)
+
+      const useRequestLogTrends =
+        !useDailyStats && Boolean(requestLogTrends && requestLogTrends.length > 0)
       const trendData = useRequestLogTrends ? requestLogTrends : trends
 
-      const todayTrend = trendData.find((t: any) => t.date === today)
-      const yesterdayTrend = trendData.find((t: any) => t.date === yesterday)
+      const todayTrend = useDailyStats ? null : trendData.find((t: any) => t.date === today)
+      const yesterdayTrend = useDailyStats
+        ? null
+        : trendData.find((t: any) => t.date === yesterday)
 
-      const todayRequests = todayTrend?.total ?? todayTrend?.info ?? 0
-      const yesterdayRequests = yesterdayTrend?.total ?? yesterdayTrend?.info ?? 0
+      const todayRequests = useDailyStats
+        ? (todayStats?.totalRequests ?? 0)
+        : (todayTrend?.total ?? todayTrend?.info ?? 0)
+      const yesterdayRequests = useDailyStats
+        ? (yesterdayStats?.totalRequests ?? 0)
+        : (yesterdayTrend?.total ?? yesterdayTrend?.info ?? 0)
+
+      const todaySuccess = useDailyStats
+        ? (todayStats?.successRequests ?? 0)
+        : useRequestLogTrends
+          ? (todayTrend?.success ?? 0)
+          : (todayTrend?.info ?? 0)
+      const yesterdaySuccess = useDailyStats
+        ? (yesterdayStats?.successRequests ?? 0)
+        : useRequestLogTrends
+          ? (yesterdayTrend?.success ?? 0)
+          : (yesterdayTrend?.info ?? 0)
+
+      const todayAvgLatency = useDailyStats
+        ? todayStats && todayStats.successRequests > 0
+          ? todayStats.totalLatency / todayStats.successRequests
+          : 0
+        : (todayTrend?.avgLatency ?? 0)
+      const yesterdayAvgLatency = useDailyStats
+        ? yesterdayStats && yesterdayStats.successRequests > 0
+          ? yesterdayStats.totalLatency / yesterdayStats.successRequests
+          : 0
+        : (yesterdayTrend?.avgLatency ?? 0)
+
+      const todayActiveAccounts = useDailyStats
+        ? (todayStats?.activeAccounts ?? activeAccounts)
+        : activeAccounts
+      const yesterdayActiveAccounts = useDailyStats ? (yesterdayStats?.activeAccounts ?? 0) : 0
 
       let requestsTrend = 0
       if (yesterdayRequests > 0) {
         requestsTrend = Math.round(((todayRequests - yesterdayRequests) / yesterdayRequests) * 100)
-      } else if (todayRequests > 0) {
-        requestsTrend = 100
       }
 
-      const todaySuccess = useRequestLogTrends
-        ? (todayTrend?.success ?? 0)
-        : (todayTrend?.info ?? 0)
-      const yesterdaySuccess = useRequestLogTrends
-        ? (yesterdayTrend?.success ?? 0)
-        : (yesterdayTrend?.info ?? 0)
       const todaySuccessRate =
         todayRequests > 0 ? Math.round((todaySuccess / todayRequests) * 100) : 0
       const yesterdaySuccessRate =
         yesterdayRequests > 0 ? Math.round((yesterdaySuccess / yesterdayRequests) * 100) : 0
       const successRateTrend =
-        yesterdaySuccessRate > 0 ? todaySuccessRate - yesterdaySuccessRate : 0
+        yesterdayRequests > 0 && todayRequests > 0
+          ? todaySuccessRate - yesterdaySuccessRate
+          : 0
 
-      const todayAvgLatency = todayTrend?.avgLatency ?? 0
-      const yesterdayAvgLatency = yesterdayTrend?.avgLatency ?? 0
       const latencyTrend =
         yesterdayAvgLatency > 0 && todayAvgLatency > 0
           ? Math.round(((todayAvgLatency - yesterdayAvgLatency) / yesterdayAvgLatency) * 100)
+          : 0
+
+      const accountsTrend =
+        yesterdayActiveAccounts > 0 && todayActiveAccounts > 0
+          ? Math.round(
+              ((todayActiveAccounts - yesterdayActiveAccounts) / yesterdayActiveAccounts) * 100,
+            )
           : 0
 
       setStats({
@@ -273,6 +314,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         requestsTrend,
         successRateTrend,
         latencyTrend,
+        accountsTrend,
       })
 
       const providerUsage = persistentStats?.providerUsage ?? {}
@@ -315,7 +357,33 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
         setActivities(convertLogsToActivities(logs, providers ?? []))
       }
 
-      if (useRequestLogTrends) {
+      if (useDailyStats) {
+        const dailyChart: Array<{
+          date: string
+          totalRequests: number
+          successRequests: number
+          failedRequests: number
+        }> = []
+        for (let i = 6; i >= 0; i--) {
+          const date = localDateKeyOffset(-i)
+          dailyChart.push(
+            persistentStats.dailyStats[date] ?? {
+              date,
+              totalRequests: 0,
+              successRequests: 0,
+              failedRequests: 0,
+            },
+          )
+        }
+        setChartData(
+          dailyChart.map((t) => ({
+            time: t.date.slice(5),
+            requests: t.totalRequests,
+            success: t.successRequests,
+            failed: t.failedRequests,
+          })),
+        )
+      } else if (useRequestLogTrends) {
         setChartData(
           requestLogTrends.map((t: any) => ({
             time: t.date.slice(5),

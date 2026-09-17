@@ -232,6 +232,11 @@ export interface DailyStatistics {
   failedRequests: number
   /** Total latency (for average calculation) */
   totalLatency: number
+  /**
+   * Snapshot of the active (enabled, status `active`) account count observed
+   * during this day. Used for the dashboard "vs yesterday" comparison.
+   */
+  activeAccounts?: number
   /** Model usage count */
   modelUsage: Record<string, number>
   /** Provider usage count */
