@@ -28,16 +28,29 @@ function legacyCopy(text: string): boolean {
     textarea.value = text
     textarea.setAttribute('readonly', '')
     textarea.style.position = 'fixed'
-    textarea.style.top = '-9999px'
+    textarea.style.top = '0'
+    textarea.style.left = '0'
     textarea.style.opacity = '0'
+    textarea.style.pointerEvents = 'none'
     document.body.appendChild(textarea)
 
     const selection = document.getSelection()
     const previousRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
 
+    // Inside a modal the focus scope can steal focus back before the command
+    // runs, which makes `execCommand('copy')` silently copy nothing while still
+    // reporting success. Focus first, then assert the selection actually landed
+    // on the full text; bail out instead of lying about the result.
+    textarea.focus()
     textarea.select()
     textarea.setSelectionRange(0, text.length)
-    const ok = document.execCommand('copy')
+
+    const selectionIsIntact =
+      document.activeElement === textarea &&
+      textarea.selectionStart === 0 &&
+      textarea.selectionEnd === text.length
+
+    const ok = selectionIsIntact && document.execCommand('copy')
 
     document.body.removeChild(textarea)
 

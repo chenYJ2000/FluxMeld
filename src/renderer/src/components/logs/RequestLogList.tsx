@@ -205,8 +205,14 @@ export function RequestLogList() {
     setShowClearDialog(false)
   }
 
-  const handleSelectLog = useCallback((log: RequestLogEntry) => {
+  const handleSelectLog = useCallback(async (log: RequestLogEntry) => {
     setSelectedLog(log)
+    try {
+      const full = await window.electronAPI?.requestLogs?.getById(log.id)
+      if (full) setSelectedLog((current) => (current?.id === log.id ? full : current))
+    } catch (error) {
+      console.error('Failed to fetch full request log:', error)
+    }
   }, [])
 
   const handleStatusChange = (value: 'all' | 'success' | 'error') => {

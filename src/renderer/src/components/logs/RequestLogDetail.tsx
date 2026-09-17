@@ -20,6 +20,7 @@ import {
   KeyRound,
 } from 'lucide-react'
 import { copyText } from '@/lib/clipboard'
+import { useToast } from '@/hooks/use-toast'
 
 interface RequestLogEntry {
   id: string
@@ -62,6 +63,7 @@ interface CopyButtonProps {
 
 function CopyButton({ text, className = '' }: CopyButtonProps) {
   const { t } = useTranslation()
+  const { toast } = useToast()
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -69,9 +71,14 @@ function CopyButton({ text, className = '' }: CopyButtonProps) {
     if (ok) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } else {
-      console.error('Failed to copy to clipboard')
+      return
     }
+
+    toast({
+      title: t('common.error'),
+      description: t('common.copyFailed'),
+      variant: 'destructive',
+    })
   }
 
   return (
@@ -109,7 +116,7 @@ function SectionHeader({ title, icon, copyText }: SectionHeaderProps) {
         {icon && <span className="text-muted-foreground">{icon}</span>}
         <label className="text-sm font-semibold text-foreground">{title}</label>
       </div>
-      {copyText && <CopyButton text={copyText} />}
+      {copyText ? <CopyButton text={copyText} /> : null}
     </div>
   )
 }
