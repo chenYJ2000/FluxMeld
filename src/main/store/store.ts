@@ -1103,11 +1103,26 @@ export class StoreManager {
   }
 
   /**
-   * Distinct API-key labels and models present in the retained request logs
+   * Request-log filter options.
+   *
+   * API keys come from the configured key list (enabled entries only) and are
+   * surfaced by name, so wild/unknown keys never appear as filter options and
+   * filtering works regardless of whether API-key auth is enabled.
    */
   getRequestLogFilterOptions(): RequestLogFilterOptions {
     this.ensureInitialized()
-    return this.getRequestLogManager().getRequestLogFilterOptions()
+    const names = new Set<string>()
+
+    for (const key of this.getConfig().apiKeys || []) {
+      if (key.enabled && key.name) {
+        names.add(key.name)
+      }
+    }
+
+    return {
+      apiKeys: Array.from(names).sort((a, b) => a.localeCompare(b)),
+      models: this.getRequestLogManager().getRequestLogModels(),
+    }
   }
 
   /**

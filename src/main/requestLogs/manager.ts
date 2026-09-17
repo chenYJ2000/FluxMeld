@@ -5,7 +5,6 @@ import type { RequestLogEntry } from '../store/types.ts'
 import type {
   RequestLogConfig,
   RequestLogFilter,
-  RequestLogFilterOptions,
   RequestLogStats,
   RequestLogTrendPoint,
 } from './types.ts'
@@ -131,23 +130,18 @@ export class RequestLogManager {
   }
 
   /**
-   * Distinct API-key labels and models currently present in the retained logs.
-   * Used to populate the log-page filter dropdowns with values that exist.
+   * Distinct model names currently present in the retained logs. Used to
+   * populate the log-page model filter with values that exist.
    */
-  getRequestLogFilterOptions(): RequestLogFilterOptions {
+  getRequestLogModels(): string[] {
     this.ensureInitialized()
-    const apiKeys = new Set<string>()
     const models = new Set<string>()
 
     for (const entry of this.requestLogs) {
-      if (entry.apiKey) apiKeys.add(entry.apiKey)
       if (entry.model) models.add(entry.model)
     }
 
-    return {
-      apiKeys: Array.from(apiKeys).sort((a, b) => a.localeCompare(b)),
-      models: Array.from(models).sort((a, b) => a.localeCompare(b)),
-    }
+    return Array.from(models).sort((a, b) => a.localeCompare(b))
   }
 
   private filterRequestLogs(filter?: RequestLogFilter): RequestLogEntry[] {
