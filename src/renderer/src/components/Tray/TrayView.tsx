@@ -13,6 +13,7 @@ import {
   Wifi,
   WifiOff,
 } from 'lucide-react'
+import { copyText } from '@/lib/clipboard'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/hooks/useTheme'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -117,7 +118,11 @@ export function TrayView() {
 
   const handleCopyUrl = async () => {
     const url = `http://${host}:${port}`
-    await navigator.clipboard.writeText(url)
+    const ok = await copyText(url)
+    if (!ok) {
+      console.error('Failed to copy to clipboard')
+      return
+    }
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

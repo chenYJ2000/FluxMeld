@@ -593,6 +593,7 @@
     "keyNameRequired": "API Key name cannot be empty",
     "copied": "Copied",
     "copiedToClipboard": "API Key copied to clipboard",
+    "copyFailed": "Copy failed, please select and copy manually",
     "deleted": "Deleted",
     "keyDeleted": "API Key has been deleted"
   },

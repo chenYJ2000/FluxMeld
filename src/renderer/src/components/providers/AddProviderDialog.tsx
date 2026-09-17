@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { copyText } from '@/lib/clipboard'
 import {
   Dialog,
   DialogContent,
@@ -94,15 +95,17 @@ export function AddProviderDialog({
 
   const copyToClipboard = async (fieldName: string, value: string) => {
     if (!value) return
-    try {
-      await navigator.clipboard.writeText(value)
-      setCopiedFields((prev) => ({ ...prev, [fieldName]: true }))
-      setTimeout(() => {
-        setCopiedFields((prev) => ({ ...prev, [fieldName]: false }))
-      }, 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+
+    const ok = await copyText(value)
+    if (!ok) {
+      console.error('Failed to copy to clipboard')
+      return
     }
+
+    setCopiedFields((prev) => ({ ...prev, [fieldName]: true }))
+    setTimeout(() => {
+      setCopiedFields((prev) => ({ ...prev, [fieldName]: false }))
+    }, 2000)
   }
 
   const providers = builtinProviders

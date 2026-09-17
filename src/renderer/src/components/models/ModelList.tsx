@@ -22,6 +22,7 @@ import {
 import { useProvidersStore } from '@/stores/providersStore'
 import { useProxyStore } from '@/stores/proxyStore'
 import { useToast } from '@/hooks/use-toast'
+import { copyText } from '@/lib/clipboard'
 import {
   Search,
   Copy,
@@ -298,7 +299,8 @@ export function ModelList() {
     const text = selectedModelNames.join(',')
 
     try {
-      await navigator.clipboard.writeText(text)
+      const ok = await copyText(text)
+      if (!ok) throw new Error('Copy failed')
       toast({
         title: t('models.copySuccess'),
         description: t('models.copySuccessDesc', { count: selectedModelNames.length }),
@@ -326,7 +328,8 @@ export function ModelList() {
     const text = filteredModels.map((m) => m.name).join(',')
 
     try {
-      await navigator.clipboard.writeText(text)
+      const ok = await copyText(text)
+      if (!ok) throw new Error('Copy failed')
       toast({
         title: t('models.copySuccess'),
         description: t('models.copySuccessDesc', { count: filteredModels.length }),

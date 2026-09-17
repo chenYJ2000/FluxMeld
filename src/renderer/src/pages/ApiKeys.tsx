@@ -25,6 +25,7 @@ import {
 import { Key, Plus, Copy, Trash2, Eye, EyeOff, Shield, Clock, BarChart3 } from 'lucide-react'
 import { toast } from '@/hooks/use-toast'
 import { useSettingsStore } from '@/stores/settingsStore'
+import { copyText } from '@/lib/clipboard'
 import type { ApiKey } from '@/types/electron'
 
 function generateApiKey(): string {
@@ -99,12 +100,20 @@ export default function ApiKeysPage() {
     })
   }
 
-  const handleCopyKey = (key: string) => {
-    navigator.clipboard.writeText(key)
-    toast({
-      title: t('apiKeys.copied'),
-      description: t('apiKeys.copiedToClipboard'),
-    })
+  const handleCopyKey = async (key: string) => {
+    const ok = await copyText(key)
+    if (ok) {
+      toast({
+        title: t('apiKeys.copied'),
+        description: t('apiKeys.copiedToClipboard'),
+      })
+    } else {
+      toast({
+        title: t('common.error'),
+        description: t('apiKeys.copyFailed'),
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleToggleVisibility = (keyId: string) => {

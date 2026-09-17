@@ -19,6 +19,7 @@ import {
   ArrowUpRight,
   KeyRound,
 } from 'lucide-react'
+import { copyText } from '@/lib/clipboard'
 
 interface RequestLogEntry {
   id: string
@@ -64,12 +65,12 @@ function CopyButton({ text, className = '' }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(text)
+    const ok = await copyText(text)
+    if (ok) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
+    } else {
+      console.error('Failed to copy to clipboard')
     }
   }
 
