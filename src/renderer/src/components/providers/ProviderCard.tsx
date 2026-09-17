@@ -108,6 +108,11 @@ export function ProviderCard({
                   {t('providers.builtin')}
                 </Badge>
               )}
+              {provider.ui?.variant === 'openai' && (
+                <Badge variant="outline" className="text-xs">
+                  {t('providers.openaiCompatible')}
+                </Badge>
+              )}
             </CardTitle>
             <CardDescription className="text-xs mt-1">
               {getProviderDescription() ||
@@ -145,13 +150,11 @@ export function ProviderCard({
                 <RefreshCw className="mr-2 h-4 w-4" />
                 {t('providers.checkStatus')}
               </DropdownMenuItem>
-              {isBuiltin && (
-                <DropdownMenuItem onClick={() => onManageModels?.(provider.id)}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  {t('providers.manageModels')}
-                </DropdownMenuItem>
-              )}
-              {isBuiltin && (provider as any).modelsApiEndpoint && (
+              <DropdownMenuItem onClick={() => onManageModels?.(provider.id)}>
+                <Settings className="mr-2 h-4 w-4" />
+                {t('providers.manageModels')}
+              </DropdownMenuItem>
+              {((isBuiltin && (provider as any).modelsApiEndpoint) || !isBuiltin) && (
                 <DropdownMenuItem onClick={() => onUpdateModels?.(provider.id)}>
                   <Download className="mr-2 h-4 w-4" />
                   {t('providers.updateModels')}

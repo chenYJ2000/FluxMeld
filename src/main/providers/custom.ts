@@ -1,5 +1,5 @@
 import { storeManager } from '../store/store'
-import type { Provider, AuthType } from '../../shared/types'
+import type { Provider, AuthType, ProviderUiMeta } from '../../shared/types'
 import type { CredentialField } from '../store/types'
 
 export interface CustomProviderData {
@@ -8,11 +8,13 @@ export interface CustomProviderData {
   type?: 'builtin' | 'custom'
   authType: AuthType
   apiEndpoint: string
+  chatPath?: string
   headers?: Record<string, string>
   description?: string
   icon?: string
   supportedModels?: string[]
   credentialFields?: CredentialField[]
+  ui?: ProviderUiMeta
 }
 
 export interface CustomProviderValidation {
@@ -175,6 +177,7 @@ export class CustomProviderManager {
       type: data.type || 'custom',
       authType: data.authType,
       apiEndpoint: data.apiEndpoint.trim(),
+      chatPath: data.chatPath?.trim() || undefined,
       headers: data.headers || {},
       enabled: true,
       createdAt: now,
@@ -183,6 +186,7 @@ export class CustomProviderManager {
       icon: data.icon?.trim(),
       supportedModels: data.supportedModels || [],
       credentialFields: data.credentialFields,
+      ui: data.ui,
     }
 
     storeManager.addProvider(provider)
@@ -283,10 +287,13 @@ export class CustomProviderManager {
       name,
       authType: existing.authType,
       apiEndpoint: existing.apiEndpoint,
+      chatPath: existing.chatPath,
       headers: { ...existing.headers },
       description: existing.description,
       icon: existing.icon,
       supportedModels: existing.supportedModels ? [...existing.supportedModels] : [],
+      credentialFields: existing.credentialFields ? [...existing.credentialFields] : undefined,
+      ui: existing.ui ? { ...existing.ui } : undefined,
     })
   }
 
@@ -301,10 +308,13 @@ export class CustomProviderManager {
       name: provider.name,
       authType: provider.authType,
       apiEndpoint: provider.apiEndpoint,
+      chatPath: provider.chatPath,
       headers: provider.headers,
       description: provider.description,
       icon: provider.icon,
       supportedModels: provider.supportedModels,
+      credentialFields: provider.credentialFields,
+      ui: provider.ui,
     }
 
     return JSON.stringify(exportData, null, 2)

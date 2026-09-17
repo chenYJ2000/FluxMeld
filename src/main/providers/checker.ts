@@ -1,12 +1,50 @@
 import axios, { AxiosError } from 'axios'
 import { getBuiltinProvider } from './builtin'
 import { getProviderModule } from './registry'
+import { storeManager } from '../store/store'
 import type { Provider, ProviderCheckResult, Account } from '../../shared/types'
 import type { BuiltinProviderConfig, TokenCheckResult } from './types'
 
 const CHECK_TIMEOUT = 15000
 
 export type { TokenCheckResult } from './types'
+
+/**
+ * Build request headers that authenticate a custom provider request with a
+ * stored account credential. Custom providers are OpenAI-compatible, so the
+ * credential is sent as a bearer token; a static provider header can still opt
+ * into a different scheme.
+ */
+export function buildCustomAuthHeaders(
+  provider: Provider,
+  account?: Account,
+): Record<string, string> {
+  const headers: Record<string, string> = { ...provider.headers }
+  const credentials = account?.credentials ?? {}
+
+  const token = credentials.apiKey || credentials.token || credentials.accessToken
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
+  if (credentials.cookie) {
+    headers['Cookie'] = credentials.cookie
+  }
+
+  return headers
+}
+
+/** First enabled, active account for a provider (holds credentials). */
+export function getFirstActiveAccount(providerId: string): Account | undefined {
+  return storeManager
+    .getAccountsByProviderId(providerId, true)
+    .find((account) => account.status === 'active' && account.enabled !== false)
+}
+
+/** OpenAI-compatible models endpoint for a custom provider. */
+export function getCustomModelsEndpoint(provider: Provider): string {
+  return `${provider.apiEndpoint.replace(/\/+$/, '')}/models`
+}
 
 export class ProviderChecker {
   static async checkProviderStatus(provider: Provider): Promise<ProviderCheckResult> {
@@ -75,17 +113,18 @@ export class ProviderChecker {
     const startTime = Date.now()
 
     try {
+      const account = getFirstActiveAccount(provider.id)
       const response = await axios({
         method: 'GET',
-        url: `${provider.apiEndpoint}/models`,
-        headers: provider.headers,
+        url: getCustomModelsEndpoint(provider),
+        headers: buildCustomAuthHeaders(provider, account),
         timeout: CHECK_TIMEOUT,
         validateStatus: () => true,
       })
 
       const latency = Date.now() - startTime
 
-      if (response.status >= 200 && response.status < 500) {
+      if (response.status >= 200 && response.status < 300) {
         return {
           providerId: provider.id,
           status: 'online',
@@ -180,21 +219,10 @@ export class ProviderChecker {
     account: Account,
   ): Promise<TokenCheckResult> {
     try {
-      const headers: Record<string, string> = {
-        ...provider.headers,
-      }
-
-      const credentials = account.credentials
-      if (credentials.token) {
-        headers['Authorization'] = `Bearer ${credentials.token}`
-      } else if (credentials.apiKey) {
-        headers['Authorization'] = `Bearer ${credentials.apiKey}`
-      }
-
       const response = await axios({
         method: 'GET',
-        url: `${provider.apiEndpoint}/models`,
-        headers,
+        url: getCustomModelsEndpoint(provider),
+        headers: buildCustomAuthHeaders(provider, account),
         timeout: CHECK_TIMEOUT,
         validateStatus: () => true,
       })

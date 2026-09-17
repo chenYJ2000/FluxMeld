@@ -818,55 +818,41 @@ export class RequestForwarder {
 
   /**
    * Build Request Body
+   *
+   * The generic path targets user-defined OpenAI-compatible providers, so the
+   * whole request is forwarded as-is (native `tools`, `tool_choice`,
+   * `response_format`, `seed`, `stream_options`, ...). Only the resolved model
+   * and stream flag are overridden, and FluxMeld-only extension fields are
+   * stripped so they never leak upstream.
    */
   private buildRequestBody(
     request: ChatCompletionRequest,
     actualModel: string,
     account: Account,
   ): any {
-    const body: any = {
+    const {
+      model: _requestedModel,
+      originalModel: _originalModel,
+      session_id: _sessionId,
+      sessionId: _camelCaseSessionId,
+      tool_format: _toolFormat,
+      web_search: _webSearch,
+      web_search_options: _webSearchOptions,
+      reasoningEffort: _reasoningEffort,
+      enable_thinking: _enableThinking,
+      thinking_budget: _thinkingBudget,
+      deep_research: _deepResearch,
+      stream: _stream,
+      ...passthrough
+    } = request as ChatCompletionRequest & Record<string, unknown>
+
+    void account
+
+    return {
+      ...passthrough,
       model: actualModel,
-      messages: request.messages,
       stream: request.stream || false,
     }
-
-    if (request.temperature !== undefined) {
-      body.temperature = request.temperature
-    }
-
-    if (request.top_p !== undefined) {
-      body.top_p = request.top_p
-    }
-
-    if (request.n !== undefined) {
-      body.n = request.n
-    }
-
-    if (request.stop !== undefined) {
-      body.stop = request.stop
-    }
-
-    if (request.max_tokens !== undefined) {
-      body.max_tokens = request.max_tokens
-    }
-
-    if (request.presence_penalty !== undefined) {
-      body.presence_penalty = request.presence_penalty
-    }
-
-    if (request.frequency_penalty !== undefined) {
-      body.frequency_penalty = request.frequency_penalty
-    }
-
-    if (request.logit_bias !== undefined) {
-      body.logit_bias = request.logit_bias
-    }
-
-    if (request.user !== undefined) {
-      body.user = request.user
-    }
-
-    return body
   }
 
   /**

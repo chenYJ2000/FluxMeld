@@ -1,6 +1,9 @@
 /**
- * Custom Provider Form Component
- * Create and edit custom API providers
+ * OpenAI-Compatible Provider Form
+ *
+ * Creates and edits providers that expose a direct OpenAI-compatible API
+ * (`/v1/chat/completions` + bearer API key). Web-session style custom
+ * providers are handled by `CustomProviderForm`.
  */
 
 import { useEffect, useState } from 'react'
@@ -18,107 +21,58 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Plus, X, HelpCircle } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import type { AuthType, CredentialField } from '@/types/electron'
+import type { CredentialField, OpenAIProviderFormData } from '@/types/electron'
 
-interface CustomProviderFormProps {
+interface OpenAIProviderFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (data: CustomProviderFormData) => void
-  initialData?: Partial<CustomProviderFormData>
+  onSubmit: (data: OpenAIProviderFormData) => void
+  initialData?: Partial<OpenAIProviderFormData>
 }
 
-export interface CustomProviderFormData {
-  name: string
-  authType: AuthType
-  apiEndpoint: string
-  headers: Record<string, string>
-  description: string
-  supportedModels: string[]
-  credentialFields: CredentialField[]
+const API_KEY_FIELD: CredentialField = {
+  name: 'apiKey',
+  label: 'API Key',
+  type: 'password',
+  required: true,
+  placeholder: 'sk-...',
 }
 
-export function CustomProviderForm({
+function createDefaultData(
+  initialData?: Partial<OpenAIProviderFormData>,
+): OpenAIProviderFormData {
+  return {
+    name: initialData?.name || '',
+    apiEndpoint: initialData?.apiEndpoint || '',
+    chatPath: initialData?.chatPath || '',
+    headers: initialData?.headers || { 'Content-Type': 'application/json' },
+    description: initialData?.description || '',
+    supportedModels: initialData?.supportedModels || [],
+    credentialFields: initialData?.credentialFields?.length
+      ? initialData.credentialFields
+      : [API_KEY_FIELD],
+    ui: initialData?.ui || { variant: 'openai' },
+  }
+}
+
+export function OpenAIProviderForm({
   open,
   onOpenChange,
   onSubmit,
   initialData,
-}: CustomProviderFormProps) {
+}: OpenAIProviderFormProps) {
   const { t } = useTranslation()
 
-  const authTypeOptions: { value: AuthType; labelKey: string; descKey: string }[] = [
-    { value: 'token', labelKey: 'providers.authToken', descKey: 'providers.authTokenDesc' },
-    {
-      value: 'userToken',
-      labelKey: 'providers.authUserToken',
-      descKey: 'providers.authUserTokenDesc',
-    },
-    {
-      value: 'refresh_token',
-      labelKey: 'providers.authRefreshToken',
-      descKey: 'providers.authRefreshTokenDesc',
-    },
-    { value: 'jwt', labelKey: 'providers.authJwt', descKey: 'providers.authJwtDesc' },
-    {
-      value: 'realUserID_token',
-      labelKey: 'providers.authUserIdToken',
-      descKey: 'providers.authUserIdTokenDesc',
-    },
-    { value: 'tongyi_sso_ticket', labelKey: 'providers.authSso', descKey: 'providers.authSsoDesc' },
-    { value: 'cookie', labelKey: 'providers.authCookie', descKey: 'providers.authCookieDesc' },
-    { value: 'oauth', labelKey: 'providers.authOAuth', descKey: 'providers.authOAuthDesc' },
-  ]
-
-  const defaultCredentialFields: Record<AuthType, CredentialField[]> = {
-    token: [{ name: 'apiKey', label: 'API Key', type: 'password', required: true }],
-    userToken: [
-      { name: 'token', label: t('deepseek.userToken'), type: 'password', required: true },
-    ],
-    refresh_token: [
-      { name: 'refresh_token', label: t('glm.refreshToken'), type: 'password', required: true },
-    ],
-    jwt: [{ name: 'token', label: 'JWT Token', type: 'password', required: true }],
-    realUserID_token: [
-      { name: 'realUserID', label: t('minimax.userId'), type: 'text', required: true },
-      { name: 'token', label: t('minimax.jwtToken'), type: 'password', required: true },
-    ],
-    tongyi_sso_ticket: [
-      { name: 'ticket', label: t('qwen.ssoTicket'), type: 'password', required: true },
-    ],
-    cookie: [{ name: 'cookie', label: 'Cookie', type: 'textarea', required: true }],
-    oauth: [],
-  }
-
-  const createDefaultData = (initial?: Partial<CustomProviderFormData>): CustomProviderFormData => ({
-    name: initial?.name || '',
-    authType: initial?.authType || 'token',
-    apiEndpoint: initial?.apiEndpoint || '',
-    headers: initial?.headers || { 'Content-Type': 'application/json' },
-    description: initial?.description || '',
-    supportedModels: initial?.supportedModels || [],
-    credentialFields: initial?.credentialFields?.length
-      ? initial.credentialFields
-      : defaultCredentialFields[initial?.authType || 'token'],
-  })
-
-  const [formData, setFormData] = useState<CustomProviderFormData>(() =>
-    createDefaultData(initialData),
-  )
-
+  const [formData, setFormData] = useState<OpenAIProviderFormData>(() => createDefaultData(initialData))
   const [newModel, setNewModel] = useState('')
   const [newHeaderKey, setNewHeaderKey] = useState('')
   const [newHeaderValue, setNewHeaderValue] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // Re-sync whenever the dialog opens or the target provider changes.
+  // Re-sync whenever the dialog opens or the target provider changes so that
+  // switching between create and edit never shows stale values.
   useEffect(() => {
     if (open) {
       setFormData(createDefaultData(initialData))
@@ -127,23 +81,12 @@ export function CustomProviderForm({
       setNewHeaderValue('')
       setErrors({})
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialData])
 
-  const handleAuthTypeChange = (authType: AuthType) => {
-    setFormData({
-      ...formData,
-      authType,
-      credentialFields: defaultCredentialFields[authType],
-    })
-  }
-
   const handleAddModel = () => {
-    if (newModel.trim() && !formData.supportedModels.includes(newModel.trim())) {
-      setFormData({
-        ...formData,
-        supportedModels: [...formData.supportedModels, newModel.trim()],
-      })
+    const model = newModel.trim()
+    if (model && !formData.supportedModels.includes(model)) {
+      setFormData({ ...formData, supportedModels: [...formData.supportedModels, model] })
       setNewModel('')
     }
   }
@@ -170,7 +113,8 @@ export function CustomProviderForm({
   }
 
   const handleRemoveHeader = (key: string) => {
-    const { [key]: _, ...rest } = formData.headers
+    const { [key]: _removed, ...rest } = formData.headers
+    void _removed
     setFormData({ ...formData, headers: rest })
   }
 
@@ -185,7 +129,10 @@ export function CustomProviderForm({
       newErrors.apiEndpoint = t('providers.apiEndpointRequired')
     } else {
       try {
-        new URL(formData.apiEndpoint)
+        const url = new URL(formData.apiEndpoint)
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          newErrors.apiEndpoint = t('providers.apiEndpointInvalid')
+        }
       } catch {
         newErrors.apiEndpoint = t('providers.apiEndpointInvalid')
       }
@@ -196,10 +143,16 @@ export function CustomProviderForm({
   }
 
   const handleSubmit = () => {
-    if (validate()) {
-      onSubmit(formData)
-      onOpenChange(false)
-    }
+    if (!validate()) return
+
+    onSubmit({
+      ...formData,
+      name: formData.name.trim(),
+      apiEndpoint: formData.apiEndpoint.trim(),
+      chatPath: formData.chatPath?.trim() || undefined,
+      ui: { ...formData.ui, variant: 'openai' },
+    })
+    onOpenChange(false)
   }
 
   return (
@@ -207,67 +160,58 @@ export function CustomProviderForm({
       <DialogContent className="sm:max-w-[700px]">
         <DialogHeader>
           <DialogTitle>
-            {initialData ? t('providers.editProvider') : t('providers.createCustomProvider')}
+            {initialData ? t('providers.editProvider') : t('providers.createOpenAIProvider')}
           </DialogTitle>
-          <DialogDescription>{t('providers.createCustomProviderDesc')}</DialogDescription>
+          <DialogDescription>{t('providers.createOpenAIProviderDesc')}</DialogDescription>
         </DialogHeader>
 
         <div className="h-[500px] overflow-y-auto pr-2">
           <div className="space-y-6 py-4 px-1">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">
+                <Label htmlFor="openai-name">
                   {t('providers.providerName')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="name"
+                  id="openai-name"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="e.g., My API Provider"
+                  placeholder={t('providers.openaiProviderNamePlaceholder')}
                 />
                 {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="authType">
-                  {t('providers.authType')} <span className="text-destructive">*</span>
-                </Label>
-                <Select value={formData.authType} onValueChange={handleAuthTypeChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {authTypeOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        <div className="flex flex-col">
-                          <span>{t(option.labelKey)}</span>
-                          <span className="text-xs text-muted-foreground">{t(option.descKey)}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="apiEndpoint">
-                  {t('providers.apiEndpoint')} <span className="text-destructive">*</span>
+                <Label htmlFor="openai-endpoint">
+                  {t('providers.baseUrl')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="apiEndpoint"
+                  id="openai-endpoint"
                   value={formData.apiEndpoint}
                   onChange={(e) => setFormData({ ...formData, apiEndpoint: e.target.value })}
-                  placeholder="https://api.example.com/v1"
+                  placeholder="https://api.openai.com/v1"
                 />
+                <p className="text-xs text-muted-foreground">{t('providers.baseUrlHelp')}</p>
                 {errors.apiEndpoint && (
                   <p className="text-xs text-destructive">{errors.apiEndpoint}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">{t('providers.description')}</Label>
+                <Label htmlFor="openai-chat-path">{t('providers.chatPath')}</Label>
+                <Input
+                  id="openai-chat-path"
+                  value={formData.chatPath || ''}
+                  onChange={(e) => setFormData({ ...formData, chatPath: e.target.value })}
+                  placeholder="/chat/completions"
+                />
+                <p className="text-xs text-muted-foreground">{t('providers.chatPathHelp')}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="openai-description">{t('providers.description')}</Label>
                 <Textarea
-                  id="description"
+                  id="openai-description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder={t('providers.descriptionPlaceholder')}
@@ -346,30 +290,11 @@ export function CustomProviderForm({
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>{t('providers.credentialFields')}</Label>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('providers.credentialFieldsHelp')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className="space-y-2 p-3 rounded bg-muted/50">
-                {formData.credentialFields.map((field) => (
-                  <div key={field.name} className="flex items-center gap-2 text-sm">
-                    <Badge variant="outline">{field.name}</Badge>
-                    <span className="text-muted-foreground">{field.label}</span>
-                    <span className="text-muted-foreground">({field.type})</span>
-                    {field.required && <Badge variant="secondary">{t('providers.required')}</Badge>}
-                  </div>
-                ))}
-              </div>
+            <div className="space-y-2 rounded bg-muted/50 p-3">
+              <Label>{t('providers.credentialFields')}</Label>
+              <p className="text-xs text-muted-foreground">
+                {t('providers.openaiCredentialHint')}
+              </p>
             </div>
           </div>
         </div>
@@ -379,7 +304,7 @@ export function CustomProviderForm({
             {t('common.cancel')}
           </Button>
           <Button onClick={handleSubmit}>
-            {initialData ? t('providers.saveChanges') : t('providers.createCustomProvider')}
+            {initialData ? t('providers.saveChanges') : t('providers.createOpenAIProvider')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -387,4 +312,4 @@ export function CustomProviderForm({
   )
 }
 
-export default CustomProviderForm
+export default OpenAIProviderForm

@@ -11,6 +11,7 @@ import {
   ProviderCard,
   AddProviderDialog,
   CustomProviderForm,
+  OpenAIProviderForm,
   AccountList,
   AddAccountDialog,
   AccountDetail,
@@ -22,6 +23,7 @@ import type {
   ProviderStatus,
   BuiltinProviderConfig,
   CustomProviderFormData,
+  OpenAIProviderFormData,
   Account,
 } from '@/types/electron'
 import { FilterType, StatusFilter } from '@/components/providers/ProviderFilter'
@@ -45,6 +47,7 @@ export function Providers() {
 
   const [showAddProviderDialog, setShowAddProviderDialog] = useState(false)
   const [showCustomProviderForm, setShowCustomProviderForm] = useState(false)
+  const [showOpenAIProviderForm, setShowOpenAIProviderForm] = useState(false)
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
 
   const [showAddAccountDialog, setShowAddAccountDialog] = useState(false)
@@ -164,7 +167,11 @@ export function Providers() {
     const provider = store.providers.find((p) => p.id === id)
     if (provider) {
       setEditingProvider(provider)
-      setShowCustomProviderForm(true)
+      if (provider.ui?.variant === 'openai') {
+        setShowOpenAIProviderForm(true)
+      } else {
+        setShowCustomProviderForm(true)
+      }
     }
   }
 
@@ -341,7 +348,14 @@ export function Providers() {
 
   const handleCreateCustomProvider = () => {
     setShowAddProviderDialog(false)
+    setEditingProvider(null)
     setShowCustomProviderForm(true)
+  }
+
+  const handleCreateOpenAIProvider = () => {
+    setShowAddProviderDialog(false)
+    setEditingProvider(null)
+    setShowOpenAIProviderForm(true)
   }
 
   const handleCustomProviderFormSubmit = async (data: CustomProviderFormData) => {
@@ -354,6 +368,7 @@ export function Providers() {
           headers: data.headers,
           description: data.description,
           supportedModels: data.supportedModels,
+          credentialFields: data.credentialFields,
         })
         if (updated) {
           store.updateProvider(editingProvider.id, updated)
@@ -379,6 +394,49 @@ export function Providers() {
         })
       }
       setShowCustomProviderForm(false)
+      setEditingProvider(null)
+    } catch (error) {
+      toast({
+        title: editingProvider ? t('providers.updateFailed') : t('providers.createFailed'),
+        description: error instanceof Error ? error.message : t('providers.operationFailed'),
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleOpenAIProviderFormSubmit = async (data: OpenAIProviderFormData) => {
+    try {
+      const ui = { ...data.ui, variant: 'openai' as const }
+      const payload = {
+        name: data.name,
+        authType: 'token' as const,
+        apiEndpoint: data.apiEndpoint,
+        chatPath: data.chatPath,
+        headers: data.headers,
+        description: data.description,
+        supportedModels: data.supportedModels,
+        credentialFields: data.credentialFields,
+        ui,
+      }
+
+      if (editingProvider) {
+        const updated = await window.electronAPI.providers.update(editingProvider.id, payload)
+        if (updated) {
+          store.updateProvider(editingProvider.id, updated)
+          toast({
+            title: t('providers.updateSuccess'),
+            description: t('providers.providerConfigUpdated'),
+          })
+        }
+      } else {
+        const newProvider = await window.electronAPI.providers.add(payload)
+        store.addProvider(newProvider)
+        toast({
+          title: t('providers.createSuccess'),
+          description: t('providers.openaiProviderCreated'),
+        })
+      }
+      setShowOpenAIProviderForm(false)
       setEditingProvider(null)
     } catch (error) {
       toast({
@@ -835,6 +893,7 @@ export function Providers() {
         builtinProviders={store.builtinProviders}
         onSelectBuiltin={handleSelectBuiltinProvider}
         onCreateCustom={handleCreateCustomProvider}
+        onCreateOpenAI={handleCreateOpenAIProvider}
         onValidateToken={handleValidateToken}
       />
 
@@ -854,6 +913,30 @@ export function Providers() {
                 headers: editingProvider.headers,
                 description: editingProvider.description || '',
                 supportedModels: editingProvider.supportedModels || [],
+                credentialFields: editingProvider.credentialFields,
+              }
+            : undefined
+        }
+      />
+
+      <OpenAIProviderForm
+        open={showOpenAIProviderForm}
+        onOpenChange={(open) => {
+          setShowOpenAIProviderForm(open)
+          if (!open) setEditingProvider(null)
+        }}
+        onSubmit={handleOpenAIProviderFormSubmit}
+        initialData={
+          editingProvider
+            ? {
+                name: editingProvider.name,
+                apiEndpoint: editingProvider.apiEndpoint,
+                chatPath: editingProvider.chatPath,
+                headers: editingProvider.headers,
+                description: editingProvider.description || '',
+                supportedModels: editingProvider.supportedModels || [],
+                credentialFields: editingProvider.credentialFields,
+                ui: editingProvider.ui,
               }
             : undefined
         }

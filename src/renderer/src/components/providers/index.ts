@@ -1,6 +1,7 @@
 export { ProviderCard } from './ProviderCard'
 export { AddProviderDialog } from './AddProviderDialog'
 export { CustomProviderForm } from './CustomProviderForm'
+export { OpenAIProviderForm } from './OpenAIProviderForm'
 export { AccountList } from './AccountList'
 export { AddAccountDialog } from './AddAccountDialog'
 export { AccountDetail } from './AccountDetail'

@@ -25,6 +25,7 @@ import type {
   EgressSourceConfig,
   ValidationResult,
   AccountImportResult,
+  ProviderUiMeta,
 } from './types'
 
 export interface ClientTransport {
@@ -430,10 +431,12 @@ export function createClientApi(
       name: string
       authType: AuthType
       apiEndpoint: string
+      chatPath?: string
       headers?: Record<string, string>
       description?: string
       supportedModels?: string[]
       credentialFields?: CredentialField[]
+      ui?: ProviderUiMeta
     }): Promise<Provider> => transport.invoke('providers:add', data),
     update: (id: string, updates: Partial<Provider>): Promise<Provider | null> =>
       transport.invoke('providers:update', id, updates),

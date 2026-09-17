@@ -39,6 +39,7 @@ interface AddProviderDialogProps {
   builtinProviders: BuiltinProviderConfig[]
   onSelectBuiltin: (provider: BuiltinProviderConfig, credentials: Record<string, string>) => void
   onCreateCustom: () => void
+  onCreateOpenAI: () => void
   onValidateToken?: (
     providerId: string,
     credentials: Record<string, string>,
@@ -60,6 +61,7 @@ export function AddProviderDialog({
   builtinProviders,
   onSelectBuiltin,
   onCreateCustom,
+  onCreateOpenAI,
   onValidateToken,
 }: AddProviderDialogProps) {
   const { t } = useTranslation()
@@ -322,6 +324,12 @@ export function AddProviderDialog({
     setSearchQuery('')
   }
 
+  const handleCreateOpenAI = () => {
+    onCreateOpenAI()
+    setSelectedProvider(null)
+    setSearchQuery('')
+  }
+
   const handleNextStep = () => {
     if (selectedProvider) {
       setStep(2)
@@ -558,14 +566,10 @@ export function AddProviderDialog({
 
   const renderStep1 = () => (
     <Tabs defaultValue="builtin" className="mt-4">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="builtin">{t('providers.builtinProviders')}</TabsTrigger>
-        <TabsTrigger value="custom" disabled className="gap-1">
-          {t('providers.customProviders')}
-          <span className="text-[10px] text-muted-foreground">
-            ({t('providers.customProviderNotSupported')})
-          </span>
-        </TabsTrigger>
+        <TabsTrigger value="custom">{t('providers.customProviders')}</TabsTrigger>
+        <TabsTrigger value="openai">{t('providers.openaiCompatible')}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="builtin" className="mt-4">
@@ -672,6 +676,24 @@ export function AddProviderDialog({
             </p>
           </div>
           <Button onClick={handleCreateCustom}>
+            {t('providers.startCreating')}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="openai" className="mt-4">
+        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <Plus className="h-8 w-8 text-primary" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-medium">{t('providers.createOpenAIProvider')}</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('providers.createOpenAIProviderDesc')}
+            </p>
+          </div>
+          <Button onClick={handleCreateOpenAI}>
             {t('providers.startCreating')}
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>

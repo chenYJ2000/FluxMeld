@@ -58,6 +58,12 @@ export interface ProviderUiMeta {
   i18nPrefix?: string
   /** Optional i18n key for a provider-specific notice shown in the card */
   noticeKey?: string
+  /**
+   * Discriminates custom provider flavors so the renderer routes to the right
+   * edit form. `openai` = direct OpenAI-compatible API endpoint, `web` =
+   * web-session style custom provider. Absent on built-in providers.
+   */
+  variant?: 'openai' | 'web'
 }
 
 export type LoadBalanceStrategy =

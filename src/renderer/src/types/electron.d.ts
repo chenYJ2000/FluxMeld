@@ -24,6 +24,7 @@ import type {
   EffectiveModel,
   ValidationResult,
   AccountImportResult,
+  ProviderUiMeta,
 } from '../../../shared/types'
 
 export type { 
@@ -51,6 +52,7 @@ export type {
   LegacyToolPromptConfig,
   EffectiveModel,
   ValidationResult,
+  ProviderUiMeta,
 }
 
 export interface CustomProviderFormData {
@@ -61,6 +63,17 @@ export interface CustomProviderFormData {
   description: string
   supportedModels: string[]
   credentialFields: CredentialField[]
+}
+
+export interface OpenAIProviderFormData {
+  name: string
+  apiEndpoint: string
+  chatPath?: string
+  headers: Record<string, string>
+  description: string
+  supportedModels: string[]
+  credentialFields: CredentialField[]
+  ui?: ProviderUiMeta
 }
 
 export interface BuiltinProviderConfig extends Provider {
@@ -224,10 +237,12 @@ interface ProvidersAPI {
     type?: 'builtin' | 'custom'
     authType: AuthType
     apiEndpoint: string
+    chatPath?: string
     headers?: Record<string, string>
     description?: string
     supportedModels?: string[]
     credentialFields?: CredentialField[]
+    ui?: ProviderUiMeta
   }) => Promise<Provider>
   update: (id: string, updates: Partial<Provider>) => Promise<Provider | null>
   delete: (id: string) => Promise<boolean>

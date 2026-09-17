@@ -4,7 +4,11 @@ import { IpcChannels } from './channels'
 import { storeManager } from '../store/store'
 import { ProviderManager } from '../store/providers'
 import { AccountManager } from '../store/accounts'
-import { ProviderChecker } from '../providers/checker'
+import {
+  ProviderChecker,
+  buildCustomAuthHeaders,
+  getCustomModelsEndpoint,
+} from '../providers/checker'
 import { CustomProviderManager } from '../providers/custom'
 import { getBuiltinProviders, getBuiltinProvider } from '../providers/builtin'
 import { oauthManager } from '../oauth/manager'
@@ -33,6 +37,7 @@ import type {
   AppConfig,
   ValidationResult,
   AccountImportResult,
+  ProviderUiMeta,
 } from '../../shared/types'
 import type {
   SystemPrompt,
@@ -532,10 +537,12 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         type?: 'builtin' | 'custom'
         authType: AuthType
         apiEndpoint: string
+        chatPath?: string
         headers?: Record<string, string>
         description?: string
         supportedModels?: string[]
         credentialFields?: CredentialField[]
+        ui?: ProviderUiMeta
       },
     ): Promise<Provider> => {
       return CustomProviderManager.create(data)
@@ -669,15 +676,32 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           }
         }
 
+        const accounts = AccountManager.getByProviderId(providerId, true)
+        const activeAccount = accounts.find((a) => a.status === 'active' && a.enabled !== false)
+
         let modelsApiEndpoint: string | undefined
-        let modelsApiHeaders: Record<string, string> | undefined
+        let requestHeaders: Record<string, string> = {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        }
 
         if (provider.type === 'builtin') {
           const builtinConfig = getBuiltinProvider(providerId)
           if (builtinConfig) {
             modelsApiEndpoint = builtinConfig.modelsApiEndpoint
-            modelsApiHeaders = builtinConfig.modelsApiHeaders
+            requestHeaders = { ...requestHeaders, ...builtinConfig.modelsApiHeaders }
           }
+
+          if (activeAccount?.credentials?.token) {
+            requestHeaders['Authorization'] = `Bearer ${activeAccount.credentials.token}`
+          }
+
+          if (activeAccount?.credentials?.cookies) {
+            requestHeaders['Cookie'] = activeAccount.credentials.cookies
+          }
+        } else {
+          modelsApiEndpoint = getCustomModelsEndpoint(provider)
+          requestHeaders = { ...requestHeaders, ...buildCustomAuthHeaders(provider, activeAccount) }
         }
 
         if (!modelsApiEndpoint) {
@@ -685,23 +709,6 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
             success: false,
             error: 'This provider does not support dynamic model updates',
           }
-        }
-
-        const accounts = AccountManager.getByProviderId(providerId, true)
-        const activeAccount = accounts.find((a) => a.status === 'active' && a.enabled !== false)
-
-        const requestHeaders: Record<string, string> = {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          ...modelsApiHeaders,
-        }
-
-        if (activeAccount?.credentials?.token) {
-          requestHeaders['Authorization'] = `Bearer ${activeAccount.credentials.token}`
-        }
-
-        if (activeAccount?.credentials?.cookies) {
-          requestHeaders['Cookie'] = activeAccount.credentials.cookies
         }
 
         const response = await axios.get(modelsApiEndpoint, {
