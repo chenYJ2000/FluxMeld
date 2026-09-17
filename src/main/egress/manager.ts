@@ -569,6 +569,15 @@ export class EgressManager {
   /** Single-flight on-demand activation shared by all concurrent callers. */
   private activate(): Promise<boolean> {
     if (this.proxyMode && this.globalExit) return Promise.resolve(true)
+    const rotating = this.rotationPromise
+    if (rotating) {
+      // A rotation is in flight: wait for it instead of acquiring a second exit
+      // concurrently, which would orphan one of the leases.
+      return rotating.then(() => {
+        if (this.proxyMode && this.globalExit) return true
+        return this.activate()
+      })
+    }
     if (this.activationPromise) return this.activationPromise
     if (Date.now() < this.cooldownUntil) return Promise.resolve(false)
 
@@ -672,7 +681,12 @@ export class EgressManager {
     }
 
     const gen = this.generation
-    const promise = this.doRotateProxy(gen)
+    // Serialize behind an in-flight activation so the two never acquire a new
+    // global exit concurrently.
+    const activation = this.activationPromise
+    const promise = activation
+      ? activation.then(() => this.doRotateProxy(gen))
+      : this.doRotateProxy(gen)
     this.rotationPromise = promise
     void promise.finally(() => {
       if (this.rotationPromise === promise) this.rotationPromise = null
@@ -787,6 +801,13 @@ export class EgressManager {
     const existing = this.groupExits.get(groupId)
     if (existing) return Promise.resolve(existing)
 
+    const rotating = this.groupRotatePromises.get(groupId)
+    if (rotating) {
+      // Serialize behind an in-flight rotation instead of acquiring a second
+      // exit for the same group.
+      return rotating.then(() => this.ensureGroupExit(groupId))
+    }
+
     const pending = this.groupEnsurePromises.get(groupId)
     if (pending) return pending
 
@@ -874,6 +895,12 @@ export class EgressManager {
     const settings = this.getSettings()
     const source = this.getActiveSource(settings)
     if (!source) return null
+
+    // Wait out an ensure that started before this rotation, so the two never
+    // acquire concurrently for the same group.
+    const pendingEnsure = this.groupEnsurePromises.get(groupId)
+    if (pendingEnsure) await pendingEnsure
+
     if (this.pool.length === 0) await this.refreshPool(source)
     if (gen !== this.generation) return null
 
