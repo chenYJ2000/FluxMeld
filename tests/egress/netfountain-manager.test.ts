@@ -25,6 +25,7 @@ function rotationWith(overrides: Partial<RotationPolicy> = {}): RotationPolicy {
     verifyBeforeUse: false,
     verifyTimeoutMs: 2000,
     maxExitAttempts: 0,
+    rotateAfterFailures: 2,
     rotateMinIntervalMs: 0,
     cooldownBaseMs: 1000,
     cooldownMaxMs: 30000,

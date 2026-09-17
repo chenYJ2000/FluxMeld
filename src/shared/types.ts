@@ -106,6 +106,8 @@ export interface RotationPolicy {
   verifyTimeoutMs: number
   /** Max candidate exits tried per activation/rotation. */
   maxExitAttempts: number
+  /** Consecutive proxy failures before the exit is rotated (<=1 rotates immediately). */
+  rotateAfterFailures: number
   /** Minimum interval between two rotations (ms). */
   rotateMinIntervalMs: number
   /** First cooldown after an activation failure (ms). */

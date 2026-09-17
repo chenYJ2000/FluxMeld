@@ -20,6 +20,7 @@ interface RotationPolicy {
   verifyBeforeUse: boolean
   verifyTimeoutMs: number
   maxExitAttempts: number
+  rotateAfterFailures: number
   rotateMinIntervalMs: number
   cooldownBaseMs: number
   cooldownMaxMs: number
@@ -39,6 +40,7 @@ export function RotationPolicyConfig() {
         verifyBeforeUse: result.verifyBeforeUse,
         verifyTimeoutMs: result.verifyTimeoutMs,
         maxExitAttempts: result.maxExitAttempts,
+        rotateAfterFailures: result.rotateAfterFailures,
         rotateMinIntervalMs: result.rotateMinIntervalMs,
         cooldownBaseMs: result.cooldownBaseMs,
         cooldownMaxMs: result.cooldownMaxMs,
@@ -74,6 +76,7 @@ export function RotationPolicyConfig() {
       | 'rotateEarlySeconds'
       | 'verifyTimeoutMs'
       | 'maxExitAttempts'
+      | 'rotateAfterFailures'
       | 'rotateMinIntervalMs'
       | 'cooldownBaseMs'
       | 'cooldownMaxMs',
@@ -148,6 +151,12 @@ export function RotationPolicyConfig() {
             'egress.rotation.maxExitAttempts',
             'egress.rotation.maxExitAttemptsHelp',
             0,
+          )}
+          {numberField(
+            'rotateAfterFailures',
+            'egress.rotation.rotateAfterFailures',
+            'egress.rotation.rotateAfterFailuresHelp',
+            1,
           )}
           {numberField(
             'rotateMinIntervalMs',

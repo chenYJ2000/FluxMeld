@@ -118,6 +118,7 @@ const DEFAULT_ROTATION: RotationPolicy = {
   verifyBeforeUse: true,
   verifyTimeoutMs: VERIFY_TIMEOUT_MS,
   maxExitAttempts: 0,
+  rotateAfterFailures: 2,
   rotateMinIntervalMs: MIN_ROTATE_INTERVAL_MS,
   cooldownBaseMs: COOLDOWN_BASE_MS,
   cooldownMaxMs: COOLDOWN_MAX_MS,
@@ -154,6 +155,9 @@ export class EgressManager {
   private abortController: AbortController | null = null
   /** Identity of the currently-cached source (id|sourceId|settings). */
   private activeSourceSignature: string | null = null
+  /** Consecutive proxy-failure counts that defer rotation (global / per group). */
+  private globalFailureCount = 0
+  private readonly groupFailureCounts = new Map<string, number>()
   private consecutiveFailures = 0
   private cooldownUntil = 0
   private lastRotateAt = 0
@@ -194,6 +198,7 @@ export class EgressManager {
     this.groupEnsurePromises.delete(groupId)
     this.groupRotatePromises.delete(groupId)
     this.lastGroupRotateAt.delete(groupId)
+    this.groupFailureCounts.delete(groupId)
   }
 
   private resetRuntime(): void {
@@ -212,6 +217,8 @@ export class EgressManager {
     this.groupExits.clear()
     this.globalExit = null
     this.proxyMode = false
+    this.globalFailureCount = 0
+    this.groupFailureCounts.clear()
     this.allocator.reset()
   }
 
@@ -286,6 +293,8 @@ export class EgressManager {
     this.activeSourceSignature = null
     this.pool = []
     this.groupExits.clear()
+    this.globalFailureCount = 0
+    this.groupFailureCounts.clear()
     this.allocator.reset()
     if (previous) this.disposeSource(previous)
   }
@@ -705,6 +714,7 @@ export class EgressManager {
     this.globalExit = exit
     this.proxyMode = true
     this.lastRotateAt = Date.now()
+    this.globalFailureCount = 0
     this.scheduleExpiryRotation(exit, settings)
     this.log(`Rotated outbound exit to: ${exit.name ?? exit.id}`)
     return exit.name ?? exit.id
@@ -800,6 +810,7 @@ export class EgressManager {
       const leased = await this.acquireUsableExit(source, settings, gen)
       if (gen !== this.generation || !leased) return null
       this.groupExits.set(groupId, leased)
+      this.groupFailureCounts.set(groupId, 0)
       this.log(`Group ${groupId} assigned exit: ${leased.name ?? leased.id}`)
       return leased
     }
@@ -814,6 +825,7 @@ export class EgressManager {
     const exit = await this.scanTable(source, settings, gen)
     if (!exit) return null
     this.groupExits.set(groupId, exit)
+    this.groupFailureCounts.set(groupId, 0)
     this.log(`Group ${groupId} assigned exit: ${exit.name ?? exit.id}`)
     return exit
   }
@@ -877,6 +889,52 @@ export class EgressManager {
     this.lastGroupRotateAt.set(groupId, Date.now())
     this.log(`Rotated exit for group ${groupId} to: ${exit.name ?? exit.id}`)
     return exit.name ?? exit.id
+  }
+
+  // ---------- failure-driven rotation ----------
+
+  private resolveFailureThreshold(): number {
+    return clampInt(this.getSettings().rotation.rotateAfterFailures, 2, 1, 1000)
+  }
+
+  /**
+   * Record a proxy-routable failure for the single global exit. The exit is
+   * rotated only after `rotateAfterFailures` consecutive failures; a success
+   * (`noteRequestSuccess`) resets the counter.
+   */
+  async noteProxyFailure(): Promise<string | null> {
+    const threshold = this.resolveFailureThreshold()
+    this.globalFailureCount += 1
+    if (this.globalFailureCount < threshold) {
+      this.log(`Proxy failure ${this.globalFailureCount}/${threshold}; keeping current exit`)
+      return this.getEgressNodeName()
+    }
+    return this.rotateProxy()
+  }
+
+  /** Same as `noteProxyFailure`, tracked independently for one group. */
+  async noteGroupFailure(groupId: string): Promise<string | null> {
+    const threshold = this.resolveFailureThreshold()
+    const count = (this.groupFailureCounts.get(groupId) ?? 0) + 1
+    this.groupFailureCounts.set(groupId, count)
+    if (count < threshold) {
+      const current = this.groupExits.get(groupId)
+      this.log(`Proxy failure ${count}/${threshold} for group ${groupId}; keeping current exit`)
+      return current ? (current.name ?? current.id) : null
+    }
+    return this.rotateGroup(groupId)
+  }
+
+  /** Reset the consecutive-failure counter after a successful request. */
+  noteRequestSuccess(providerId: string, accountId: string): void {
+    const settings = this.getSettings()
+    if (settings.groupAssignmentEnabled) {
+      const groupId = this.deps?.getProviderAssignment(providerId)?.[accountId]
+      if (!groupId) return
+      this.groupFailureCounts.delete(groupId)
+      return
+    }
+    this.globalFailureCount = 0
   }
 
   // ---------- assignment ----------

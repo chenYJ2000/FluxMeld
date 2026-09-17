@@ -1057,6 +1057,8 @@
       "verifyTimeoutHelp": "After picking an exit, connectivity is verified by requesting https://www.gstatic.com/generate_204 through it; no response within this many milliseconds marks the exit unusable and moves to the next candidate (default 2000).",
       "maxExitAttempts": "Candidate cap",
       "maxExitAttemptsHelp": "Candidate budget for scanning the exit table per activation/rotation. 0 = auto: Clash uses the whole table (policy groups and dead nodes included), config file / IP pool use 10. During the scan: policy groups/DIRECT/REJECT/banners and already-in-use exits consume 1 candidate; dead nodes are skipped without consuming a candidate; a failed live-node test consumes 1 candidate.",
+      "rotateAfterFailures": "Rotate after consecutive failures",
+      "rotateAfterFailuresHelp": "Rotate the exit only after this many consecutive failures; retries before then keep the same exit. 1 rotates on the first failure (default 2). A success resets the counter.",
       "rotateMinInterval": "Min rotation interval (ms)",
       "rotateMinIntervalHelp": "Rotation requests within this interval of the last successful rotation are ignored (the current exit is kept). Rotation is triggered by request failures (HTTP 403/408/409/425/429 or 5xx).",
       "cooldownBase": "Failure cooldown base (ms)",

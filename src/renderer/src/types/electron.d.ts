@@ -159,6 +159,7 @@ interface RotationPolicyInfo {
   verifyBeforeUse: boolean
   verifyTimeoutMs: number
   maxExitAttempts: number
+  rotateAfterFailures: number
   rotateMinIntervalMs: number
   cooldownBaseMs: number
   cooldownMaxMs: number

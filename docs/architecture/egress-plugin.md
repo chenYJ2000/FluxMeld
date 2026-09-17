@@ -138,7 +138,11 @@ tested).
 
 These knobs live on `outboundProxy.rotation` and are editable on the "Rotation
 Policy" page: `verifyTimeoutMs` (2000), `maxExitAttempts` (0 = auto),
-`rotateMinIntervalMs` (3000), `cooldownBaseMs` (1000), `cooldownMaxMs` (30000).
+`rotateAfterFailures` (2), `rotateMinIntervalMs` (3000), `cooldownBaseMs` (1000),
+`cooldownMaxMs` (30000). Failure-driven rotation is deferred until
+`rotateAfterFailures` consecutive failures accumulate for the current exit
+(tracked globally in single-exit mode and per group in group mode); a successful
+request resets the counter, and `1` rotates on the first failure.
 An *activation failure* (which drives the cooldown) is any of: no source
 configured; source probe unavailable; empty exit table; no usable exit found
 within the candidate budget.

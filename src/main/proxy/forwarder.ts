@@ -562,6 +562,11 @@ export class RequestForwarder {
         }
 
         if (result.success) {
+          // A successful request clears the exit's consecutive-failure counter.
+          egressManager.noteRequestSuccess(
+            currentSelection.provider.id,
+            currentSelection.account.id,
+          )
           // Non-streaming requests are finished here; the account lock can be
           // released. For streaming, the lock stays held until the stream
           // completes and the route layer releases it.
@@ -617,10 +622,12 @@ export class RequestForwarder {
           // never silently promoted to a proxy.
           const groupId = egressManager.getAssignedGroupId(providerId, accountId)
           if (groupId) {
-            await egressManager.rotateGroup(groupId)
+            await egressManager.noteGroupFailure(groupId)
           }
         } else if (egressManager.isProxyMode()) {
-          await egressManager.rotateProxy()
+          // Rotation is deferred until `rotateAfterFailures` consecutive
+          // failures have accumulated for the current exit.
+          await egressManager.noteProxyFailure()
         } else {
           await egressManager.ensureProxyForRequest()
         }

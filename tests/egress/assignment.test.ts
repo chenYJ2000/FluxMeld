@@ -19,6 +19,7 @@ function makeDeps(options: {
       verifyBeforeUse: false,
       verifyTimeoutMs: 5000,
       maxExitAttempts: 8,
+      rotateAfterFailures: 2,
       rotateMinIntervalMs: 3000,
       cooldownBaseMs: 1000,
       cooldownMaxMs: 30000,

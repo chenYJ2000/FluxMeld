@@ -1057,6 +1057,8 @@
       "verifyTimeoutHelp": "选择出口后，先通过该出口请求 https://www.gstatic.com/generate_204 验证连通性；超过该毫秒数仍未响应即判定该出口不可用，换下一个候选（默认 2000）。",
       "maxExitAttempts": "候选上限",
       "maxExitAttemptsHelp": "单次激活/轮换扫描节点表的候选预算。0=自动：Clash 使用全部节点表（含策略组与死节点），文件/IP 池使用 10。扫描时：策略组/DIRECT/REJECT/流量横幅与已被占用的出口会消耗 1 个候选；死节点跳过且不消耗候选；活节点测试失败消耗 1 个候选。",
+      "rotateAfterFailures": "连续失败次数后更换",
+      "rotateAfterFailuresHelp": "当前出口连续失败达到该次数后才更换 IP；在此之前重试仍沿用同一出口。1 表示首次失败即更换（默认 2）。任一次请求成功会清零计数。",
       "rotateMinInterval": "轮换最小间隔（毫秒）",
       "rotateMinIntervalHelp": "距上次成功轮换不足该毫秒数时，新的轮换请求会被忽略（继续沿用当前出口）。轮换由请求失败触发（HTTP 403/408/409/425/429 或 5xx）。",
       "cooldownBase": "失败冷却基数（毫秒）",

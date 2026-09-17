@@ -68,6 +68,7 @@ function makeServices(settings: Record<string, unknown> = SETTINGS): EgressServi
       verifyBeforeUse: false,
       verifyTimeoutMs: 2000,
       maxExitAttempts: 0,
+      rotateAfterFailures: 2,
       rotateMinIntervalMs: 3000,
       cooldownBaseMs: 1000,
       cooldownMaxMs: 30000,

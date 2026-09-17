@@ -402,6 +402,14 @@ export class ConfigManager {
         ) {
           errors.push('outboundProxy.rotation.maxExitAttempts must be a non-negative integer')
         }
+
+        if (
+          rotation.rotateAfterFailures !== undefined &&
+          (!Number.isInteger(Number(rotation.rotateAfterFailures)) ||
+            Number(rotation.rotateAfterFailures) < 0)
+        ) {
+          errors.push('outboundProxy.rotation.rotateAfterFailures must be a non-negative integer')
+        }
       }
 
       if (
