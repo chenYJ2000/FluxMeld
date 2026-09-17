@@ -6,6 +6,7 @@ import type {
   ModelMapping,
   AppConfig,
 } from '@/types/electron'
+import { localDateKey } from '../../../shared/date'
 
 export interface ProxyConfig {
   port: number
@@ -139,7 +140,7 @@ export const useProxyStore = create<ProxyState>((set, get) => ({
     }
     try {
       const persistentStats = await window.electronAPI.statistics.get()
-      const today = new Date().toISOString().split('T')[0]
+      const today = localDateKey()
       const todayStats = persistentStats?.dailyStats?.[today] || {
         totalRequests: 0,
         successRequests: 0,

@@ -8,6 +8,7 @@ import type {
   LogEntry,
 } from '@/types/electron'
 import type { ProviderStats, ActivityItem, ChartDataPoint } from '@/components/dashboard'
+import { localDateKey, localDateKeyOffset } from '../../../shared/date'
 
 interface DashboardStats {
   totalRequests: number
@@ -214,7 +215,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const successRate =
         totalRequests > 0 ? Math.round((successRequests / totalRequests) * 100) : 0
 
-      const today = new Date().toISOString().split('T')[0]
+      const today = localDateKey()
       const todayStats = persistentStats?.dailyStats?.[today]
       const avgLatency =
         todayStats && todayStats.successRequests > 0
@@ -226,7 +227,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       const activeAccounts =
         accounts?.filter((a: Account) => a.status === 'active' && a.enabled !== false).length ?? 0
 
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const yesterday = localDateKeyOffset(-1)
 
       const useRequestLogTrends = requestLogTrends && requestLogTrends.length > 0
       const trendData = useRequestLogTrends ? requestLogTrends : trends

@@ -36,6 +36,7 @@ import {
   Coins,
 } from 'lucide-react'
 import type { Account, AccountStatus, Provider } from '@/types/electron'
+import { effectiveTodayUsed } from '../../../../shared/dailyUsage'
 import { cn } from '@/lib/utils'
 
 interface AccountDetailProps {
@@ -151,7 +152,7 @@ export function AccountDetail({
   }
 
   const usagePercent = account.dailyLimit
-    ? Math.min(100, ((account.todayUsed || 0) / account.dailyLimit) * 100)
+    ? Math.min(100, (effectiveTodayUsed(account) / account.dailyLimit) * 100)
     : 0
 
   const handleValidate = async () => {
@@ -192,7 +193,7 @@ export function AccountDetail({
     },
     {
       labelKey: 'providers.usedToday',
-      value: account.todayUsed || 0,
+      value: effectiveTodayUsed(account),
       subtitle: account.dailyLimit
         ? `${t('providers.dailyLimit')}: ${account.dailyLimit}`
         : undefined,
@@ -362,7 +363,7 @@ export function AccountDetail({
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-muted-foreground">{t('providers.usedToday')}</span>
                   <span className="text-sm font-medium">
-                    {account.todayUsed || 0} / {account.dailyLimit}
+                    {effectiveTodayUsed(account)} / {account.dailyLimit}
                   </span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">

@@ -13,6 +13,8 @@ import {
   serializeAccountExport,
 } from '../../shared/accountTransfer'
 import type { AccountImportResult } from '../../shared/types'
+import { localDateKey } from '../../shared/date'
+import { effectiveTodayUsed, incrementTodayUsed } from '../../shared/dailyUsage'
 
 /**
  * Account Manager class
@@ -87,6 +89,7 @@ export class AccountManager {
       updatedAt: now,
       requestCount: 0,
       todayUsed: 0,
+      todayUsedDate: localDateKey(),
       dailyLimit: data.dailyLimit,
       lastStatusCheck: now,
       lastUsed: now,
@@ -264,24 +267,10 @@ export class AccountManager {
     if (account) {
       storeManager.updateAccount(id, {
         requestCount: (account.requestCount || 0) + 1,
-        todayUsed: (account.todayUsed || 0) + 1,
+        ...incrementTodayUsed(account),
         lastUsed: Date.now(),
       })
     }
-  }
-
-  /**
-   * Reset daily usage count
-   * Should be called at midnight
-   */
-  static resetDailyUsage(): void {
-    const accounts = storeManager.getAccounts()
-
-    for (const account of accounts) {
-      storeManager.updateAccount(account.id, { todayUsed: 0 })
-    }
-
-    storeManager.addLog('info', 'Reset daily usage count for all accounts')
   }
 
   /**
@@ -368,7 +357,7 @@ export class AccountManager {
       return false
     }
 
-    if (account.dailyLimit && account.todayUsed && account.todayUsed >= account.dailyLimit) {
+    if (account.dailyLimit && effectiveTodayUsed(account) >= account.dailyLimit) {
       return false
     }
 
@@ -392,7 +381,7 @@ export class AccountManager {
         return false
       }
 
-      if (account.dailyLimit && account.todayUsed && account.todayUsed >= account.dailyLimit) {
+      if (account.dailyLimit && effectiveTodayUsed(account) >= account.dailyLimit) {
         return false
       }
 
@@ -418,8 +407,8 @@ export class AccountManager {
 
     if (strategy === 'fill-first') {
       return available.reduce((prev, curr) => {
-        const prevUsed = prev.todayUsed || 0
-        const currUsed = curr.todayUsed || 0
+        const prevUsed = effectiveTodayUsed(prev)
+        const currUsed = effectiveTodayUsed(curr)
         return currUsed < prevUsed ? curr : prev
       })
     }

@@ -174,6 +174,11 @@ export interface Account {
   requestCount?: number
   dailyLimit?: number
   todayUsed?: number
+  /**
+   * Local `YYYY-MM-DD` date the `todayUsed` counter belongs to. When it does
+   * not match the current local day the counter is treated as 0.
+   */
+  todayUsedDate?: string
 }
 
 export interface Provider {

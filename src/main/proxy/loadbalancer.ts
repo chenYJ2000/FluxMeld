@@ -6,6 +6,7 @@
 import { Account, Provider, LoadBalanceStrategy } from '../store/types'
 import { AccountSelection } from './types'
 import { storeManager } from '../store/store'
+import { effectiveTodayUsed } from '../../shared/dailyUsage'
 
 /**
  * Load Balancer
@@ -238,7 +239,7 @@ export class LoadBalancer {
       return false
     }
 
-    if (account.dailyLimit && account.todayUsed && account.todayUsed >= account.dailyLimit) {
+    if (account.dailyLimit && effectiveTodayUsed(account) >= account.dailyLimit) {
       return false
     }
 
@@ -311,8 +312,8 @@ export class LoadBalancer {
    */
   private selectFillFirst(candidates: AccountSelection[]): AccountSelection {
     return candidates.reduce((best, current) => {
-      const bestUsed = best.account.todayUsed || 0
-      const currentUsed = current.account.todayUsed || 0
+      const bestUsed = effectiveTodayUsed(best.account)
+      const currentUsed = effectiveTodayUsed(current.account)
 
       if (currentUsed < bestUsed) {
         return current
@@ -377,8 +378,8 @@ export class LoadBalancer {
       }
 
       if (currentLastUsed === bestLastUsed) {
-        const bestUsed = best.account.todayUsed || 0
-        const currentUsed = current.account.todayUsed || 0
+        const bestUsed = effectiveTodayUsed(best.account)
+        const currentUsed = effectiveTodayUsed(current.account)
 
         if (currentUsed < bestUsed) {
           return current
@@ -416,8 +417,8 @@ export class LoadBalancer {
       if (currentInFlight < bestInFlight) return current
       if (currentInFlight > bestInFlight) return best
 
-      const bestUsed = best.account.todayUsed || 0
-      const currentUsed = current.account.todayUsed || 0
+      const bestUsed = effectiveTodayUsed(best.account)
+      const currentUsed = effectiveTodayUsed(current.account)
       if (currentUsed < bestUsed) return current
       if (currentUsed > bestUsed) return best
 

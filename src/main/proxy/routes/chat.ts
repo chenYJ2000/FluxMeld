@@ -20,6 +20,7 @@ import { proxyStatusManager } from '../status'
 import { modelMapper } from '../modelMapper'
 import { getModelDeprecation } from '../modelDeprecations'
 import { storeManager } from '../../store/store'
+import { incrementTodayUsed } from '../../../shared/dailyUsage'
 import {
   isAnthropicToolFormat,
   transformResponseToAnthropic,
@@ -526,7 +527,7 @@ router.post('/completions', async (ctx: Context) => {
       storeManager.updateAccount(usedAccount.id, {
         lastUsed: Date.now(),
         requestCount: (latestAccount.requestCount || 0) + 1,
-        todayUsed: (latestAccount.todayUsed || 0) + 1,
+        ...incrementTodayUsed(latestAccount),
       })
     }
 

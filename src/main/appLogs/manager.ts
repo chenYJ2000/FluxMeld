@@ -3,6 +3,7 @@ import { join } from 'node:path'
 
 import type { LogEntry } from '../store/types.ts'
 import type { AppLogFilter, AppLogStats, AppLogTrendPoint } from './types.ts'
+import { localDateKey, localDayStartOffset } from '../../shared/date.ts'
 
 interface AppLogManagerOptions {
   storageDir: string
@@ -165,15 +166,12 @@ export class AppLogManager {
     days: number,
     totalUsesInfo = false,
   ): AppLogTrendPoint[] {
-    const dayMs = 24 * 60 * 60 * 1000
-    const today = new Date().toISOString().split('T')[0]
-    const todayStart = new Date(today).getTime()
     const trends: AppLogTrendPoint[] = []
 
     for (let i = days - 1; i >= 0; i--) {
-      const dayStart = todayStart - i * dayMs
-      const dayEnd = dayStart + dayMs
-      const date = new Date(dayStart).toISOString().split('T')[0]
+      const dayStart = localDayStartOffset(-i)
+      const dayEnd = localDayStartOffset(-i + 1)
+      const date = localDateKey(new Date(dayStart))
       const dayLogs = logs.filter(
         (entry) => entry.timestamp >= dayStart && entry.timestamp < dayEnd,
       )

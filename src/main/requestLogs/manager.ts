@@ -9,6 +9,7 @@ import type {
   RequestLogTrendPoint,
 } from './types.ts'
 import { normalizeRequestLogConfig } from './types.ts'
+import { localDateKey, localDayStart, localDayStartOffset } from '../../shared/date.ts'
 import {
   sanitizeRequestLogEntry,
   sanitizeRequestLogUpdates,
@@ -143,9 +144,8 @@ export class RequestLogManager {
 
   getRequestLogStats(): RequestLogStats {
     this.ensureInitialized()
-    const today = new Date().toISOString().split('T')[0]
-    const todayStart = new Date(today).getTime()
-    const todayEnd = todayStart + 24 * 60 * 60 * 1000
+    const todayStart = localDayStart()
+    const todayEnd = localDayStartOffset(1)
     const todayLogs = this.requestLogs.filter(
       (entry) => entry.timestamp >= todayStart && entry.timestamp < todayEnd,
     )
@@ -162,15 +162,12 @@ export class RequestLogManager {
 
   getRequestLogTrend(days: number = 7): RequestLogTrendPoint[] {
     this.ensureInitialized()
-    const dayMs = 24 * 60 * 60 * 1000
-    const today = new Date().toISOString().split('T')[0]
-    const todayStart = new Date(today).getTime()
     const trends: RequestLogTrendPoint[] = []
 
     for (let i = days - 1; i >= 0; i--) {
-      const dayStart = todayStart - i * dayMs
-      const dayEnd = dayStart + dayMs
-      const date = new Date(dayStart).toISOString().split('T')[0]
+      const dayStart = localDayStartOffset(-i)
+      const dayEnd = localDayStartOffset(-i + 1)
+      const date = localDateKey(new Date(dayStart))
       const dayLogs = this.requestLogs.filter(
         (entry) => entry.timestamp >= dayStart && entry.timestamp < dayEnd,
       )

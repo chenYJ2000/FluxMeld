@@ -43,6 +43,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { Account, AccountStatus, Provider } from '@/types/electron'
+import { effectiveTodayUsed } from '../../../../shared/dailyUsage'
 import { cn } from '@/lib/utils'
 
 interface AccountListProps {
@@ -190,10 +191,11 @@ export function AccountList({
   }
 
   const formatUsage = (account: Account) => {
+    const used = effectiveTodayUsed(account)
     if (account.dailyLimit) {
-      return `${account.todayUsed || 0} / ${account.dailyLimit}`
+      return `${used} / ${account.dailyLimit}`
     }
-    return account.todayUsed || 0
+    return used
   }
 
   if (accounts.length === 0) {

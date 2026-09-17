@@ -43,6 +43,7 @@ import { BUILTIN_PROMPTS } from '../data/builtin-prompts'
 import { RequestLogManager } from '../requestLogs/manager'
 import { normalizeRequestLogConfig } from '../requestLogs/types'
 import { normalizeToolCallingConfig } from '../../shared/toolCalling'
+import { localDateKey, localDateKeyOffset } from '../../shared/date'
 import { AppLogManager } from '../appLogs/manager'
 import type { AppLogFilter } from '../appLogs/types'
 
@@ -194,6 +195,7 @@ export class StoreManager {
       await this.initializeDefaultProviders()
       this.isInitialized = true
       this.initializationError = null
+      this.cleanOldDailyStats()
     } catch (error) {
       console.error('[Store] Failed to initialize storage:', error)
       this.initializationError = error instanceof Error ? error : new Error(String(error))
@@ -1157,7 +1159,7 @@ export class StoreManager {
   ): PersistentStatistics {
     this.ensureInitialized()
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateKey()
 
     const newStats: PersistentStatistics = {
       ...stats,
@@ -1224,7 +1226,7 @@ export class StoreManager {
   getTodayStatistics(): DailyStatistics {
     this.ensureInitialized()
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
-    const today = new Date().toISOString().split('T')[0]
+    const today = localDateKey()
     return (
       stats.dailyStats[today] || {
         date: today,
@@ -1244,8 +1246,7 @@ export class StoreManager {
   cleanOldDailyStats(): void {
     this.ensureInitialized()
     const stats = this.store!.get('statistics') || DEFAULT_STATISTICS
-    const cutoff = Date.now() - 30 * 24 * 60 * 60 * 1000
-    const cutoffDate = new Date(cutoff).toISOString().split('T')[0]
+    const cutoffDate = localDateKeyOffset(-30)
 
     const filteredDailyStats: Record<string, DailyStatistics> = {}
     for (const [date, dayStats] of Object.entries(stats.dailyStats)) {
