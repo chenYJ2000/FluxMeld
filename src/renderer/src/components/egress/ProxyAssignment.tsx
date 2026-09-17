@@ -343,31 +343,29 @@ export function ProxyAssignment() {
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="w-full">
-              <div className="flex gap-4 pb-4">
+            <div className="flex flex-wrap gap-4">
+              <GroupColumn
+                groupId={DIRECT}
+                name={t('egress.assignment.directGroup')}
+                count={countLabel(DIRECT)}
+                accounts={accountsFor(DIRECT)}
+                editable={false}
+                onRename={handleRename}
+                onDelete={handleDeleteGroup}
+              />
+              {groups.map((group) => (
                 <GroupColumn
-                  groupId={DIRECT}
-                  name={t('egress.assignment.directGroup')}
-                  count={countLabel(DIRECT)}
-                  accounts={accountsFor(DIRECT)}
-                  editable={false}
+                  key={group.id}
+                  groupId={group.id}
+                  name={group.name}
+                  count={countLabel(group.id)}
+                  accounts={accountsFor(group.id)}
+                  editable
                   onRename={handleRename}
                   onDelete={handleDeleteGroup}
                 />
-                {groups.map((group) => (
-                  <GroupColumn
-                    key={group.id}
-                    groupId={group.id}
-                    name={group.name}
-                    count={countLabel(group.id)}
-                    accounts={accountsFor(group.id)}
-                    editable
-                    onRename={handleRename}
-                    onDelete={handleDeleteGroup}
-                  />
-                ))}
-              </div>
-            </ScrollArea>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -408,7 +406,7 @@ function GroupColumn({
   }
 
   return (
-    <div className="min-w-[240px] flex-1 rounded-lg border p-3 space-y-2">
+    <div className="min-w-[240px] grow basis-[240px] rounded-lg border p-3 space-y-2">
       <div className="flex items-center gap-2">
         {editable && editing ? (
           <Input
