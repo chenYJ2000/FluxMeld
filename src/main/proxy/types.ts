@@ -256,6 +256,8 @@ export interface ProxyContext {
   deadlineAt?: number
   /** Configured total request timeout, used for structured timeout errors. */
   timeoutMs?: number
+  /** Callback invoked once an attempt resolves its egress (node name/IP, or 'DIRECT'). */
+  onEgressResolved?: (egressNode: string) => void
 }
 
 /**

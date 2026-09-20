@@ -396,6 +396,9 @@ router.post('/completions', async (ctx: Context) => {
     signal: requestDeadline.signal,
     deadlineAt: requestDeadline.deadlineAt,
     timeoutMs: requestTimeoutMs,
+    onEgressResolved: (node) => {
+      resultEgressNode = node
+    },
   }
 
   proxyStatusManager.recordRequestStart(request.model, provider.id, account.id)
