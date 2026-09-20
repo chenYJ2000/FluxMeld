@@ -209,14 +209,22 @@ export function About() {
 
   const links = [
     {
+      label: t('about.github'),
+      icon: Github,
+      url: 'https://github.com/chenYJ2000/FluxMeld',
+      full: true,
+    },
+    {
       label: t('about.upstream'),
       icon: Github,
       url: 'https://github.com/xiaoY233/Chat2API',
+      full: false,
     },
     {
       label: t('about.license'),
       icon: FileText,
       url: 'https://www.gnu.org/licenses/gpl-3.0.html',
+      full: false,
     },
   ]
 
@@ -264,7 +272,7 @@ export function About() {
                 <button
                   key={link.label}
                   onClick={() => handleOpenExternal(link.url)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:bg-[var(--glass-bg-hover)] hover:border-[var(--glass-border-hover)] transition-all group cursor-pointer text-left"
+                  className={`w-full flex items-center justify-center relative p-3 rounded-xl bg-[var(--glass-bg)] border border-[var(--glass-border)] hover:bg-[var(--glass-bg-hover)] hover:border-[var(--glass-border-hover)] transition-all group cursor-pointer ${link.full ? 'sm:col-span-2' : ''}`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-1.5 rounded-lg bg-[var(--bg-tertiary)]/50 text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
@@ -274,7 +282,7 @@ export function About() {
                       {link.label}
                     </span>
                   </div>
-                  <div className="w-6 h-6 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)]/30 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                  <div className="absolute right-3 w-6 h-6 flex items-center justify-center rounded-full bg-[var(--bg-tertiary)]/30 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
                     <span className="text-[10px] text-[var(--text-primary)]">↗</span>
                   </div>
                 </button>
