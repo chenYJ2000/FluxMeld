@@ -25,6 +25,11 @@ export const glmModule: ProviderModule = {
     successUrlPatterns: [/chatglm\.cn/i],
     windowTitle: 'GLM Login',
   },
+  registration: {
+    registrationUrl: 'https://chatglm.cn/login',
+    fields: [{ value: 'phone' }, { value: 'password' }, { value: 'code' }],
+    windowTitle: 'GLM Registration',
+  },
   tokenChecker: checkGLMToken,
   normalizeOAuthCredentials: (credentials) =>
     credentials.chatglm_refresh_token

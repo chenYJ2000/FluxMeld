@@ -1,4 +1,5 @@
 import { storeManager } from '../store/store'
+import { getBuiltinProvider } from './builtin'
 import type { Provider, AuthType, ProviderUiMeta } from '../../shared/types'
 import type { CredentialField } from '../store/types'
 
@@ -171,22 +172,28 @@ export class CustomProviderManager {
     }
 
     const now = Date.now()
+    // Built-in providers take their canonical fields (capabilities, ui, models)
+    // from the provider registry so the UI immediately reflects flags such as
+    // assisted batch registration without waiting for an app restart.
+    const builtinConfig =
+      data.type === 'builtin' && data.id ? getBuiltinProvider(data.id) : undefined
     const provider: Provider = {
       id: data.id || storeManager.generateId(),
       name: data.name.trim(),
       type: data.type || 'custom',
       authType: data.authType,
       apiEndpoint: data.apiEndpoint.trim(),
-      chatPath: data.chatPath?.trim() || undefined,
+      chatPath: data.chatPath?.trim() || builtinConfig?.chatPath || undefined,
       headers: data.headers || {},
       enabled: true,
       createdAt: now,
       updatedAt: now,
       description: data.description?.trim(),
       icon: data.icon?.trim(),
-      supportedModels: data.supportedModels || [],
-      credentialFields: data.credentialFields,
-      ui: data.ui,
+      supportedModels: builtinConfig?.supportedModels ?? data.supportedModels ?? [],
+      credentialFields: builtinConfig?.credentialFields ?? data.credentialFields,
+      capabilities: builtinConfig?.capabilities,
+      ui: data.ui ?? builtinConfig?.ui,
     }
 
     storeManager.addProvider(provider)

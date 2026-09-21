@@ -22,6 +22,7 @@ import {
   Info,
   Download,
   Settings,
+  KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getProviderIcon } from '@/lib/providerIcon'
@@ -38,6 +39,8 @@ interface ProviderCardProps {
   onDuplicate: (id: string) => void
   onCheckStatus: (id: string) => void
   onManageAccounts: (id: string) => void
+  /** Assisted batch registration (only for providers that support it). */
+  onBatchRegister?: (id: string) => void
   onUpdateModels?: (id: string) => void
   onManageModels?: (id: string) => void
   className?: string
@@ -60,6 +63,7 @@ export function ProviderCard({
   onDuplicate,
   onCheckStatus,
   onManageAccounts,
+  onBatchRegister,
   onUpdateModels,
   onManageModels,
   className,
@@ -203,24 +207,36 @@ export function ProviderCard({
             </div>
           </div>
 
-          <Button
-            size="sm"
-            variant={accountCount === 0 ? 'default' : 'outline'}
-            onClick={() => onManageAccounts(provider.id)}
-            className="ml-4 shrink-0"
-          >
-            {accountCount === 0 ? (
-              <>
-                <Plus className="h-4 w-4 mr-1" />
-                {t('providers.addAccount')}
-              </>
-            ) : (
-              <>
-                <LogIn className="h-4 w-4 mr-1" />
-                {t('providers.accountManagement')}
-              </>
+          <div className="flex items-center gap-2 ml-4 shrink-0">
+            {onBatchRegister && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onBatchRegister(provider.id)}
+                title={t('providers.batchRegister')}
+              >
+                <KeyRound className="h-4 w-4 mr-1" />
+                {t('providers.batchRegister')}
+              </Button>
             )}
-          </Button>
+            <Button
+              size="sm"
+              variant={accountCount === 0 ? 'default' : 'outline'}
+              onClick={() => onManageAccounts(provider.id)}
+            >
+              {accountCount === 0 ? (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t('providers.addAccount')}
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4 mr-1" />
+                  {t('providers.accountManagement')}
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

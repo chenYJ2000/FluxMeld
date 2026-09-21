@@ -233,7 +233,6 @@ export function AddAccountDialog({
       if (result?.success && result.credentials) {
         // Main process normalizes OAuth credentials to canonical field names.
         setCredentials(result.credentials)
-        setOAuthStatus(t('providers.loginSuccess'))
 
         if (result.accountInfo?.name) {
           setName(result.accountInfo.name)
@@ -243,6 +242,23 @@ export function AddAccountDialog({
           valid: true,
           userInfo: result.accountInfo,
         })
+
+        const accountName =
+          name.trim() ||
+          result.accountInfo?.name ||
+          result.accountInfo?.email ||
+          `${provider.name} ${t('providers.accounts')}`
+
+        setOAuthStatus(t('providers.saving'))
+
+        await onAddAccount({
+          name: accountName,
+          email: result.accountInfo?.email,
+          credentials: result.credentials,
+        })
+
+        onOpenChange(false)
+        resetForm()
       } else {
         const errorMsg = result?.error || ''
         const translatedError =

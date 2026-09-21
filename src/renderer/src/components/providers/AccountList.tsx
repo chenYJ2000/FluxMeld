@@ -33,6 +33,7 @@ import {
   ShieldCheck,
   Download,
   Upload,
+  KeyRound,
 } from 'lucide-react'
 import {
   Dialog,
@@ -50,6 +51,8 @@ interface AccountListProps {
   accounts: Account[]
   provider?: Provider
   onAddAccount: () => void
+  /** Open the assisted batch registration flow (only for providers that support it). */
+  onBatchRegister?: () => void
   onValidateAllAccounts?: () => void
   isValidatingAll?: boolean
   onEditAccount: (account: Account) => void
@@ -68,6 +71,7 @@ export function AccountList({
   accounts,
   provider,
   onAddAccount,
+  onBatchRegister,
   onValidateAllAccounts,
   isValidatingAll = false,
   onEditAccount,
@@ -210,6 +214,12 @@ export function AccountList({
               <Plus className="mr-2 h-4 w-4" />
               {t('providers.addAccount')}
             </Button>
+            {onBatchRegister && (
+              <Button variant="outline" onClick={onBatchRegister}>
+                <KeyRound className="mr-2 h-4 w-4" />
+                {t('providers.batchRegister')}
+              </Button>
+            )}
             {onImportAccounts && (
               <>
                 <input
@@ -284,6 +294,12 @@ export function AccountList({
             <Plus className="mr-2 h-4 w-4" />
             {t('providers.addAccount')}
           </Button>
+          {onBatchRegister && (
+            <Button variant="outline" size="sm" onClick={onBatchRegister}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              {t('providers.batchRegister')}
+            </Button>
+          )}
         </div>
       </div>
 

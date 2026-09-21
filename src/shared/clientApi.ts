@@ -356,6 +356,14 @@ interface ContextManagementConfig {
 
 type ProviderType = ProviderVendor
 
+/** Result of one phone entry in a batch registration run. */
+export interface BatchRegistrationItemResult {
+  phone: string
+  success: boolean
+  accountId?: string
+  error?: string
+}
+
 export function createClientApi(
   transport: ClientTransport,
   options: ClientApiOptions = {},
@@ -548,6 +556,15 @@ export function createClientApi(
       transport.invoke('oauth:startInAppLogin', { providerId, providerType, timeout }),
     cancelInAppLogin: (): Promise<void> => transport.invoke('oauth:cancelInAppLogin'),
     isInAppLoginOpen: (): Promise<boolean> => transport.invoke('oauth:inAppLoginStatus'),
+    startBatchRegistration: (
+      providerId: string,
+      providerType: ProviderType,
+      count: number,
+      timeout?: number,
+    ): Promise<{ results: BatchRegistrationItemResult[] }> =>
+      transport.invoke('oauth:startBatchRegistration', { providerId, providerType, count, timeout }),
+    cancelBatchRegistration: (): Promise<void> =>
+      transport.invoke('oauth:cancelBatchRegistration'),
     onCallback: (callback: (result: OAuthResult) => void) =>
       transport.on('oauth:callback', (result) => callback(result)),
     onProgress: (callback: (event: OAuthProgressEvent) => void) =>

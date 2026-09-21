@@ -12,6 +12,14 @@ import {
 import { CustomProviderManager } from '../providers/custom'
 import { getBuiltinProviders, getBuiltinProvider } from '../providers/builtin'
 import { oauthManager } from '../oauth/manager'
+import {
+  isRegistrationApiReady,
+  fetchRegistrationPhone,
+  pollRegistrationCode,
+  releaseRegistrationPhone,
+  maskPhone,
+  generateRegistrationPassword,
+} from '../oauth/registrationApi'
 import { ProxyServer } from '../proxy/server'
 import { proxyStatusManager } from '../proxy/status'
 import { initializeEgress, egressManager } from '../egress'
@@ -52,6 +60,16 @@ import type { ProviderType } from '../oauth/types'
 let proxyServer: ProxyServer | null = null
 let proxyStartTime: number | null = null
 const updaterManager = UpdaterManager.getInstance()
+
+/** Set by the cancel handler to stop a running batch registration loop. */
+let batchRegistrationCancelled = false
+
+interface BatchRegistrationItemResult {
+  phone: string
+  success: boolean
+  accountId?: string
+  error?: string
+}
 
 /**
  * Keep the in-memory proxy endpoint in sync with the persisted configuration so
@@ -1089,6 +1107,131 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
 
   ipcMain.handle(IpcChannels.OAUTH_IN_APP_LOGIN_STATUS, async (): Promise<boolean> => {
     return oauthManager.isInAppLoginOpen()
+  })
+
+  ipcMain.handle(
+    IpcChannels.OAUTH_START_BATCH_REGISTRATION,
+    async (
+      _,
+      data: {
+        providerId: string
+        providerType: ProviderVendor
+        count: number
+        timeout?: number
+      },
+    ): Promise<{ results: BatchRegistrationItemResult[] }> => {
+      const config = storeManager.getConfig()
+      const proxyMode = (config as any).oauthProxyMode || 'system'
+      const apiConfig = config.registrationApi
+      const total = Math.max(1, Math.floor(data.count || 0))
+      const results: BatchRegistrationItemResult[] = []
+      batchRegistrationCancelled = false
+
+      if (!isRegistrationApiReady(apiConfig)) {
+        const error = 'Registration number API is not configured'
+        oauthManager.emitProgress({
+          status: 'error',
+          message: error,
+          data: { done: true, total: 0, error },
+        })
+        return { results: [{ phone: '', success: false, error }] }
+      }
+
+      // Make sure the provider exists so accounts can be created even when the
+      // operator picked a built-in provider that was never added manually.
+      try {
+        storeManager.ensureProviderExists(data.providerId)
+      } catch (error) {
+        console.error('[BatchRegister] Failed to ensure provider exists:', error)
+      }
+
+      for (let index = 0; index < total; index++) {
+        if (batchRegistrationCancelled) break
+
+        let phone = ''
+        let masked = ''
+        try {
+          phone = await fetchRegistrationPhone(apiConfig)
+          masked = maskPhone(phone)
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to fetch phone number'
+          results.push({ phone: '', success: false, error: message })
+          oauthManager.emitProgress({
+            status: 'error',
+            message,
+            data: { index, total, phase: 'failed', error: message },
+          })
+          break
+        }
+
+        const password = generateRegistrationPassword()
+        oauthManager.emitProgress({
+          status: 'pending',
+          message: `(${index + 1}/${total}) ${masked}`,
+          data: { index, total, phone: masked, password, phase: 'opening' },
+        })
+
+        try {
+          const result = await oauthManager.startInAppRegistration(
+            data.providerId,
+            data.providerType as ProviderType,
+            phone,
+            password,
+            data.timeout,
+            proxyMode,
+            () => pollRegistrationCode(apiConfig, phone),
+          )
+
+          if (result.success && result.credentials) {
+            const normalized = normalizeOAuthResult(data.providerId, result)
+            const account = AccountManager.create({
+              providerId: data.providerId,
+              name: masked,
+              credentials: normalized.credentials || result.credentials,
+            })
+            results.push({ phone: masked, success: true, accountId: account.id })
+            oauthManager.emitProgress({
+              status: 'success',
+              message: `${masked} registered`,
+              data: {
+                index,
+                total,
+                phone: masked,
+                password,
+                phase: 'saved',
+                accountId: account.id,
+                account,
+              },
+            })
+          } else {
+            results.push({ phone: masked, success: false, error: result.error })
+            oauthManager.emitProgress({
+              status: 'error',
+              message: `${masked}: ${result.error || 'Registration failed'}`,
+              data: { index, total, phone: masked, password, phase: 'failed', error: result.error },
+            })
+          }
+        } finally {
+          await releaseRegistrationPhone(apiConfig, phone)
+        }
+      }
+
+      const cancelled = batchRegistrationCancelled
+      batchRegistrationCancelled = false
+      oauthManager.emitProgress({
+        status: cancelled ? 'cancelled' : 'success',
+        message: cancelled ? 'Batch registration cancelled' : 'Batch registration finished',
+        data: { done: true, total },
+      })
+
+      return { results }
+    },
+  )
+
+  ipcMain.handle(IpcChannels.OAUTH_CANCEL_BATCH_REGISTRATION, async (): Promise<void> => {
+    console.log('Cancel batch registration')
+    batchRegistrationCancelled = true
+    oauthManager.cancelInAppLogin()
   })
 
   ipcMain.handle(

@@ -347,6 +347,14 @@ export class StoreManager {
       requestLogConfig: normalizeRequestLogConfig(
         rawConfig.requestLogConfig || DEFAULT_REQUEST_LOG_CONFIG,
       ),
+      registrationApi: {
+        ...DEFAULT_CONFIG.registrationApi,
+        ...(rawConfig.registrationApi ?? {}),
+        // An empty base URL means "use the built-in default" so existing
+        // configs saved before the default existed still work.
+        baseUrl:
+          rawConfig.registrationApi?.baseUrl?.trim() || DEFAULT_CONFIG.registrationApi.baseUrl,
+      },
       contextManagement: normalizeContextManagementConfig(rawConfig.contextManagement),
       outboundProxy: {
         ...DEFAULT_CONFIG.outboundProxy,

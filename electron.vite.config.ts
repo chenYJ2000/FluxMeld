@@ -19,6 +19,7 @@ export default defineConfig({
           'electron-updater',
           'ajv',
           'ajv-formats',
+          'socks-proxy-agent',
         ],
       }),
     ],

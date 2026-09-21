@@ -54,7 +54,7 @@ export const glmConfig: BuiltinProviderConfig = {
   ],
   tokenCheckEndpoint: '/chatglm/user-api/user/refresh',
   tokenCheckMethod: 'POST',
-  capabilities: { clearChats: true, toolCalling: true },
+  capabilities: { clearChats: true, toolCalling: true, batchRegister: true },
   ui: { iconKey: 'glm', i18nPrefix: 'glm' },
 }
 

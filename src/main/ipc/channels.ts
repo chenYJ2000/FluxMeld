@@ -80,6 +80,8 @@ export const IpcChannels = {
   OAUTH_START_IN_APP_LOGIN: 'oauth:startInAppLogin',
   OAUTH_CANCEL_IN_APP_LOGIN: 'oauth:cancelInAppLogin',
   OAUTH_IN_APP_LOGIN_STATUS: 'oauth:inAppLoginStatus',
+  OAUTH_START_BATCH_REGISTRATION: 'oauth:startBatchRegistration',
+  OAUTH_CANCEL_BATCH_REGISTRATION: 'oauth:cancelBatchRegistration',
 
   LOGS_GET: 'logs:get',
   LOGS_GET_STATS: 'logs:getStats',

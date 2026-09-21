@@ -59,3 +59,7 @@ src/renderer/next-app/
 # Backup
 backup/
 scripts/__pycache__/
+
+# Local account exports / stray Windows redirect artifacts
+*-accounts-export.json
+nul

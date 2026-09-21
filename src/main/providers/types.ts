@@ -41,6 +41,33 @@ export interface TokenExtractionConfig {
 }
 
 /**
+ * A form field the registration assistant should populate.
+ *
+ * `selector` is optional; when omitted the shared autofill falls back to
+ * heuristics so the flow keeps working when the page markup changes.
+ */
+export interface RegistrationField {
+  value: 'phone' | 'password' | 'code'
+  selector?: string
+}
+
+/**
+ * Rules for assisting account registration in the in-app browser window.
+ *
+ * This only opens the provider's official page and prefills the phone and
+ * password so the repetitive typing is not repeated per account. The captcha
+ * / slider and the SMS verification code are always completed by a human.
+ */
+export interface RegistrationConfig {
+  /** Official registration/login page to open. */
+  registrationUrl: string
+  /** Fields to autofill. Defaults to the phone + password heuristics. */
+  fields?: RegistrationField[]
+  /** Window title shown while registering. */
+  windowTitle?: string
+}
+
+/**
  * Built-in Provider Configuration Interface
  *
  * Static, serializable description of a provider. This is the single source of
@@ -117,6 +144,8 @@ export interface ProviderModule {
   oauth?: ProviderOAuthModule
   /** In-app browser token extraction rules. */
   tokenExtraction?: TokenExtractionConfig
+  /** Assisted registration rules (official page + phone/password prefill). */
+  registration?: RegistrationConfig
   /** Credential validation for an account. */
   tokenChecker?(
     provider: Provider,

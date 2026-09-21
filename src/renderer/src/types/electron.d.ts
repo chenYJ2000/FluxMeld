@@ -25,6 +25,7 @@ import type {
   ValidationResult,
   AccountImportResult,
   ProviderUiMeta,
+  RegistrationApiConfig,
 } from '../../../shared/types'
 
 export type { 
@@ -53,6 +54,7 @@ export type {
   EffectiveModel,
   ValidationResult,
   ProviderUiMeta,
+  RegistrationApiConfig,
 }
 
 export interface CustomProviderFormData {
@@ -310,6 +312,13 @@ interface AccountsAPI {
   import: (jsonData: string, providerId?: string) => Promise<AccountImportResult>
 }
 
+interface BatchRegistrationItemResult {
+  phone: string
+  success: boolean
+  accountId?: string
+  error?: string
+}
+
 interface OAuthAPI {
   startLogin: (providerId: string, providerType: ProviderVendor) => Promise<OAuthResult>
   cancelLogin: () => Promise<void>
@@ -335,6 +344,13 @@ interface OAuthAPI {
   startInAppLogin: (providerId: string, providerType: ProviderVendor, timeout?: number) => Promise<OAuthResult>
   cancelInAppLogin: () => Promise<void>
   isInAppLoginOpen: () => Promise<boolean>
+  startBatchRegistration: (
+    providerId: string,
+    providerType: ProviderVendor,
+    count: number,
+    timeout?: number,
+  ) => Promise<{ results: BatchRegistrationItemResult[] }>
+  cancelBatchRegistration: () => Promise<void>
   onCallback: (callback: (result: OAuthResult) => void) => () => void
   onProgress: (callback: (event: {
     status: 'idle' | 'pending' | 'success' | 'error' | 'cancelled'

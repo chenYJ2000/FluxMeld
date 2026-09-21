@@ -11,6 +11,7 @@ import {
   getTokenExtractionConfig,
   TokenSource,
 } from './tokenExtractionConfig'
+import type { RegistrationConfig } from '../providers/types.ts'
 
 export interface InAppLoginResult {
   success: boolean
@@ -28,6 +29,21 @@ export interface InAppLoginOptions {
   providerType: ProviderType
   timeout?: number
   proxyMode?: 'system' | 'none'
+  /**
+   * `register` opens the provider's registration page and prefills the form
+   * instead of the normal login page. Credential sniffing is identical.
+   */
+  mode?: 'login' | 'register'
+  /** Values injected into the registration form (phone + password). */
+  prefill?: { phone?: string; password?: string }
+  /** Explicit registration rules from the provider module. */
+  registration?: RegistrationConfig | null
+  /**
+   * Optional resolver for the SMS verification code. Called once when the
+   * registration page loads; when it resolves with a code the code field is
+   * filled automatically. Resolve with `null` to leave it to the operator.
+   */
+  codeResolver?: () => Promise<string | null>
 }
 
 const DEFAULT_TIMEOUT = 300000 // 5 minutes
@@ -44,6 +60,8 @@ export class InAppLoginManager extends EventEmitter {
   private loginStartTime: number = 0
   private lastTokenCheckTime: number = 0
   private options: InAppLoginOptions | null = null
+  private resolvedCode: string | null = null
+  private codeResolutionStarted: boolean = false
 
   constructor() {
     super()
@@ -70,6 +88,8 @@ export class InAppLoginManager extends EventEmitter {
     this.loginStartTime = Date.now()
     this.lastTokenCheckTime = 0
     this.options = options
+    this.resolvedCode = null
+    this.codeResolutionStarted = false
 
     return new Promise((resolve) => {
       this.resolvePromise = resolve
@@ -111,7 +131,7 @@ export class InAppLoginManager extends EventEmitter {
         webSecurity: true,
         javascript: true,
       },
-      title: this.config.windowTitle || 'Login',
+      title: this.resolveWindowTitle(),
       autoHideMenuBar: true,
     })
 
@@ -129,12 +149,30 @@ export class InAppLoginManager extends EventEmitter {
       }
     })
 
-    this.loginWindow.loadURL(this.config.loginUrl).catch((error) => {
+    this.loginWindow.loadURL(this.resolveTargetUrl()).catch((error) => {
       this.complete({
         success: false,
         error: `Failed to load login page: ${error.message}`,
       })
     })
+  }
+
+  private isRegistrationMode(): boolean {
+    return this.options?.mode === 'register' && !!this.options.registration
+  }
+
+  private resolveTargetUrl(): string {
+    if (this.isRegistrationMode()) {
+      return this.options!.registration!.registrationUrl
+    }
+    return this.config?.loginUrl || ''
+  }
+
+  private resolveWindowTitle(): string {
+    if (this.isRegistrationMode()) {
+      return this.options!.registration!.windowTitle || 'Register'
+    }
+    return this.config?.windowTitle || 'Login'
   }
 
   private setupTokenInterception(): void {
@@ -222,7 +260,15 @@ export class InAppLoginManager extends EventEmitter {
     this.loginSession.cookies.on('changed', async (_event, cookie, _cause, removed) => {
       if (this.isCompleted || removed) return
 
-      console.log('[InAppLogin] Cookie changed:', { name: cookie.name, removed })
+      // Only react to cookies that can actually carry a credential. Anti-bot
+      // cookies (e.g. ssxmod_itna) churn constantly and would otherwise trigger
+      // an endless token-rescan loop.
+      const isTargetCookie = this.config!.tokenSources.some(
+        (source) => source.type === 'cookie' && source.key === cookie.name,
+      )
+      if (!isTargetCookie) return
+
+      console.log('[InAppLogin] Target cookie changed:', cookie.name)
 
       if (!this.hasMinTimePassed()) {
         console.log('[InAppLogin] Min time not passed, skipping cookie check')
@@ -247,12 +293,181 @@ export class InAppLoginManager extends EventEmitter {
 
     this.loginWindow?.webContents.on('did-finish-load', () => {
       console.log('[InAppLogin] Page finished loading, starting token checks')
+      this.injectRegistrationAutofill()
+      this.startCodeResolution()
       this.delayedTokenCheck()
     })
 
     this.loginWindow?.webContents.on('did-navigate-in-page', () => {
       console.log('[InAppLogin] Page navigated, starting delayed token check')
+      this.injectRegistrationAutofill()
       this.delayedTokenCheck()
+    })
+  }
+
+  /**
+   * Resolve the SMS verification code through the provider-supplied resolver
+   * and inject it into the page once available. Runs at most once per window.
+   */
+  private startCodeResolution(): void {
+    const resolver = this.options?.codeResolver
+    if (!this.isRegistrationMode() || !resolver || this.codeResolutionStarted) return
+    this.codeResolutionStarted = true
+
+    resolver()
+      .then((code) => {
+        if (this.isCompleted || !code) return
+        this.resolvedCode = code
+        console.log('[InAppLogin] Verification code resolved, injecting into form')
+        this.injectRegistrationAutofill()
+      })
+      .catch((error) => {
+        console.error('[InAppLogin] Code resolver failed:', error)
+      })
+  }
+
+  /**
+   * Inject a self-refreshing autofill script into the registration page.
+   *
+   * The page is a multi-step SPA: the phone field appears first and the
+   * password field may only appear after the SMS step. A MutationObserver
+   * inside the page keeps filling whichever fields become available, but only
+   * when they are still empty so the human's own input is never overwritten.
+   */
+  private injectRegistrationAutofill(): void {
+    if (!this.isRegistrationMode()) return
+    if (!this.loginWindow || this.loginWindow.isDestroyed()) return
+    if (this.loginWindow.webContents.isDestroyed()) return
+
+    const prefill = this.options?.prefill || {}
+    const fields = this.options?.registration?.fields || [
+      { value: 'phone' as const },
+      { value: 'password' as const },
+    ]
+    const phoneField = fields.find((f) => f.value === 'phone')
+    const passwordField = fields.find((f) => f.value === 'password')
+    const codeField = fields.find((f) => f.value === 'code')
+
+    const payload = {
+      phone: phoneField ? prefill.phone : undefined,
+      password: passwordField ? prefill.password : undefined,
+      code: this.resolvedCode || undefined,
+      phoneSelector: phoneField?.selector,
+      passwordSelector: passwordField?.selector,
+      codeSelector: codeField?.selector,
+    }
+
+    if (!payload.phone && !payload.password && !payload.code) return
+
+    const script = `(() => {
+      const payload = ${JSON.stringify(payload)};
+      const done = { phone: false, password: false, code: false };
+
+      const isVisible = (el) => {
+        if (!el) return false;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const style = window.getComputedStyle(el);
+        return style.visibility !== 'hidden' && style.display !== 'none';
+      };
+
+      const setValue = (el, value) => {
+        try {
+          const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+          const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+          if (desc && desc.set) desc.set.call(el, value); else el.value = value;
+          el.dispatchEvent(new Event('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          el.dispatchEvent(new Event('blur', { bubbles: true }));
+          return true;
+        } catch (e) {
+          return false;
+        }
+      };
+
+      const visibleInputs = () =>
+        Array.from(document.querySelectorAll('input, textarea')).filter(isVisible);
+
+      const hint = (el) =>
+        [el.placeholder, el.getAttribute('aria-label'), el.name, el.id, el.type]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+
+      const findPhone = () => {
+        if (payload.phoneSelector) {
+          const el = document.querySelector(payload.phoneSelector);
+          if (el && isVisible(el)) return el;
+        }
+        const tel = document.querySelector('input[type="tel"]');
+        if (tel && isVisible(tel)) return tel;
+        const hinted = visibleInputs().find((el) => /(手机号|手机|电话|phone|mobile)/.test(hint(el)));
+        if (hinted) return hinted;
+        return visibleInputs().find(
+          (el) => el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'tel') && el.maxLength === 11,
+        ) || null;
+      };
+
+      const findPassword = () => {
+        if (payload.passwordSelector) {
+          const el = document.querySelector(payload.passwordSelector);
+          if (el && isVisible(el)) return el;
+        }
+        return visibleInputs().find((el) => el.type === 'password') || null;
+      };
+
+      const findCode = () => {
+        if (payload.codeSelector) {
+          const el = document.querySelector(payload.codeSelector);
+          if (el && isVisible(el)) return el;
+        }
+        const hinted = visibleInputs().find((el) =>
+          /(验证码|校验码|verification|\\bcode\\b)/.test(hint(el)),
+        );
+        if (hinted) return hinted;
+        return (
+          visibleInputs().find(
+            (el) =>
+              el.tagName === 'INPUT' &&
+              (el.type === 'text' || el.type === 'number' || el.inputMode === 'numeric') &&
+              el.maxLength >= 4 &&
+              el.maxLength <= 6,
+          ) || null
+        );
+      };
+
+      const tick = () => {
+        try {
+          if (payload.phone && !done.phone) {
+            const el = findPhone();
+            if (el && !el.value && setValue(el, payload.phone)) done.phone = true;
+          }
+          if (payload.password && !done.password) {
+            const el = findPassword();
+            if (el && !el.value && setValue(el, payload.password)) done.password = true;
+          }
+          if (payload.code && !done.code) {
+            const el = findCode();
+            if (el && !el.value && setValue(el, payload.code)) done.code = true;
+          }
+        } catch (e) {}
+      };
+
+      tick();
+
+      if (window.__fluxmeldRegObserver) window.__fluxmeldRegObserver.disconnect();
+      try {
+        const observer = new MutationObserver(() => tick());
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        window.__fluxmeldRegObserver = observer;
+      } catch (e) {}
+      if (!window.__fluxmeldRegInterval) {
+        window.__fluxmeldRegInterval = setInterval(tick, 1500);
+      }
+    })()`
+
+    this.loginWindow.webContents.executeJavaScript(script).catch((error) => {
+      console.error('[InAppLogin] Failed to inject registration autofill:', error)
     })
   }
 

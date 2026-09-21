@@ -21,7 +21,7 @@ import { qwenAiModule } from './qwen-ai/index.ts'
 import { zaiModule } from './zai/index.ts'
 
 import type { Provider } from '../../shared/types'
-import type { ProviderModule, BuiltinProviderConfig } from './types.ts'
+import type { ProviderModule, BuiltinProviderConfig, RegistrationConfig } from './types.ts'
 import type { ForwarderServices, ProviderForwarder } from '../proxy/forwarders/types.ts'
 import type { BaseOAuthAdapter } from './common/oauthBase.ts'
 import type { AdapterConfig, ProviderType } from '../oauth/types.ts'
@@ -96,6 +96,11 @@ export function createOAuthAdapter(
 /** Supported authentication methods for a provider type. */
 export function getSupportedAuthMethods(providerType: ProviderType): string[] {
   return providerModuleMap[providerType]?.oauth?.authMethods ?? ['manual']
+}
+
+/** Assisted registration rules for a provider type, or `null` when unsupported. */
+export function getRegistrationConfig(providerType: ProviderType): RegistrationConfig | null {
+  return providerModuleMap[providerType]?.registration ?? null
 }
 
 /** Tool-calling profile for a provider. */

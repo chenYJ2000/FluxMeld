@@ -14,6 +14,7 @@ import {
   OpenAIProviderForm,
   AccountList,
   AddAccountDialog,
+  BatchRegisterDialog,
   AccountDetail,
   ProviderFilter,
 } from '@/components/providers'
@@ -28,7 +29,8 @@ import type {
 } from '@/types/electron'
 import { FilterType, StatusFilter } from '@/components/providers/ProviderFilter'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Server, ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Server, ArrowLeft, KeyRound } from 'lucide-react'
 
 type ViewMode = 'providers' | 'accounts' | 'account-detail'
 
@@ -51,6 +53,8 @@ export function Providers() {
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
 
   const [showAddAccountDialog, setShowAddAccountDialog] = useState(false)
+  const [showBatchRegisterDialog, setShowBatchRegisterDialog] = useState(false)
+  const [batchRegisterProvider, setBatchRegisterProvider] = useState<Provider | null>(null)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
 
   const [showModelEditor, setShowModelEditor] = useState(false)
@@ -314,10 +318,12 @@ export function Providers() {
         type: 'builtin',
         authType: provider.authType,
         apiEndpoint: provider.apiEndpoint,
+        chatPath: provider.chatPath,
         headers: provider.headers,
         description: provider.description,
         supportedModels: provider.supportedModels,
         credentialFields: provider.credentialFields,
+        ui: provider.ui,
       })
       store.addProvider(newProvider)
       targetProvider = newProvider
@@ -484,6 +490,40 @@ export function Providers() {
         variant: 'destructive',
       })
     }
+  }
+
+  const handleBatchRegisterCompleted = async () => {
+    try {
+      const accounts = await window.electronAPI.accounts.getAll()
+      useProvidersStore.getState().setAccounts(accounts)
+
+      const countMap: Record<string, { total: number; active: number }> = {}
+      for (const account of accounts) {
+        const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
+        countMap[account.providerId] = {
+          total: providerAccounts.length,
+          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
+        }
+      }
+      useProvidersStore.getState().setAccountCounts(countMap)
+    } catch (error) {
+      console.error('Failed to refresh accounts after batch registration:', error)
+    }
+  }
+
+  const handleOpenBatchRegister = (provider: Provider) => {
+    setBatchRegisterProvider(provider)
+    setShowBatchRegisterDialog(true)
+  }
+
+  const handleBatchRegisterById = (id: string) => {
+    const provider = store.getProviderById(id)
+    if (provider) handleOpenBatchRegister(provider)
+  }
+
+  const handleBatchRegisterOpenChange = (open: boolean) => {
+    setShowBatchRegisterDialog(open)
+    if (!open) setBatchRegisterProvider(null)
   }
 
   const handleUpdateAccount = async (id: string, updates: Partial<Account>) => {
@@ -753,6 +793,25 @@ export function Providers() {
     ? store.getAccountsByProvider(store.selectedProviderId)
     : []
 
+  const supportsBatchRegister = (provider: Provider) =>
+    provider.capabilities?.batchRegister ??
+    store.builtinProviders.find((builtin) => builtin.id === provider.id)?.capabilities
+      ?.batchRegister ??
+    false
+
+  const batchRegisterProviders = (() => {
+    const map = new Map<string, Provider>()
+    for (const provider of store.providers) {
+      if (supportsBatchRegister(provider)) map.set(provider.id, provider)
+    }
+    for (const builtin of store.builtinProviders) {
+      if (!map.has(builtin.id) && builtin.capabilities?.batchRegister) {
+        map.set(builtin.id, builtin as unknown as Provider)
+      }
+    }
+    return Array.from(map.values())
+  })()
+
   if (viewMode === 'account-detail' && selectedAccount && selectedProvider) {
     return (
       <div className="space-y-6">
@@ -798,6 +857,14 @@ export function Providers() {
           accounts={providerAccounts}
           provider={selectedProvider}
           onAddAccount={() => setShowAddAccountDialog(true)}
+          onBatchRegister={
+            supportsBatchRegister(selectedProvider)
+              ? () => {
+                  setBatchRegisterProvider(selectedProvider)
+                  setShowBatchRegisterDialog(true)
+                }
+              : undefined
+          }
           onValidateAllAccounts={() => handleValidateAllAccounts(selectedProvider.id)}
           isValidatingAll={isValidatingAll}
           onEditAccount={async (account) => {
@@ -825,6 +892,14 @@ export function Providers() {
           editingAccount={editingAccount}
           onUpdateAccount={handleUpdateAccount}
         />
+
+        <BatchRegisterDialog
+          open={showBatchRegisterDialog}
+          onOpenChange={handleBatchRegisterOpenChange}
+          provider={batchRegisterProvider ?? selectedProvider}
+          providers={batchRegisterProviders}
+          onCompleted={handleBatchRegisterCompleted}
+        />
       </div>
     )
   }
@@ -836,6 +911,15 @@ export function Providers() {
           <h2 className="text-2xl font-bold tracking-tight">{t('providers.title')}</h2>
           <p className="text-muted-foreground">{t('providers.subtitle')}</p>
         </div>
+        <Button
+          onClick={() => {
+            setBatchRegisterProvider(null)
+            setShowBatchRegisterDialog(true)
+          }}
+        >
+          <KeyRound className="mr-2 h-4 w-4" />
+          {t('providers.batchRegister')}
+        </Button>
       </div>
 
       <ProviderFilter
@@ -879,6 +963,9 @@ export function Providers() {
                 onDuplicate={handleDuplicateProvider}
                 onCheckStatus={handleCheckProviderStatus}
                 onManageAccounts={handleManageAccounts}
+                onBatchRegister={
+                  supportsBatchRegister(provider) ? handleBatchRegisterById : undefined
+                }
                 onUpdateModels={handleUpdateModels}
                 onManageModels={handleManageModels}
               />
@@ -953,6 +1040,14 @@ export function Providers() {
           providerName={modelEditorProvider.name}
         />
       )}
+
+      <BatchRegisterDialog
+        open={showBatchRegisterDialog}
+        onOpenChange={handleBatchRegisterOpenChange}
+        provider={batchRegisterProvider}
+        providers={batchRegisterProviders}
+        onCompleted={handleBatchRegisterCompleted}
+      />
     </div>
   )
 }

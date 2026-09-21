@@ -48,6 +48,8 @@ export interface ProviderCapabilities {
   credits?: boolean
   /** Whether FluxMeld provides managed (prompt-emulated) tool calling for this provider */
   toolCalling?: boolean
+  /** Whether the provider supports assisted batch account registration */
+  batchRegister?: boolean
 }
 
 /** Serializable UI metadata for a provider. */
@@ -236,6 +238,51 @@ export interface ApiKey {
   description?: string
 }
 
+/**
+ * Company phone-verification API integration used by assisted batch
+ * registration.
+ *
+ * Contract (external endpoints under `<baseUrl>/api/external`):
+ *   GET getPhone  -> lease a phone number (keyword selects the business)
+ *   GET getCode   -> fetch the SMS verification code for a number
+ *   GET getMsg    -> fetch the raw message(s) for a number
+ *   GET release   -> release a leased number
+ *
+ * Authentication is either `?token=sk_live_...` (default) or an
+ * `Authorization: Bearer sk_live_...` header. The phone number is only ever
+ * handled in the main process; the renderer sees a masked form.
+ */
+export interface RegistrationApiConfig {
+  /** Master switch. When off, batch registration refuses to start. */
+  enabled: boolean
+  /** API base URL, e.g. `https://api.example.com`. */
+  baseUrl: string
+  /** `sk_live_...` API key. */
+  token: string
+  /** How the token is transmitted. */
+  authMode: 'query' | 'header'
+  /** Business keyword passed to `getPhone` / `getMsg` (must match on both). */
+  keyWord: string
+  /** Optional province filter for `getPhone` (e.g. `北京`); empty = no filter. */
+  province: string
+  /** Optional card type filter for `getPhone`: 全部 / 实卡 / 虚卡. */
+  cardType: string
+  /**
+   * Endpoint polled for the verification code. The external API documents
+   * `getMsg` (returns the raw SMS content); `getCode` is kept for
+   * compatibility with keys that expose a direct code endpoint.
+   */
+  codeSource: 'getCode' | 'getMsg'
+  /** Release the number through the API once the flow ends. */
+  autoRelease: boolean
+  /** Minimum interval between API calls (ms) to respect the rate limit. */
+  minRequestIntervalMs: number
+  /** How often to poll for the code (ms). */
+  codePollIntervalMs: number
+  /** Give up polling for a code after this long (ms). */
+  codePollTimeoutMs: number
+}
+
 export interface AppConfig {
   proxyPort: number
   proxyHost: string
@@ -261,6 +308,8 @@ export interface AppConfig {
   apiKeys: ApiKey[]
   enableApiKey: boolean
   oauthProxyMode: 'system' | 'none'
+  /** Assisted batch registration number/code API integration. */
+  registrationApi: RegistrationApiConfig
   sessionConfig: SessionConfig
   toolCallingConfig: ToolCallingConfig
   toolPromptConfig?: LegacyToolPromptConfig

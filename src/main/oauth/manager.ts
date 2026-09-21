@@ -18,6 +18,8 @@ import {
 import { createAdapter, BaseOAuthAdapter } from './adapters'
 import { storeManager } from '../store/store'
 import { inAppLoginManager, InAppLoginResult } from './inAppLogin'
+import { getRegistrationConfig } from '../providers/registry'
+import type { RegistrationConfig } from '../providers/types.ts'
 
 const DEFAULT_CALLBACK_PORT = 8311
 const DEFAULT_TIMEOUT = 300000 // 5 minutes
@@ -285,6 +287,12 @@ export class OAuthManager extends EventEmitter {
     providerType: ProviderType,
     timeout?: number,
     proxyMode?: 'system' | 'none',
+    extra?: {
+      mode?: 'login' | 'register'
+      prefill?: { phone?: string; password?: string }
+      registration?: RegistrationConfig | null
+      codeResolver?: () => Promise<string | null>
+    },
   ): Promise<OAuthResult> {
     this.emit('statusChange', 'pending')
     this.sendProgressToRenderer({
@@ -296,6 +304,11 @@ export class OAuthManager extends EventEmitter {
       const adapter = this.getAdapter(providerId, providerType)
       const collectedTokens: Record<string, string> = {}
       let isValidating = false
+      // Suppress re-validating an identical token value for a short window; the
+      // page can re-emit the same cookie many times while a guest session sits
+      // on the login page.
+      const recentTokenAttempts = new Map<string, number>()
+      const TOKEN_RETRY_COOLDOWN_MS = 20000
 
       const statusHandler = (event: { status: string; message: string }) => {
         this.sendProgressToRenderer({
@@ -348,6 +361,13 @@ export class OAuthManager extends EventEmitter {
           key: event.key,
           valueLength: event.value.length,
         })
+
+        const attemptKey = `${event.key}:${event.value}`
+        const lastAttempt = recentTokenAttempts.get(attemptKey) || 0
+        if (Date.now() - lastAttempt < TOKEN_RETRY_COOLDOWN_MS) {
+          return
+        }
+        recentTokenAttempts.set(attemptKey, Date.now())
 
         // Store the token
         collectedTokens[event.key] = event.value
@@ -572,6 +592,10 @@ export class OAuthManager extends EventEmitter {
           providerType,
           timeout: timeout || DEFAULT_TIMEOUT,
           proxyMode,
+          mode: extra?.mode,
+          prefill: extra?.prefill,
+          registration: extra?.registration,
+          codeResolver: extra?.codeResolver,
         })
         .then((result) => {
           if (!result.success) {
@@ -579,6 +603,51 @@ export class OAuthManager extends EventEmitter {
           }
         })
     })
+  }
+
+  /**
+   * Start an assisted single-account registration.
+   *
+   * Opens the provider's official registration page, prefills the phone and
+   * password, then waits for a human to solve the captcha / slider and the SMS
+   * verification code. Credential extraction and validation reuse the exact
+   * same in-app login pipeline.
+   */
+  async startInAppRegistration(
+    providerId: string,
+    providerType: ProviderType,
+    phone: string,
+    password: string,
+    timeout?: number,
+    proxyMode?: 'system' | 'none',
+    codeResolver?: () => Promise<string | null>,
+  ): Promise<OAuthResult> {
+    const registration = getRegistrationConfig(providerType)
+    if (!registration) {
+      return {
+        success: false,
+        providerId,
+        providerType,
+        error: `Provider does not support assisted registration: ${providerType}`,
+      }
+    }
+
+    return this.startInAppLogin(providerId, providerType, timeout, proxyMode, {
+      mode: 'register',
+      prefill: { phone, password },
+      registration,
+      codeResolver,
+    })
+  }
+
+  /**
+   * Broadcast a progress event to listeners (used by batch flows).
+   *
+   * This only emits; the IPC layer owns the renderer bridge via its `progress`
+   * listener so events are not delivered twice.
+   */
+  emitProgress(event: OAuthProgressEvent): void {
+    this.emit('progress', event)
   }
 
   /**
