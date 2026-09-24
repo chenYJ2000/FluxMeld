@@ -295,7 +295,11 @@
     "updateModelsSuccess": "模型列表更新成功",
     "updateModelsFailed": "模型列表更新失败",
     "updateModelsNotSupported": "该供应商不支持动态更新模型",
-    "updatingModels": "正在更新模型列表..."
+    "updatingModels": "正在更新模型列表...",
+    "deleteAllAccounts": "一键删除全部账户",
+    "deleteAllAccountsConfirm": "确定要删除当前供应商的全部 {{count}} 个账户吗？",
+    "deleteAllAccountsWarning": "此操作不可撤销，删除后需要重新添加或导入账户。",
+    "accountsDeleted": "已删除 {{count}} 个账户"
   },
   "loginGuide": {
     "getToken": "获取 {{provider}} 凭证",
@@ -534,7 +538,7 @@
     "mappingUpdatedPending": "模型映射 {{model}} 已修改（待保存）",
     "mappingDeletedPending": "模型映射 {{model}} 已删除（待保存）",
     "configSaved": "模型映射配置已保存",
-    "configSaveFailed": "无法保存配置，请重试",
+    "configSaveFailed": "保存配置失败",
     "unsavedChangesWarning": "您有未保存的更改，确定要离开吗？",
     "unsavedChangesHint": "您有未保存的更改，请点击保存按钮保存",
     "unsavedChangesTitle": "有未保存的更改",
@@ -618,12 +622,7 @@
     "restartNow": "立即重启",
     "restarting": "正在重启...",
     "proxyRestarted": "代理服务已使用新配置重启",
-    "proxyRestartFailed": "代理服务重启失败",
-    "validationFailed": "验证失败",
-    "fixFormErrors": "请修正表单中的错误",
-    "proxyConfigUpdated": "代理配置已更新",
-    "configSaveFailed": "保存配置失败",
-    "saving": "保存中..."
+    "proxyRestartFailed": "代理服务重启失败"
   },
   "apiKeys": {
     "title": "API Key 管理",

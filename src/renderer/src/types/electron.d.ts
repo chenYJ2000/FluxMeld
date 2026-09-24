@@ -26,6 +26,7 @@ import type {
   AccountImportResult,
   ProviderUiMeta,
   RegistrationApiConfig,
+  BatchDeleteAccountsResponse,
 } from '../../../shared/types'
 
 export type { 
@@ -287,6 +288,7 @@ interface AccountsAPI {
   }) => Promise<Account>
   update: (id: string, updates: Partial<Account>) => Promise<Account | null>
   delete: (id: string) => Promise<boolean>
+  deleteAll: (providerId?: string) => Promise<BatchDeleteAccountsResponse>
   validate: (accountId: string) => Promise<boolean>
   validateAll: (providerId?: string) => Promise<Record<string, ValidationResult>>
   validateToken: (providerId: string, credentials: Record<string, string>) => Promise<{

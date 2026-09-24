@@ -716,6 +716,33 @@ export function Providers() {
     }
   }
 
+  const handleDeleteAllAccounts = async (providerId: string) => {
+    try {
+      const result = await window.electronAPI.accounts.deleteAll(providerId)
+      if (result.succeeded > 0) {
+        store.setAccounts(store.accounts.filter((a) => a.providerId !== providerId))
+        store.updateAccountCount(providerId, 0, 0)
+
+        toast({
+          title: t('providers.deleteSuccess'),
+          description: t('providers.accountsDeleted', { count: result.succeeded }),
+        })
+      } else {
+        toast({
+          title: t('providers.deleteFailed'),
+          description: t('providers.operationFailed'),
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      toast({
+        title: t('providers.deleteFailed'),
+        description: error instanceof Error ? error.message : t('providers.operationFailed'),
+        variant: 'destructive',
+      })
+    }
+  }
+
   const handleValidateAccount = async (id: string) => {
     try {
       const isValid = await window.electronAPI.accounts.validate(id)
@@ -1008,6 +1035,7 @@ export function Providers() {
             setShowAddAccountDialog(true)
           }}
           onDeleteAccount={handleDeleteAccount}
+          onDeleteAllAccounts={() => handleDeleteAllAccounts(selectedProvider.id)}
           onValidateAccount={handleValidateAccount}
           onReauthenticateAccount={handleReLoginAccount}
           reauthenticatingAccountId={reauthenticatingAccountId}

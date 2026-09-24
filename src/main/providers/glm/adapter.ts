@@ -7,11 +7,7 @@ import axios, { AxiosResponse } from 'axios'
 import { Account, Provider } from '../../store/types'
 import { storeManager } from '../../store/store'
 import { PassThrough } from 'stream'
-import {
-  GLMRequestValidationError,
-  resolveGLMChatMode,
-  type GLMChatMode,
-} from './modelOptions'
+import { GLMRequestValidationError, resolveGLMChatMode, type GLMChatMode } from './modelOptions'
 import { createParser } from 'eventsource-parser'
 import FormData from 'form-data'
 import mime from 'mime-types'
@@ -65,6 +61,61 @@ interface TokenInfo {
   accessToken: string
   refreshToken: string
   expiresAt: number
+}
+
+/** Decode a JWT payload without verifying the signature. */
+function decodeJwtPayload(token: string): Record<string, any> | undefined {
+  try {
+    const part = token.split('.')[1]
+    if (!part) return undefined
+    const padded = part + '='.repeat((4 - (part.length % 4)) % 4)
+    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'))
+  } catch {
+    return undefined
+  }
+}
+
+/** Read a (stream) response body as a short string for diagnostics. */
+async function readStreamSnippet(data: any, maxBytes = 2000): Promise<string> {
+  if (!data) return ''
+  if (typeof data === 'string') return data.slice(0, maxBytes)
+  if (typeof data.read !== 'function') {
+    try {
+      return JSON.stringify(data).slice(0, maxBytes)
+    } catch {
+      return ''
+    }
+  }
+  return await new Promise((resolve) => {
+    let out = ''
+    let settled = false
+    const finish = () => {
+      if (settled) return
+      settled = true
+      resolve(out.slice(0, maxBytes))
+    }
+    data.on('data', (chunk: Buffer) => {
+      out += chunk.toString('utf8')
+      if (out.length >= maxBytes) {
+        try {
+          data.destroy()
+        } catch {
+          /* noop */
+        }
+        finish()
+      }
+    })
+    data.on('end', finish)
+    data.on('error', finish)
+    setTimeout(() => {
+      try {
+        data.destroy()
+      } catch {
+        /* noop */
+      }
+      finish()
+    }, 1500)
+  })
 }
 
 interface GLMMessage {
@@ -210,6 +261,23 @@ export class GLMAdapter {
     return credentials.refresh_token || credentials.token || ''
   }
 
+  /**
+   * Device id sent as `X-Device-Id`.
+   *
+   * A GLM refresh token is bound to a stable `device_id` (embedded in the JWT)
+   * and the official web client reuses it for every call. This adapter used to
+   * send a fresh random uuid per request, which makes a single account look
+   * like a brand-new device on every call and trips GLM risk control / 429.
+   * `GLM_DEVICE_ID_MODE=random` restores the old behaviour for comparison.
+   */
+  private getDeviceId(): string {
+    if ((process.env.GLM_DEVICE_ID_MODE || 'token') !== 'random') {
+      const deviceId = decodeJwtPayload(this.getRefreshToken())?.device_id
+      if (typeof deviceId === 'string' && deviceId) return deviceId
+    }
+    return uuid()
+  }
+
   private async acquireToken(options?: GLMRequestOptions): Promise<string> {
     throwIfAborted(options?.signal)
     const refreshToken = this.getRefreshToken()
@@ -227,7 +295,7 @@ export class GLMAdapter {
         headers: {
           Authorization: `Bearer ${refreshToken}`,
           ...FAKE_HEADERS,
-          'X-Device-Id': uuid(),
+          'X-Device-Id': this.getDeviceId(),
           'X-Nonce': sign.nonce,
           'X-Request-Id': uuid(),
           'X-Sign': sign.sign,
@@ -243,6 +311,9 @@ export class GLMAdapter {
     const { code, status, message } = response.data || {}
     const isSuccess = code === 0 || status === 0
     if (response.status !== 200 || !isSuccess) {
+      console.error(
+        `[GLM-DIAG] refresh HTTP ${response.status} account=${this.account.name} code=${code} status=${status} body=${JSON.stringify(response.data).slice(0, 500)}`,
+      )
       const errorMsg = message || `HTTP ${response.status}`
       throw new Error(`Token refresh failed: ${errorMsg}`)
     }
@@ -612,6 +683,7 @@ GLM STRICT RULES:
     throwIfAborted(options?.signal)
 
     const transportRequestId = uuid()
+    const chatDeviceId = this.getDeviceId()
     const preparedMessages = addGLMTransportNonce(
       this.messagesToPrompt(messages, refs, toolsPrompt, false),
       transportRequestId,
@@ -694,7 +766,7 @@ GLM STRICT RULES:
         headers: {
           Authorization: `Bearer ${token}`,
           ...FAKE_HEADERS,
-          'X-Device-Id': uuid(),
+          'X-Device-Id': chatDeviceId,
           'X-Request-Id': transportRequestId,
           'X-Sign': sign.sign,
           'X-Timestamp': sign.timestamp,
@@ -706,6 +778,13 @@ GLM STRICT RULES:
         responseType: 'stream',
       },
     )
+
+    if (response.status >= 400) {
+      const snippet = await readStreamSnippet(response.data)
+      console.error(
+        `[GLM-DIAG] chat HTTP ${response.status} account=${this.account.name} deviceId=${chatDeviceId} deviceMode=${process.env.GLM_DEVICE_ID_MODE || 'token'} retry-after=${response.headers?.['retry-after'] ?? ''} body=${snippet}`,
+      )
+    }
 
     return { response, conversationId: '' }
   }
@@ -724,7 +803,7 @@ GLM STRICT RULES:
           headers: {
             Authorization: `Bearer ${token}`,
             Referer: 'https://chatglm.cn/main/alltoolsdetail',
-            'X-Device-Id': uuid(),
+            'X-Device-Id': this.getDeviceId(),
             'X-Request-Id': uuid(),
             'X-Sign': sign.sign,
             'X-Timestamp': sign.timestamp,
@@ -761,7 +840,7 @@ GLM STRICT RULES:
             headers: {
               Authorization: `Bearer ${token}`,
               Referer: 'https://chatglm.cn/main/alltoolsdetail',
-              'X-Device-Id': uuid(),
+              'X-Device-Id': this.getDeviceId(),
               'X-Request-Id': uuid(),
               'X-Sign': sign.sign,
               'X-Timestamp': sign.timestamp,
@@ -815,7 +894,7 @@ GLM STRICT RULES:
           headers: {
             Authorization: `Bearer ${token}`,
             Referer: 'https://chatglm.cn/main/alltoolsdetail',
-            'X-Device-Id': uuid(),
+            'X-Device-Id': this.getDeviceId(),
             'X-Request-Id': uuid(),
             'X-Sign': sign.sign,
             'X-Timestamp': sign.timestamp,

@@ -26,6 +26,7 @@ import type {
   ValidationResult,
   AccountImportResult,
   ProviderUiMeta,
+  BatchDeleteAccountsResponse,
 } from './types'
 
 export interface ClientTransport {
@@ -498,6 +499,8 @@ export function createClientApi(
     update: (id: string, updates: Partial<Account>): Promise<Account | null> =>
       transport.invoke('accounts:update', id, updates),
     delete: (id: string): Promise<boolean> => transport.invoke('accounts:delete', id),
+    deleteAll: (providerId?: string): Promise<BatchDeleteAccountsResponse> =>
+      transport.invoke('accounts:deleteAll', providerId),
     validate: (accountId: string): Promise<boolean> =>
       transport.invoke('accounts:validate', accountId),
     validateAll: (providerId?: string): Promise<Record<string, ValidationResult>> =>

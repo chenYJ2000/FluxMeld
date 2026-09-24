@@ -46,6 +46,8 @@ import type {
   ValidationResult,
   AccountImportResult,
   ProviderUiMeta,
+  BatchAccountResult,
+  BatchDeleteAccountsResponse,
 } from '../../shared/types'
 import type {
   SystemPrompt,
@@ -907,6 +909,43 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
   ipcMain.handle(IpcChannels.ACCOUNTS_DELETE, async (_, id: string): Promise<boolean> => {
     return AccountManager.delete(id)
   })
+
+  ipcMain.handle(
+    IpcChannels.ACCOUNTS_DELETE_ALL,
+    async (_, providerId?: string): Promise<BatchDeleteAccountsResponse> => {
+      const targets = providerId
+        ? AccountManager.getByProviderId(providerId, false)
+        : AccountManager.getAll(false)
+
+      const results: BatchAccountResult[] = []
+      let succeeded = 0
+      let failed = 0
+
+      targets.forEach((account, index) => {
+        const deleted = AccountManager.delete(account.id)
+        if (deleted) {
+          results.push({ index, success: true, id: account.id })
+          succeeded++
+        } else {
+          results.push({
+            index,
+            success: false,
+            id: account.id,
+            error: { code: 'account_not_found', message: `Account not found: ${account.id}` },
+          })
+          failed++
+        }
+      })
+
+      return {
+        total: targets.length,
+        succeeded,
+        failed,
+        deletedCount: succeeded,
+        results,
+      }
+    },
+  )
 
   ipcMain.handle(IpcChannels.ACCOUNTS_VALIDATE, async (_, accountId: string): Promise<boolean> => {
     const result = await AccountManager.validate(accountId)

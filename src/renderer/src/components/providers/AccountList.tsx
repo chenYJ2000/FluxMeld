@@ -57,6 +57,8 @@ interface AccountListProps {
   isValidatingAll?: boolean
   onEditAccount: (account: Account) => void
   onDeleteAccount: (id: string) => void
+  /** Delete every account currently shown (one-click clear). */
+  onDeleteAllAccounts?: () => void | Promise<void>
   onValidateAccount: (id: string) => void
   onReauthenticateAccount?: (account: Account) => void
   reauthenticatingAccountId?: string | null
@@ -78,6 +80,7 @@ export function AccountList({
   isValidatingAll = false,
   onEditAccount,
   onDeleteAccount,
+  onDeleteAllAccounts,
   onValidateAccount,
   onReauthenticateAccount,
   reauthenticatingAccountId,
@@ -92,6 +95,8 @@ export function AccountList({
   const [showClearChatsDialog, setShowClearChatsDialog] = useState(false)
   const [selectedAccountForClear, setSelectedAccountForClear] = useState<Account | null>(null)
   const [showExportWarning, setShowExportWarning] = useState(false)
+  const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false)
+  const [isDeletingAll, setIsDeletingAll] = useState(false)
   const importInputRef = useRef<HTMLInputElement>(null)
 
   const statusConfig: Record<
@@ -182,6 +187,17 @@ export function AccountList({
   const confirmExport = () => {
     setShowExportWarning(false)
     onExportAccounts?.()
+  }
+
+  const confirmDeleteAll = async () => {
+    if (!onDeleteAllAccounts) return
+    setIsDeletingAll(true)
+    try {
+      await onDeleteAllAccounts()
+      setShowDeleteAllDialog(false)
+    } finally {
+      setIsDeletingAll(false)
+    }
   }
 
   const activeCount = accounts.filter((a) => a.status === 'active' && a.enabled !== false).length
@@ -293,6 +309,17 @@ export function AccountList({
                 {t('providers.importAccounts')}
               </Button>
             </>
+          )}
+          {onDeleteAllAccounts && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setShowDeleteAllDialog(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {t('providers.deleteAllAccounts')}
+            </Button>
           )}
           <Button size="sm" onClick={onAddAccount}>
             <Plus className="mr-2 h-4 w-4" />
@@ -507,6 +534,40 @@ export function AccountList({
               {t('common.cancel')}
             </Button>
             <Button onClick={confirmExport}>{t('common.confirm')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete All Confirmation Dialog */}
+      <Dialog open={showDeleteAllDialog} onOpenChange={setShowDeleteAllDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('providers.deleteAllAccounts')}</DialogTitle>
+            <DialogDescription>
+              <div className="space-y-2">
+                <p>{t('providers.deleteAllAccountsConfirm', { count: totalCount })}</p>
+                <p className="text-destructive font-medium">
+                  {t('providers.deleteAllAccountsWarning')}
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteAllDialog(false)}
+              disabled={isDeletingAll}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteAll} disabled={isDeletingAll}>
+              {isDeletingAll ? (
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              {isDeletingAll ? t('common.loading') : t('common.confirm')}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

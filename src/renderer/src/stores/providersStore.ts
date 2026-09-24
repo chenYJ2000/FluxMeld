@@ -34,6 +34,7 @@ interface ProviderState {
   addAccount: (account: Account) => void
   updateAccount: (id: string, updates: Partial<Account>) => void
   removeAccount: (id: string) => void
+  removeAccounts: (ids: string[]) => void
 
   updateProviderStatus: (id: string, status: ProviderStatus) => void
   updateAccountCount: (providerId: string, total: number, active: number) => void
@@ -94,6 +95,14 @@ export const useProvidersStore = create<ProviderState>((set, get) => ({
     set((state) => ({
       accounts: state.accounts.filter((a) => a.id !== id),
     })),
+
+  removeAccounts: (ids) =>
+    set((state) => {
+      const removal = new Set(ids)
+      return {
+        accounts: state.accounts.filter((a) => !removal.has(a.id)),
+      }
+    }),
 
   updateProviderStatus: (id, status) =>
     set((state) => ({
