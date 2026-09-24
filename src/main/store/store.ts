@@ -429,6 +429,7 @@ export class StoreManager {
 
           return {
             ...p,
+            authType: builtinConfig.authType,
             apiEndpoint: builtinConfig.apiEndpoint,
             chatPath: builtinConfig.chatPath,
             supportedModels: builtinConfig.supportedModels,

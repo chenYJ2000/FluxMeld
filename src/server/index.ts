@@ -27,6 +27,9 @@ import { IpcChannels } from '../main/ipc/channels'
 import { storeManager } from '../main/store/store'
 import { emitToClients } from './eventBus'
 import { startWebServer } from './webServer'
+import { startProviderSessionMaintenance } from '../main/providers/maintenance'
+
+process.env.FLUXMELD_WEB_MODE = '1'
 
 const WEB_HOST = process.env.WEB_HOST || '0.0.0.0'
 const WEB_PORT = Number(process.env.WEB_PORT || 3000)
@@ -91,6 +94,8 @@ async function main(): Promise<void> {
     proxyPort,
     accessPassword: ACCESS_PASSWORD,
   })
+
+  startProviderSessionMaintenance()
 
   console.log('[web] proxy service port:', proxyPort)
   if (ACCESS_PASSWORD) {

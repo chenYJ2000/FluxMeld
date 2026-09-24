@@ -7,6 +7,7 @@
 | deepseek | [DeepSeek](deepseek.md) |
 | glm | [GLM](glm.md) |
 | kimi | [Kimi](kimi.md) |
+| kimi-ai | [Kimi AI](kimi-ai.md) |
 | minimax | [MiniMax](minimax.md) |
 | mimo | [Mimo](mimo.md) |
 | perplexity | [Perplexity](perplexity.md) |

@@ -15,6 +15,10 @@ import {
   OAuthCallbackData,
 } from '../../oauth/types'
 import { buildKimiAuthHeaders } from './token'
+import { getKimiJwtExpiry } from './token'
+import { exchangeKimiRefreshToken } from './session'
+import { checkKimiToken } from './tokenCheck'
+import type { Account, Provider } from '../../../shared/types'
 
 const KIMI_API_BASE = 'https://www.kimi.com'
 
@@ -46,7 +50,7 @@ export class KimiAdapter extends BaseOAuthAdapter {
     super({
       ...config,
       providerType: 'kimi',
-      authMethods: ['manual'],
+      authMethods: ['manual', 'cookie'],
       loginUrl: KIMI_API_BASE,
       apiUrl: KIMI_API_BASE,
     })
@@ -70,9 +74,9 @@ export class KimiAdapter extends BaseOAuthAdapter {
 
   /**
    * Detect token type
-   * Reference: detectTokenType function from Kimi-Free-API
+   * Distinguish a JWT access token from a web session cookie.
    */
-  detectTokenType(token: string): 'jwt' | 'refresh' {
+  detectTokenType(token: string): 'jwt' | 'cookie' {
     if (token.startsWith('eyJ') && token.split('.').length === 3) {
       try {
         const payload = this.parseJWT(token)
@@ -80,10 +84,10 @@ export class KimiAdapter extends BaseOAuthAdapter {
           return 'jwt'
         }
       } catch {
-        // Parse failed, treat as refresh token
+        // Parse failed; the upstream validation will reject an invalid credential.
       }
     }
-    return 'refresh'
+    return 'cookie'
   }
 
   /**
@@ -191,7 +195,7 @@ export class KimiAdapter extends BaseOAuthAdapter {
     )
 
     try {
-      const credentials: Record<string, string> = { accessToken: token }
+      const credentials: Record<string, string> = { token }
       let accountInfo: Record<string, string> = {}
 
       if (tokenType === 'jwt') {
@@ -261,8 +265,9 @@ export class KimiAdapter extends BaseOAuthAdapter {
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
     // Support multiple key variations for flexibility
     const accessToken =
-      credentials.accessToken ||
       credentials.token ||
+      credentials['kimi-auth'] ||
+      credentials.accessToken ||
       credentials.access_token ||
       credentials.apiKey ||
       credentials.api_key
@@ -274,29 +279,34 @@ export class KimiAdapter extends BaseOAuthAdapter {
       }
     }
 
-    const tokenType = this.detectTokenType(accessToken)
-
     try {
-      const result = await this.callGrpcApi(
-        accessToken,
-        '/apiv2/kimi.gateway.order.v1.SubscriptionService/GetSubscription',
-        {},
+      const result = await checkKimiToken(
+        { id: 'kimi' } as Provider,
+        {
+          id: 'temp',
+          providerId: 'kimi',
+          name: 'temp',
+          credentials: {
+            token: accessToken,
+            refresh_token: credentials.refresh_token || '',
+          },
+          status: 'active',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        } as Account,
       )
 
-      if (!result || !result.subscription) {
+      if (!result.valid) {
         return {
           valid: false,
-          error: 'Token is invalid or expired',
+          error: result.error || 'Token is invalid or expired',
         }
       }
 
       return {
         valid: true,
-        tokenType,
-        accountInfo: {
-          userId: result.subscription?.userId || '',
-          name: result.subscription?.userName || '',
-        },
+        tokenType: this.detectTokenType(accessToken),
+        accountInfo: result.userInfo,
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Validation request failed'
@@ -307,11 +317,19 @@ export class KimiAdapter extends BaseOAuthAdapter {
     }
   }
 
-  /**
-   * Refresh token - Kimi no longer supports refresh token API
-   */
   async refreshToken(credentials: Record<string, string>): Promise<CredentialInfo | null> {
-    return null
+    if (!credentials.refresh_token) return null
+    try {
+      const next = await exchangeKimiRefreshToken(credentials.refresh_token)
+      return {
+        type: 'jwt',
+        value: next.token,
+        refreshToken: next.refresh_token,
+        expiresAt: getKimiJwtExpiry(next.token) || undefined,
+      }
+    } catch {
+      return null
+    }
   }
 
   /**

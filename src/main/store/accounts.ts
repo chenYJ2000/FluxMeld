@@ -299,7 +299,7 @@ export class AccountManager {
       }
     }
 
-    const result = await validateCredentials(provider, account.credentials)
+    const result = await validateCredentials(provider, account.credentials, account)
 
     if (result.valid) {
       this.updateStatus(id, 'active')

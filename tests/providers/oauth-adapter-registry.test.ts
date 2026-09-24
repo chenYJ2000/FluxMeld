@@ -7,6 +7,7 @@ const PROVIDER_TYPES: ProviderType[] = [
   'deepseek',
   'glm',
   'kimi',
+  'kimi-ai',
   'mimo',
   'minimax',
   'perplexity',
@@ -40,6 +41,7 @@ test('every supported provider type exposes auth methods', () => {
 })
 
 test('cookie-capable providers advertise the cookie auth method', () => {
+  assert.ok(getSupportedAuthMethods('kimi').includes('cookie'))
   assert.ok(getSupportedAuthMethods('mimo').includes('cookie'))
   assert.ok(getSupportedAuthMethods('perplexity').includes('cookie'))
   assert.ok(getSupportedAuthMethods('qwen').includes('cookie'))

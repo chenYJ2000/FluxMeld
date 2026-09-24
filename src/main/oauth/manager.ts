@@ -18,7 +18,7 @@ import {
 import { createAdapter, BaseOAuthAdapter } from './adapters'
 import { storeManager } from '../store/store'
 import { inAppLoginManager, InAppLoginResult } from './inAppLogin'
-import { getRegistrationConfig } from '../providers/registry'
+import { getRegistrationConfig, getProviderModule } from '../providers/registry'
 import type { RegistrationConfig } from '../providers/types.ts'
 
 const DEFAULT_CALLBACK_PORT = 8311
@@ -384,6 +384,17 @@ export class OAuthManager extends EventEmitter {
 
         console.log('[OAuthManager] Collected tokens:', Object.keys(collectedTokens))
 
+        const extraction = getProviderModule(providerType)?.tokenExtraction
+        const primaryReady = (extraction?.requiredKeys ?? []).every((key) => collectedTokens[key])
+        const legacyReady =
+          extra?.mode !== 'register' &&
+          (extraction?.loginAlternativeKeys ?? []).some((keys) =>
+            keys.every((key) => collectedTokens[key]),
+          )
+        if (!primaryReady && !legacyReady) {
+          return
+        }
+
         // For MiniMax, we need both token and realUserID before validating
         if (providerType === 'minimax') {
           if (!collectedTokens.token) {
@@ -608,10 +619,9 @@ export class OAuthManager extends EventEmitter {
   /**
    * Start an assisted single-account registration.
    *
-   * Opens the provider's official registration page, prefills the phone and
-   * password, then waits for a human to solve the captcha / slider and the SMS
-   * verification code. Credential extraction and validation reuse the exact
-   * same in-app login pipeline.
+   * Opens the provider's official registration page, prefills its configured
+   * fields, and waits for any human-verification challenge. Credential
+   * extraction and validation reuse the in-app login pipeline.
    */
   async startInAppRegistration(
     providerId: string,

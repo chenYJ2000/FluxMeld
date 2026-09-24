@@ -131,10 +131,20 @@ export function AddProviderDialog({
     : null
 
   const supportsOAuth =
+    window.electronAPI?.platform !== 'web' &&
     selectedProviderData &&
-    ['deepseek', 'glm', 'kimi', 'mimo', 'minimax', 'qwen', 'qwen-ai', 'zai', 'perplexity'].includes(
-      selectedProviderData.id,
-    )
+    [
+      'deepseek',
+      'glm',
+      'kimi',
+      'kimi-ai',
+      'mimo',
+      'minimax',
+      'qwen',
+      'qwen-ai',
+      'zai',
+      'perplexity',
+    ].includes(selectedProviderData.id)
 
   const toggleModelExpansion = (providerId: string) => {
     setExpandedModels((prev) => {

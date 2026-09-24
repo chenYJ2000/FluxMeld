@@ -58,6 +58,8 @@ interface AccountListProps {
   onEditAccount: (account: Account) => void
   onDeleteAccount: (id: string) => void
   onValidateAccount: (id: string) => void
+  onReauthenticateAccount?: (account: Account) => void
+  reauthenticatingAccountId?: string | null
   onViewDetail: (account: Account) => void
   /** Toggle the account's independent enable switch (excluded from routing when off). */
   onToggleAccount?: (id: string, enabled: boolean) => void
@@ -77,6 +79,8 @@ export function AccountList({
   onEditAccount,
   onDeleteAccount,
   onValidateAccount,
+  onReauthenticateAccount,
+  reauthenticatingAccountId,
   onViewDetail,
   onToggleAccount,
   onExportAccounts,
@@ -364,6 +368,28 @@ export function AccountList({
                             {account.errorMessage}
                           </p>
                         )}
+                        {(provider?.id === 'kimi' || provider?.id === 'kimi-ai') &&
+                          (account.status === 'error' || account.status === 'expired') &&
+                          onReauthenticateAccount && (
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto px-0 py-1"
+                              disabled={!!reauthenticatingAccountId}
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                onReauthenticateAccount(account)
+                              }}
+                            >
+                              <RefreshCw
+                                className={cn(
+                                  'mr-1 h-3 w-3',
+                                  reauthenticatingAccountId === account.id && 'animate-spin',
+                                )}
+                              />
+                              {t('providers.relogin')}
+                            </Button>
+                          )}
                       </div>
                     </div>
 
@@ -377,7 +403,9 @@ export function AccountList({
                         <div
                           className="flex items-center"
                           onClick={(e) => e.stopPropagation()}
-                          title={isEnabled ? t('providers.disableAccount') : t('providers.enableAccount')}
+                          title={
+                            isEnabled ? t('providers.disableAccount') : t('providers.enableAccount')
+                          }
                         >
                           <Switch
                             checked={isEnabled}

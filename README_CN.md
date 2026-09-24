@@ -47,7 +47,7 @@ FluxMeld 的数据目录是 ~/.fluxmeld/，不会读取或覆盖旧应用安装�
 
 ## 主要能力
 
-- **多服务商账户工作台**：支持 DeepSeek、GLM、Kimi、MiniMax、MiMo、Perplexity、
+- **多服务商账户工作台**：支持 DeepSeek、GLM、Kimi（kimi.com）、Kimi AI（kimi.ai）、MiniMax、MiMo、Perplexity、
   Qwen、Qwen AI、Z.ai，以及已配置的自定义服务商。
 - **OpenAI 兼容中继**：提供 chat completions、模型发现、流式响应、API Key
   鉴权和本地代理配置。
@@ -68,6 +68,7 @@ FluxMeld 的数据目录是 ~/.fluxmeld/，不会读取或覆盖旧应用安装�
 | DeepSeek | deepseek-v4-flash, deepseek-v4-pro |
 | GLM | GLM-5.3, GLM-5.3-Flash |
 | Kimi | Kimi-K3, Kimi-K2.6 |
+| Kimi AI (kimi.ai) | Kimi-AI-K3, Kimi-AI-K2.6 |
 | MiniMax | MiniMax-M2.7 |
 | Mimo | MiMo-V2.5-Pro, MiMo-V2.5, MiMo-V2-Flash |
 | Perplexity | Auto |

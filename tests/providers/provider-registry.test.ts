@@ -38,7 +38,7 @@ test('toolCalling capability is declared on the expected providers', () => {
     .filter((module) => module.config.capabilities?.toolCalling)
     .map((module) => module.id)
     .sort()
-  assert.deepEqual(ids, ['deepseek', 'glm', 'kimi', 'mimo', 'qwen'])
+  assert.deepEqual(ids, ['deepseek', 'glm', 'kimi', 'kimi-ai', 'mimo', 'qwen'].sort())
 })
 
 test('every module exposes UI icon metadata and OAuth auth methods', () => {

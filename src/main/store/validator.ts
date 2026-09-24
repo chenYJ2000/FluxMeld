@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosError } from 'axios'
-import { Provider, ValidationResult, AuthType } from './types'
+import { Account, Provider, ValidationResult } from './types'
 import { ProviderChecker } from '../providers/checker'
 
 /**
@@ -381,6 +381,7 @@ class GenericTokenValidator implements Validator {
 export async function validateCredentials(
   provider: Provider,
   credentials: Record<string, string>,
+  existingAccount?: Account,
 ): Promise<ValidationResult> {
   // Built-in providers use ProviderChecker for validation
   if (provider.type === 'builtin') {
@@ -394,7 +395,7 @@ export async function validateCredentials(
       updatedAt: Date.now(),
     }
 
-    const result = await ProviderChecker.checkAccountToken(provider, tempAccount)
+    const result = await ProviderChecker.checkAccountToken(provider, existingAccount || tempAccount)
 
     return {
       valid: result.valid,

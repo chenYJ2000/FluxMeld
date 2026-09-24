@@ -13,6 +13,7 @@
 import { deepseekModule } from './deepseek/index.ts'
 import { glmModule } from './glm/index.ts'
 import { kimiModule } from './kimi/index.ts'
+import { kimiAiModule } from './kimi-ai/index.ts'
 import { mimoModule } from './mimo/index.ts'
 import { minimaxModule } from './minimax/index.ts'
 import { perplexityModule } from './perplexity/index.ts'
@@ -34,6 +35,7 @@ export const providerModules: ProviderModule[] = [
   deepseekModule,
   glmModule,
   kimiModule,
+  kimiAiModule,
   qwenModule,
   qwenAiModule,
   zaiModule,

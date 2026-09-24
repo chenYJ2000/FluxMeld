@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path'
 import { deepseekConfig } from '../../src/main/providers/deepseek/config.ts'
 import { glmConfig } from '../../src/main/providers/glm/config.ts'
 import { kimiConfig } from '../../src/main/providers/kimi/config.ts'
+import { kimiAiConfig } from '../../src/main/providers/kimi-ai/config.ts'
 import { minimaxConfig } from '../../src/main/providers/minimax/config.ts'
 import { mimoConfig } from '../../src/main/providers/mimo/config.ts'
 import { perplexityConfig } from '../../src/main/providers/perplexity/config.ts'
@@ -311,14 +312,8 @@ test('Kimi and domestic Qwen support account-level chat cleanup', () => {
   // Providers are dispatched through the registry, not hard-coded in the IPC layer.
   assert.match(handlersSource, /import \{ getProviderModule \} from '\.\.\/providers\/registry'/)
   assert.match(handlersSource, /getProviderModule\(provider\.id\)\?\.capabilities\?\.clearChats/)
-  assert.match(
-    kimiModuleSource,
-    /new KimiAdapter\(provider, account\)\.deleteAllChats\(\)/,
-  )
-  assert.match(
-    qwenModuleSource,
-    /new QwenAdapter\(provider, account\)\.deleteAllChats\(\)/,
-  )
+  assert.match(kimiModuleSource, /new KimiAdapter\(provider, account\)\.deleteAllChats\(\)/)
+  assert.match(qwenModuleSource, /new QwenAdapter\(provider, account\)\.deleteAllChats\(\)/)
   assert.match(accountListSource, /provider\?\.capabilities\?\.clearChats/)
 
   assert.match(kimiAdapterSource, /async deleteAllChats\(\): Promise<boolean>/)
@@ -407,7 +402,10 @@ test('Qwen AI defaults keep only the filtered current web model set', () => {
     assert.equal(qwenAiConfig.modelMappings?.[removedModel], undefined, removedModel)
   }
 
-  const qwenAiAdapterSource = readFileSync(join(root, 'src/main/providers/qwen-ai/adapter.ts'), 'utf8')
+  const qwenAiAdapterSource = readFileSync(
+    join(root, 'src/main/providers/qwen-ai/adapter.ts'),
+    'utf8',
+  )
   assert.match(qwenAiAdapterSource, /qwen:\s*'qwen3\.7-max'/)
   assert.match(qwenAiAdapterSource, /qwen3:\s*'qwen3\.7-max'/)
   assert.match(qwenAiAdapterSource, /'qwen3\.7':\s*'qwen3\.7-max'/)
@@ -468,6 +466,7 @@ test('provider docs cover every built-in provider and Qwen AI manual model addit
     'deepseek',
     'glm',
     'kimi',
+    'kimi-ai',
     'minimax',
     'mimo',
     'perplexity',
@@ -525,6 +524,7 @@ test('README Supported Providers model lists mirror current defaults with Perple
     ['DeepSeek', deepseekConfig.supportedModels?.join(', ')],
     ['GLM', glmConfig.supportedModels?.join(', ')],
     ['Kimi', kimiConfig.supportedModels?.join(', ')],
+    ['Kimi AI (kimi.ai)', kimiAiConfig.supportedModels?.join(', ')],
     ['MiniMax', minimaxConfig.supportedModels?.join(', ')],
     ['Mimo', mimoConfig.supportedModels?.join(', ')],
     ['Perplexity', 'Auto'],

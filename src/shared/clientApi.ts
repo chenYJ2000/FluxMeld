@@ -561,10 +561,16 @@ export function createClientApi(
       providerType: ProviderType,
       count: number,
       timeout?: number,
+      options?: { countryCode?: string; acceptedTerms?: boolean },
     ): Promise<{ results: BatchRegistrationItemResult[] }> =>
-      transport.invoke('oauth:startBatchRegistration', { providerId, providerType, count, timeout }),
-    cancelBatchRegistration: (): Promise<void> =>
-      transport.invoke('oauth:cancelBatchRegistration'),
+      transport.invoke('oauth:startBatchRegistration', {
+        providerId,
+        providerType,
+        count,
+        timeout,
+        ...options,
+      }),
+    cancelBatchRegistration: (): Promise<void> => transport.invoke('oauth:cancelBatchRegistration'),
     onCallback: (callback: (result: OAuthResult) => void) =>
       transport.on('oauth:callback', (result) => callback(result)),
     onProgress: (callback: (event: OAuthProgressEvent) => void) =>

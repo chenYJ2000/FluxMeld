@@ -83,5 +83,8 @@ test('P0 metadata exposes only approved clients and providers', () => {
     .filter((provider) => provider.capabilities?.toolCalling)
     .map((provider) => provider.id)
     .sort()
-  assert.deepEqual(toolCallingProviders, ['deepseek', 'glm', 'kimi', 'mimo', 'qwen'])
+  assert.deepEqual(
+    toolCallingProviders,
+    ['deepseek', 'glm', 'kimi', 'kimi-ai', 'mimo', 'qwen'].sort(),
+  )
 })

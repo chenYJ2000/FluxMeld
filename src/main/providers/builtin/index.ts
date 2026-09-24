@@ -11,6 +11,7 @@
 import deepseekConfig from '../deepseek/config.ts'
 import glmConfig from '../glm/config.ts'
 import kimiConfig from '../kimi/config.ts'
+import kimiAiConfig from '../kimi-ai/config.ts'
 import minimaxConfig from '../minimax/config.ts'
 import mimoConfig from '../mimo/config.ts'
 import perplexityConfig from '../perplexity/config.ts'
@@ -23,6 +24,7 @@ export const builtinProviders: BuiltinProviderConfig[] = [
   deepseekConfig,
   glmConfig,
   kimiConfig,
+  kimiAiConfig,
   minimaxConfig,
   mimoConfig,
   perplexityConfig,

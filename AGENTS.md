@@ -216,9 +216,9 @@ so the model list has a single source of truth (do not duplicate it).
 | Type | Credential Field | Providers |
 | --- | --- | --- |
 | `userToken` | `token` | DeepSeek |
-| `jwt` | `token` | Kimi, MiniMax, Qwen AI, Z.ai |
+| `jwt` | `token` + `refresh_token` (Kimi AI), `token` (others) | Kimi AI (kimi.ai), MiniMax, Qwen AI, Z.ai |
 | `refresh_token` | `refresh_token` | GLM |
-| `cookie` | `sessionToken` | Perplexity |
+| `cookie` | `token` + optional `refresh_token` (Kimi), `sessionToken` (Perplexity) | Kimi (kimi.com), Perplexity |
 | `tongyi_sso_ticket` | `ticket` | Qwen |
 | `token` | `token` | Z.ai |
 

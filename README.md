@@ -55,7 +55,7 @@ reuse or overwrite a predecessor application's data.
 
 ## Highlights
 
-- **Provider-account workspace** for DeepSeek, GLM, Kimi, MiniMax, MiMo,
+- **Provider-account workspace** for DeepSeek, GLM, Kimi (kimi.com), Kimi AI (kimi.ai), MiniMax, MiMo,
   Perplexity, Qwen, Qwen AI, Z.ai, and configured custom providers.
 - **OpenAI-compatible relay** for chat completions, model discovery, streaming,
   API-key authentication, and local proxy configuration.
@@ -79,6 +79,7 @@ access can change independently of FluxMeld releases.
 | DeepSeek | deepseek-v4-flash, deepseek-v4-pro |
 | GLM | GLM-5.3, GLM-5.3-Flash |
 | Kimi | Kimi-K3, Kimi-K2.6 |
+| Kimi AI (kimi.ai) | Kimi-AI-K3, Kimi-AI-K2.6 |
 | MiniMax | MiniMax-M2.7 |
 | Mimo | MiMo-V2.5-Pro, MiMo-V2.5, MiMo-V2-Flash |
 | Perplexity | Auto |

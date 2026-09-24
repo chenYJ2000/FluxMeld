@@ -10,6 +10,18 @@
 
 const OPAQUE_TOKEN_PREFIX = 'v10'
 
+/** JWT expiry is distinct from the browser's Cookie expiration date. */
+export function getKimiJwtExpiry(token: string): number | null {
+  const parts = token.trim().split('.')
+  if (parts.length !== 3 || !parts[0].startsWith('eyJ')) return null
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+    return typeof payload.exp === 'number' && Number.isFinite(payload.exp) ? payload.exp : null
+  } catch {
+    return null
+  }
+}
+
 export function isKimiOpaqueToken(token: string): boolean {
   const trimmed = token.trim()
   if (!trimmed) return false

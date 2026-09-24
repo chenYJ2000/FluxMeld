@@ -2,9 +2,9 @@ import type { BuiltinProviderConfig } from '../../store/types'
 
 export const kimiConfig: BuiltinProviderConfig = {
   id: 'kimi',
-  name: 'Kimi',
+  name: 'Kimi (kimi.com)',
   type: 'builtin',
-  authType: 'jwt',
+  authType: 'cookie',
   apiEndpoint: 'https://www.kimi.com',
   chatPath: '/apiv2/kimi.gateway.chat.v1.ChatService/Chat',
   headers: {
@@ -38,16 +38,33 @@ export const kimiConfig: BuiltinProviderConfig = {
       labelKey: 'kimi.accessToken',
       placeholderKey: 'kimi.accessTokenPlaceholder',
       helpTextKey: 'kimi.accessTokenHelp',
-      label: '访问令牌',
+      label: 'Kimi 会话令牌',
       type: 'password',
       required: true,
-      placeholder: '请输入 Kimi 访问令牌或刷新令牌',
-      helpText: '浏览器 Cookie 中的 kimi-auth 字段值（推荐），或 JWT Token / refresh_token',
+      placeholder: '请输入当前有效的 kimi-auth 或 access_token',
+      helpText:
+        'kimi-auth 的 Cookie 保存期限可能晚于令牌实际到期时间；优先使用 Local Storage 中的 access_token，并同时填写 refresh_token 以自动续期',
+    },
+    {
+      name: 'refresh_token',
+      labelKey: 'kimi.refreshToken',
+      placeholderKey: 'kimi.refreshTokenPlaceholder',
+      helpTextKey: 'kimi.refreshTokenHelp',
+      label: 'refresh_token',
+      type: 'password',
+      required: false,
+      placeholder: '粘贴 www.kimi.com Local Storage 中的 refresh_token',
+      helpText: '若网页保存了此字段，填写后 FluxMeld 可在 access_token 到期前自动续期',
     },
   ],
-  tokenCheckEndpoint: '/api/auth/token/refresh',
+  tokenCheckEndpoint: '/',
   tokenCheckMethod: 'GET',
-  capabilities: { clearChats: true, toolCalling: true },
+  capabilities: {
+    clearChats: true,
+    toolCalling: true,
+    batchRegister: true,
+    webBatchRegister: true,
+  },
   ui: { iconKey: 'kimi', i18nPrefix: 'kimi' },
 }
 

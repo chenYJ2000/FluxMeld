@@ -1,11 +1,15 @@
 import { KimiAdapter, KimiStreamHandler } from './adapter'
 import { createForwardFailure } from '../../proxy/forwarders/errors'
+import { storeManager } from '../../store/store'
 import type { ForwarderServices, ProviderForwarder } from '../../proxy/forwarders/types'
 
-export function createKimiForwarder(services: ForwarderServices): ProviderForwarder {
+export function createKimiForwarder(
+  services: ForwarderServices,
+  providerId = 'kimi',
+): ProviderForwarder {
   return {
-    name: 'kimi',
-    matches: KimiAdapter.isKimiProvider,
+    name: providerId,
+    matches: (provider) => provider.id === providerId,
     async forward(request, account, provider, actualModel, startTime) {
       try {
         const transformed = services.transformRequestForPromptToolUse(request, provider)
@@ -55,7 +59,30 @@ export function createKimiForwarder(services: ForwarderServices): ProviderForwar
         }
 
         if (request.stream) {
-          const transformedStream = await handler.handleStream(response.data)
+          const transformedStream = await handler.handleStream(response.data, (status) => {
+            const current = storeManager.getAccountById(account.id, true)
+            const requestToken = adapter.getActiveToken()
+            const currentToken =
+              current?.credentials.token ||
+              current?.credentials.accessToken ||
+              current?.credentials.refreshToken
+            if (!current || currentToken !== requestToken) return
+
+            storeManager.updateAccount(account.id, {
+              status: 'error',
+              errorMessage: `Authentication failed (HTTP ${status})`,
+              lastStatusCheck: Date.now(),
+            })
+            storeManager.addLog(
+              'error',
+              'Account disabled after Kimi stream authentication failure',
+              {
+                providerId: provider.id,
+                accountId: account.id,
+                data: { status },
+              },
+            )
+          })
 
           if (services.shouldDeleteSession()) {
             const originalEnd = transformedStream.end.bind(transformedStream)

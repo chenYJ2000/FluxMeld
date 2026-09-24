@@ -62,6 +62,7 @@ export class InAppLoginManager extends EventEmitter {
   private options: InAppLoginOptions | null = null
   private resolvedCode: string | null = null
   private codeResolutionStarted: boolean = false
+  private tokenCheckInterval: NodeJS.Timeout | null = null
 
   constructor() {
     super()
@@ -303,6 +304,15 @@ export class InAppLoginManager extends EventEmitter {
       this.injectRegistrationAutofill()
       this.delayedTokenCheck()
     })
+
+    // Some login pages update Local Storage without navigating. Keep checking
+    // until the credentials are found or the login window closes.
+    if (this.config.tokenSources.some((source) => source.type === 'localStorage')) {
+      this.tokenCheckInterval = setInterval(() => {
+        if (this.isCompleted || !this.hasMinTimePassed()) return
+        void this.checkForTokens()
+      }, 2000)
+    }
   }
 
   /**
@@ -355,6 +365,9 @@ export class InAppLoginManager extends EventEmitter {
       phoneSelector: phoneField?.selector,
       passwordSelector: passwordField?.selector,
       codeSelector: codeField?.selector,
+      termsCheckboxSelector: this.options?.registration?.termsCheckboxSelector,
+      sendCodeSelector: this.options?.registration?.sendCodeSelector,
+      submitSelector: this.options?.registration?.submitSelector,
     }
 
     if (!payload.phone && !payload.password && !payload.code) return
@@ -440,15 +453,50 @@ export class InAppLoginManager extends EventEmitter {
         try {
           if (payload.phone && !done.phone) {
             const el = findPhone();
-            if (el && !el.value && setValue(el, payload.phone)) done.phone = true;
+            if (el && !el.value && setValue(el, payload.phone)) {
+              done.phone = true;
+              return;
+            }
           }
           if (payload.password && !done.password) {
             const el = findPassword();
             if (el && !el.value && setValue(el, payload.password)) done.password = true;
           }
+          const terms = payload.termsCheckboxSelector
+            ? document.querySelector(payload.termsCheckboxSelector)
+            : null;
+          if (terms && isVisible(terms) && !terms.checked) {
+            terms.click();
+            return;
+          }
+
+          const phone = findPhone();
+          const code = findCode();
+          const send = payload.sendCodeSelector
+            ? document.querySelector(payload.sendCodeSelector)
+            : null;
+          if (payload.sendCodeSelector && !window.__fluxmeldRegSendClicked) {
+            if (send && phone?.value && !code?.value && !send.disabled &&
+                (!payload.termsCheckboxSelector || terms?.checked)) {
+              window.__fluxmeldRegSendClicked = true;
+              send.click();
+            }
+            return;
+          }
+
           if (payload.code && !done.code) {
-            const el = findCode();
-            if (el && !el.value && setValue(el, payload.code)) done.code = true;
+            if (code && !code.value && setValue(code, payload.code)) {
+              done.code = true;
+              return;
+            }
+          }
+
+          const submit = payload.submitSelector
+            ? document.querySelector(payload.submitSelector)
+            : null;
+          if (submit && payload.code && code?.value === payload.code && !submit.disabled && !window.__fluxmeldRegSubmitted) {
+            window.__fluxmeldRegSubmitted = true;
+            submit.click();
           }
         } catch (e) {}
       };
@@ -461,9 +509,8 @@ export class InAppLoginManager extends EventEmitter {
         observer.observe(document.documentElement, { childList: true, subtree: true });
         window.__fluxmeldRegObserver = observer;
       } catch (e) {}
-      if (!window.__fluxmeldRegInterval) {
-        window.__fluxmeldRegInterval = setInterval(tick, 1500);
-      }
+      if (window.__fluxmeldRegInterval) clearInterval(window.__fluxmeldRegInterval);
+      window.__fluxmeldRegInterval = setInterval(tick, 1500);
     })()`
 
     this.loginWindow.webContents.executeJavaScript(script).catch((error) => {
@@ -741,6 +788,10 @@ export class InAppLoginManager extends EventEmitter {
     if (this.timeoutId) {
       clearTimeout(this.timeoutId)
       this.timeoutId = null
+    }
+    if (this.tokenCheckInterval) {
+      clearInterval(this.tokenCheckInterval)
+      this.tokenCheckInterval = null
     }
 
     if (this.loginWindow && !this.loginWindow.isDestroyed()) {

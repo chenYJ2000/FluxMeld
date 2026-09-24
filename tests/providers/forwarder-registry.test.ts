@@ -33,6 +33,7 @@ const EXPECTED_PROVIDERS = [
   'deepseek',
   'glm',
   'kimi',
+  'kimi-ai',
   'qwen',
   'qwen-ai',
   'zai',

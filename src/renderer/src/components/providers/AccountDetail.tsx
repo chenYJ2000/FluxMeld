@@ -46,6 +46,8 @@ interface AccountDetailProps {
   onEdit: () => void
   onDelete: () => void
   onValidate: () => Promise<void>
+  onReauthenticate?: () => void
+  isReauthenticating?: boolean
   /** Toggle the account's independent enable switch (excluded from routing when off). */
   onToggleEnabled?: (enabled: boolean) => void
 }
@@ -57,6 +59,8 @@ export function AccountDetail({
   onEdit,
   onDelete,
   onValidate,
+  onReauthenticate,
+  isReauthenticating = false,
   onToggleEnabled,
 }: AccountDetailProps) {
   const { t, i18n } = useTranslation()
@@ -242,12 +246,11 @@ export function AccountDetail({
           {onToggleEnabled && (
             <div className="flex items-center gap-2 mr-1">
               <span className="text-sm text-muted-foreground">
-                {account.enabled === false ? t('providers.accountDisabled') : t('providers.accountEnabled')}
+                {account.enabled === false
+                  ? t('providers.accountDisabled')
+                  : t('providers.accountEnabled')}
               </span>
-              <Switch
-                checked={account.enabled !== false}
-                onCheckedChange={onToggleEnabled}
-              />
+              <Switch checked={account.enabled !== false} onCheckedChange={onToggleEnabled} />
             </div>
           )}
           <Button variant="outline" size="sm" onClick={handleValidate} disabled={isValidating}>
@@ -258,6 +261,18 @@ export function AccountDetail({
             <Edit className="mr-2 h-4 w-4" />
             {t('common.edit')}
           </Button>
+          {(provider?.id === 'kimi' || provider?.id === 'kimi-ai') &&
+            (account.status === 'error' || account.status === 'expired') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onReauthenticate}
+                disabled={!onReauthenticate || isReauthenticating}
+              >
+                <RefreshCw className={cn('mr-2 h-4 w-4', isReauthenticating && 'animate-spin')} />
+                {t('providers.relogin')}
+              </Button>
+            )}
           <Button
             variant="outline"
             size="sm"

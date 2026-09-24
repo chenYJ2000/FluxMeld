@@ -162,9 +162,7 @@ async function requestText(
 }
 
 export function normalizePhone(text: string): string {
-  return text
-    .replace(/^["'\s]+|["'\s]+$/g, '')
-    .replace(/[\s-]/g, '')
+  return text.replace(/^["'\s]+|["'\s]+$/g, '').replace(/[\s-]/g, '')
 }
 
 function looksLikePhone(text: string): boolean {
@@ -223,12 +221,14 @@ export async function fetchRegistrationPhone(config: RegistrationApiConfig): Pro
 export async function pollRegistrationCode(
   config: RegistrationApiConfig,
   phone: string,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   const endpoint = config.codeSource === 'getMsg' ? 'getMsg' : 'getCode'
   const interval = Math.max(1000, config.codePollIntervalMs || DEFAULT_MIN_INTERVAL_MS)
   const deadline = Date.now() + (config.codePollTimeoutMs || 180000)
 
   while (Date.now() < deadline) {
+    if (signal?.aborted) return null
     try {
       const body = await requestText(config, endpoint, {
         phone,

@@ -9,6 +9,7 @@ export type ProviderVendor =
   | 'deepseek'
   | 'glm'
   | 'kimi'
+  | 'kimi-ai'
   | 'mimo'
   | 'minimax'
   | 'qwen'
@@ -50,6 +51,8 @@ export interface ProviderCapabilities {
   toolCalling?: boolean
   /** Whether the provider supports assisted batch account registration */
   batchRegister?: boolean
+  /** Whether the headless web server has a registration browser driver */
+  webBatchRegister?: boolean
 }
 
 /** Serializable UI metadata for a provider. */

@@ -13,7 +13,7 @@
 
 import type { Account, Provider, CredentialField } from '../../shared/types'
 import type { BaseOAuthAdapter } from './common/oauthBase'
-import type { AdapterConfig, ProviderType } from '../oauth/types'
+import type { AdapterConfig, OAuthResult, ProviderType } from '../oauth/types'
 import type { ForwarderServices, ProviderForwarder } from '../proxy/forwarders/types'
 import type { ProviderToolProfile } from '../proxy/toolCalling/providerProfiles'
 
@@ -35,6 +35,10 @@ export interface TokenSource {
 export interface TokenExtractionConfig {
   loginUrl: string
   tokenSources: TokenSource[]
+  /** Token keys that must be collected before the login is validated. */
+  requiredKeys?: string[]
+  /** Legacy credential sets accepted for login, but never for registration. */
+  loginAlternativeKeys?: string[][]
   targetDomains: string[]
   successUrlPatterns?: RegExp[]
   windowTitle?: string
@@ -54,9 +58,9 @@ export interface RegistrationField {
 /**
  * Rules for assisting account registration in the in-app browser window.
  *
- * This only opens the provider's official page and prefills the phone and
- * password so the repetitive typing is not repeated per account. The captcha
- * / slider and the SMS verification code are always completed by a human.
+ * Opens the provider's official page and prefills the configured fields.
+ * Optional selectors can send and submit an SMS code; a human still handles
+ * any challenge presented by the provider.
  */
 export interface RegistrationConfig {
   /** Official registration/login page to open. */
@@ -65,6 +69,22 @@ export interface RegistrationConfig {
   fields?: RegistrationField[]
   /** Window title shown while registering. */
   windowTitle?: string
+  /** Require the operator to accept the provider's terms before a batch starts. */
+  requiresTermsConsent?: boolean
+  /** Optional controls for providers whose SMS login can be submitted automatically. */
+  termsCheckboxSelector?: string
+  sendCodeSelector?: string
+  submitSelector?: string
+}
+
+/** Server-side browser registration for the headless web runtime. */
+export interface WebRegistrationOptions {
+  providerId: string
+  phone: string
+  countryCode: string
+  timeout?: number
+  resolveCode: (signal: AbortSignal) => Promise<string | null>
+  signal: AbortSignal
 }
 
 /**
@@ -146,11 +166,12 @@ export interface ProviderModule {
   tokenExtraction?: TokenExtractionConfig
   /** Assisted registration rules (official page + phone/password prefill). */
   registration?: RegistrationConfig
+  /** Optional web-runtime registration driver. It must close its browser on every exit. */
+  webRegistration?(options: WebRegistrationOptions): Promise<OAuthResult>
   /** Credential validation for an account. */
-  tokenChecker?(
-    provider: Provider,
-    account: Account,
-  ): Promise<TokenCheckResult> | TokenCheckResult
+  tokenChecker?(provider: Provider, account: Account): Promise<TokenCheckResult> | TokenCheckResult
+  /** Optional periodic upkeep for persisted provider sessions. */
+  maintainSessions?(): Promise<void>
   /** Normalize raw OAuth credentials into canonical provider credential keys. */
   normalizeOAuthCredentials?(credentials: Record<string, string>): Record<string, string>
   /** Optional provider capabilities (clear chats, credits, ...). */

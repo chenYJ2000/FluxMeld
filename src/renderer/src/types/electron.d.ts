@@ -349,6 +349,7 @@ interface OAuthAPI {
     providerType: ProviderVendor,
     count: number,
     timeout?: number,
+    options?: { countryCode?: string; acceptedTerms?: boolean },
   ) => Promise<{ results: BatchRegistrationItemResult[] }>
   cancelBatchRegistration: () => Promise<void>
   onCallback: (callback: (result: OAuthResult) => void) => () => void

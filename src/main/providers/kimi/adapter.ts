@@ -8,6 +8,8 @@ import { Account, Provider } from '../../store/types'
 import { PassThrough } from 'stream'
 import { createKimiChatPayload, encodeKimiGrpcFrame } from './modelOptions'
 import { buildKimiAuthHeaders } from './token'
+import { resolveKimiAccessToken } from './session'
+import { resolveKimiAiAccessToken } from '../kimi-ai/session'
 import {
   createBaseChunk,
   getProviderToolProfile,
@@ -20,15 +22,12 @@ import {
 } from '../common/toolCalling'
 import { unixTimestamp } from '../common/crypto'
 
-const KIMI_API_BASE = 'https://www.kimi.com'
-
 const FAKE_HEADERS: Record<string, string> = {
   Accept: '*/*',
   'Accept-Encoding': 'gzip, deflate, br, zstd',
   'Accept-Language': 'zh-CN,zh;q=0.9,en-US;q=0.8,en;q=0.7',
   'Cache-Control': 'no-cache',
   Pragma: 'no-cache',
-  Origin: KIMI_API_BASE,
   'Sec-Ch-Ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
   'Sec-Ch-Ua-Mobile': '?0',
   'Sec-Ch-Ua-Platform': '"Windows"',
@@ -42,9 +41,8 @@ const FAKE_HEADERS: Record<string, string> = {
 
 interface TokenInfo {
   accessToken: string
-  refreshToken: string
   userId: string
-  refreshTime: number
+  expiresAt: number
 }
 
 interface KimiMessage {
@@ -70,7 +68,7 @@ interface ChatCompletionRequest {
 
 const accessTokenMap = new Map<string, TokenInfo>()
 
-export function detectTokenType(token: string): 'jwt' | 'refresh' {
+export function detectTokenType(token: string): 'jwt' | 'cookie' {
   if (token.startsWith('eyJ') && token.split('.').length === 3) {
     try {
       const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString())
@@ -78,10 +76,10 @@ export function detectTokenType(token: string): 'jwt' | 'refresh' {
         return 'jwt'
       }
     } catch (e) {
-      // Parse failed, treat as refresh token
+      // Parse failed; the upstream request will validate this credential.
     }
   }
-  return 'refresh'
+  return 'cookie'
 }
 
 function extractUserIdFromJWT(token: string): string | undefined {
@@ -93,9 +91,9 @@ function extractUserIdFromJWT(token: string): string | undefined {
   }
 }
 
-function checkResult(result: AxiosResponse, refreshToken: string): any {
+function checkResult(result: AxiosResponse, credential: string): any {
   if (result.status === 401) {
-    accessTokenMap.delete(refreshToken)
+    accessTokenMap.delete(credential)
     throw new Error('Token invalid or expired')
   }
   if (!result.data) {
@@ -106,7 +104,7 @@ function checkResult(result: AxiosResponse, refreshToken: string): any {
     return result.data
   }
   if (error_type === 'auth.token.invalid') {
-    accessTokenMap.delete(refreshToken)
+    accessTokenMap.delete(credential)
   }
   throw new Error(`Kimi API error: ${message || error_type}`)
 }
@@ -115,20 +113,45 @@ export class KimiAdapter {
   private provider: Provider
   private account: Account
   private token: string
+  private apiBase: string
 
   constructor(provider: Provider, account: Account) {
     this.provider = provider
     this.account = account
-    this.token = account.credentials.token || account.credentials.refreshToken || ''
+    this.apiBase = provider.apiEndpoint.replace(/\/+$/, '')
+    this.token =
+      account.credentials.token ||
+      account.credentials.accessToken ||
+      account.credentials.refreshToken ||
+      ''
+  }
+
+  private authHeaders(token: string): Record<string, string> {
+    return this.provider.authType === 'jwt'
+      ? { Authorization: `Bearer ${token.trim()}` }
+      : buildKimiAuthHeaders(token)
+  }
+
+  private requestHeaders(token: string): Record<string, string> {
+    return { ...this.authHeaders(token), ...FAKE_HEADERS, Origin: this.apiBase }
+  }
+
+  getActiveToken(): string {
+    return this.token
   }
 
   private async acquireToken(): Promise<{ accessToken: string; userId: string }> {
+    if (this.provider.id === 'kimi-ai') {
+      this.token = await resolveKimiAiAccessToken(this.account)
+    } else if (this.provider.id === 'kimi') {
+      this.token = await resolveKimiAccessToken(this.account)
+    }
     if (!this.token) {
       throw new Error('Kimi Token not configured')
     }
 
     let result = accessTokenMap.get(this.token)
-    if (result && result.refreshTime > unixTimestamp()) {
+    if (result && result.expiresAt > unixTimestamp()) {
       console.log('[Kimi] Using cached token')
       return { accessToken: result.accessToken, userId: result.userId }
     }
@@ -140,9 +163,8 @@ export class KimiAdapter {
       const userId = extractUserIdFromJWT(this.token) || ''
       accessTokenMap.set(this.token, {
         accessToken: this.token,
-        refreshToken: this.token,
         userId,
-        refreshTime: unixTimestamp() + 300,
+        expiresAt: unixTimestamp() + 300,
       })
       console.log('[Kimi] Using JWT token with parsed user ID')
       return { accessToken: this.token, userId }
@@ -153,9 +175,8 @@ export class KimiAdapter {
     )
     accessTokenMap.set(this.token, {
       accessToken: this.token,
-      refreshToken: this.token,
       userId: '',
-      refreshTime: unixTimestamp() + 300,
+      expiresAt: unixTimestamp() + 300,
     })
     return { accessToken: this.token, userId: '' }
   }
@@ -294,7 +315,7 @@ export class KimiAdapter {
   async chatCompletion(
     request: ChatCompletionRequest,
   ): Promise<{ response: AxiosResponse; conversationId: string }> {
-    const { accessToken } = await this.acquireToken()
+    let { accessToken } = await this.acquireToken()
 
     const messages = [...request.messages]
 
@@ -366,30 +387,46 @@ export class KimiAdapter {
       frameBuffer.length - 5,
     )
 
-    const response = await axios.post(
-      `${KIMI_API_BASE}/apiv2/kimi.gateway.chat.v1.ChatService/Chat`,
-      frameBuffer,
-      {
+    const send = (token: string) =>
+      axios.post(`${this.apiBase}/apiv2/kimi.gateway.chat.v1.ChatService/Chat`, frameBuffer, {
         headers: {
-          ...buildKimiAuthHeaders(accessToken),
+          ...this.requestHeaders(token),
           'Content-Type': 'application/connect+json',
-          ...FAKE_HEADERS,
         },
         timeout: 1800000,
         validateStatus: () => true,
         responseType: 'stream',
-      },
-    )
+      })
+    let response = await send(accessToken)
+
+    if (
+      (response.status === 401 || response.status === 403) &&
+      this.account.credentials.refresh_token
+    ) {
+      response.data?.destroy?.()
+      const refresh =
+        this.provider.id === 'kimi-ai' ? resolveKimiAiAccessToken : resolveKimiAccessToken
+      const refreshedToken = await refresh(this.account, {
+        force: true,
+        failedToken: accessToken,
+      })
+      if (refreshedToken && refreshedToken !== accessToken) {
+        accessTokenMap.delete(accessToken)
+        this.token = refreshedToken
+        accessToken = refreshedToken
+        response = await send(accessToken)
+      }
+    }
 
     console.log('[Kimi] Completion response status:', response.status)
 
-    if (response.status === 401) {
+    if (response.status === 401 || response.status === 403) {
       accessTokenMap.delete(this.token)
-      throw new Error('Token invalid or expired')
+      throw new KimiApiError('Kimi authentication expired; please log in again', response.status)
     }
 
     if (response.status !== 200) {
-      throw new Error(`Completion request failed: HTTP ${response.status}`)
+      throw new KimiApiError(`Completion request failed: HTTP ${response.status}`, response.status)
     }
 
     return { response, conversationId: '' }
@@ -400,13 +437,12 @@ export class KimiAdapter {
       const { accessToken } = await this.acquireToken()
 
       const response = await axios.post(
-        `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/DeleteChat`,
+        `${this.apiBase}/apiv2/kimi.chat.v1.ChatService/DeleteChat`,
         { chat_id: conversationId },
         {
           headers: {
-            ...buildKimiAuthHeaders(accessToken),
+            ...this.requestHeaders(accessToken),
             'Content-Type': 'application/json',
-            ...FAKE_HEADERS,
           },
           timeout: 1800000,
           validateStatus: () => true,
@@ -426,7 +462,7 @@ export class KimiAdapter {
   ): Promise<{ chatIds: string[]; nextPageToken: string }> {
     const { accessToken } = await this.acquireToken()
     const response = await axios.post(
-      `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/ListChats`,
+      `${this.apiBase}/apiv2/kimi.chat.v1.ChatService/ListChats`,
       {
         page_size: 100,
         ...(pageToken ? { page_token: pageToken } : {}),
@@ -434,9 +470,8 @@ export class KimiAdapter {
       },
       {
         headers: {
-          ...buildKimiAuthHeaders(accessToken),
+          ...this.requestHeaders(accessToken),
           'Content-Type': 'application/json',
-          ...FAKE_HEADERS,
         },
         timeout: 1800000,
         validateStatus: () => true,
@@ -462,13 +497,12 @@ export class KimiAdapter {
 
     const { accessToken } = await this.acquireToken()
     const response = await axios.post(
-      `${KIMI_API_BASE}/apiv2/kimi.chat.v1.ChatService/BatchDeleteChats`,
+      `${this.apiBase}/apiv2/kimi.chat.v1.ChatService/BatchDeleteChats`,
       { chat_ids: chatIds },
       {
         headers: {
-          ...buildKimiAuthHeaders(accessToken),
+          ...this.requestHeaders(accessToken),
           'Content-Type': 'application/json',
-          ...FAKE_HEADERS,
         },
         timeout: 1800000,
         validateStatus: () => true,
@@ -519,7 +553,7 @@ export class KimiAdapter {
   }
 
   static isKimiProvider(provider: Provider): boolean {
-    return provider.id === 'kimi' || provider.apiEndpoint.includes('kimi.com')
+    return provider.id === 'kimi'
   }
 }
 
@@ -648,7 +682,7 @@ export class KimiStreamHandler {
     return data.block?.text?.content || null
   }
 
-  async handleStream(stream: any): Promise<PassThrough> {
+  async handleStream(stream: any, onAuthError?: (status: 401 | 403) => void): Promise<PassThrough> {
     const transStream = new PassThrough()
     const created = unixTimestamp()
     let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0)
@@ -667,6 +701,7 @@ export class KimiStreamHandler {
         (v) => {
           sentRole = v
         },
+        onAuthError,
       )
     })
 
@@ -695,6 +730,7 @@ export class KimiStreamHandler {
     setBuffer: (remaining: Buffer<ArrayBufferLike>) => void,
     getSentRole: () => boolean,
     setSentRole: (v: boolean) => void,
+    onAuthError?: (status: 401 | 403) => void,
   ) {
     let offset = 0
 
@@ -719,6 +755,9 @@ export class KimiStreamHandler {
             const apiError = createKimiApiError(data.error)
             console.error('[Kimi] API Error:', apiError.message)
             this.hasError = true
+            if (apiError.status === 401 || apiError.status === 403) {
+              onAuthError?.(apiError.status)
+            }
             transStream.write(
               `data: ${JSON.stringify({
                 id: this.conversationId,

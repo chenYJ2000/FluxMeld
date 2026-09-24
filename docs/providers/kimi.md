@@ -1,14 +1,16 @@
-# Kimi
+# Kimi (kimi.com)
 
 | 项目 | 说明 |
 | --- | --- |
 | 供应商 ID | kimi |
 | 官网 | https://www.kimi.com |
 | API Base | https://www.kimi.com |
-| 认证 | JWT Token 或 v10 会话 Token（kimi-auth Cookie） |
-| 凭据字段 | `token` |
+| 认证 | JWT `access_token` + `refresh_token`，或 `kimi-auth` Cookie |
+| 凭据字段 | `token`、可选 `refresh_token` |
 
-新版 kimi.com 的 `kimi-auth` Cookie 值为 `v10` 开头的不透明会话 Token（base64 形式）。该格式通过 `Cookie: kimi-auth=<token>` 携带发送，不能走 `Authorization: Bearer`（服务器会报 token malformed）。会话过期后需重新登录获取，Kimi 不提供刷新接口。
+`kimi-auth` 可能是不透明的 `v10` 会话 Token，也可能是 JWT。`v10` 格式通过 `Cookie: kimi-auth=<token>` 发送，不能走 `Authorization: Bearer`（服务器会报 token malformed）。实际观察到一种情况：浏览器仍保存 `kimi-auth`，但其 JWT `exp` 已过期；重新登录后网站另行写入 Local Storage 的 `access_token`，并未更新旧 Cookie。浏览器显示的 Cookie 过期日期不代表 JWT 仍有效。
+
+优先从 Local Storage 获取 `access_token` 和 `refresh_token`。观察到的访问令牌有效期约为 15 分钟；网站使用 `https://auth.kimi.com/api/account.gateway.v1.AuthService/RefreshToken` 续期，并可能轮换刷新令牌。FluxMeld 保存新令牌，并在到期前、后台检查和认证失败时尝试续期。只有访问令牌或只有旧 Cookie 的账号仍无法自动续期。`www.kimi.ai` 使用单独的供应商和认证方式。
 
 ## 默认模型
 
@@ -36,6 +38,11 @@ K3 请求使用官网当前的 `SCENARIO_OK_COMPUTER` 场景和 `ok-computer` Ag
 ## 教程
 
 1. 登录 `www.kimi.com`。
-2. 打开 DevTools -> Application -> Cookies，复制 `kimi-auth` 值，或复制可用 JWT/refresh token。
-3. 在供应商管理中添加 Kimi 账号，填入 `token`。
-4. 可选择 `Kimi-K3` 或 `Kimi-K2.6`；调用方可通过 `reasoning_effort` 选择思考强度。
+2. 打开 DevTools -> Application，清除顶部筛选框，然后选择 Local Storage -> `https://www.kimi.com`。
+3. 复制 `access_token` 和 `refresh_token` 的字段值，不要连同键名一起复制或公开令牌。
+4. 在供应商管理中添加 Kimi 账号，分别填入访问令牌和可选的刷新令牌并验证。填写刷新令牌后可自动续期。
+5. 可选择 `Kimi-K3` 或 `Kimi-K2.6`；调用方可通过 `reasoning_effort` 选择思考强度。
+
+## 批量注册
+
+在「设置 → 批量注册号码 API」配置取号、取码接口后，可在供应商管理中选择 Kimi 批量注册。kimi.com 的手机号登录仅接受中国大陆 `+86` 号码；程序会在官方登录页填写手机号和短信验证码，并在登录成功后验证、保存 `access_token` 与 `refresh_token`。桌面版会打开登录窗口供你完成人机验证。网页版使用独立的无头 Chrome；若出现人机验证而无法取得短信验证码，该号码会失败并释放。开始前需同意 Kimi 的服务条款和隐私政策。

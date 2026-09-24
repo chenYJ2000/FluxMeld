@@ -55,7 +55,7 @@ async function main() {
     target: ['node20'],
     outfile: serverOut,
     plugins: [electronAliasPlugin],
-    external: ['zstd-codec', 'canvas'],
+    external: ['zstd-codec', 'canvas', 'playwright-core'],
     sourcemap: true,
     logLevel: 'info',
   })

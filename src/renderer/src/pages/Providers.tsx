@@ -26,6 +26,7 @@ import type {
   CustomProviderFormData,
   OpenAIProviderFormData,
   Account,
+  ProviderVendor,
 } from '@/types/electron'
 import { FilterType, StatusFilter } from '@/components/providers/ProviderFilter'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -56,6 +57,10 @@ export function Providers() {
   const [showBatchRegisterDialog, setShowBatchRegisterDialog] = useState(false)
   const [batchRegisterProvider, setBatchRegisterProvider] = useState<Provider | null>(null)
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
+  const [webReauthenticationAccountId, setWebReauthenticationAccountId] = useState<string | null>(
+    null,
+  )
+  const [reauthenticatingAccountId, setReauthenticatingAccountId] = useState<string | null>(null)
 
   const [showModelEditor, setShowModelEditor] = useState(false)
   const [modelEditorProvider, setModelEditorProvider] = useState<{
@@ -102,7 +107,8 @@ export function Providers() {
           const providerAccounts = accountsData.filter((a) => a.providerId === provider.id)
           countMap[provider.id] = {
             total: providerAccounts.length,
-            active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
+            active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false)
+              .length,
           }
         }
 
@@ -117,6 +123,45 @@ export function Providers() {
 
     loadInitialData()
   }, [])
+
+  useEffect(() => {
+    if (viewMode !== 'accounts' && viewMode !== 'account-detail') return
+
+    let cancelled = false
+    let checking = false
+    const refreshAccountStatuses = async () => {
+      if (checking) return
+      checking = true
+      try {
+        const accounts = await window.electronAPI.accounts.getAll()
+        if (cancelled) return
+        const currentStore = useProvidersStore.getState()
+        currentStore.setAccounts(accounts)
+        const providerId = currentStore.selectedProviderId
+        if (providerId) {
+          const providerAccounts = accounts.filter((account) => account.providerId === providerId)
+          currentStore.updateAccountCount(
+            providerId,
+            providerAccounts.length,
+            providerAccounts.filter(
+              (account) => account.status === 'active' && account.enabled !== false,
+            ).length,
+          )
+        }
+      } catch (error) {
+        console.error('Failed to refresh account statuses:', error)
+      } finally {
+        checking = false
+      }
+    }
+
+    void refreshAccountStatuses()
+    const interval = window.setInterval(refreshAccountStatuses, 10000)
+    return () => {
+      cancelled = true
+      window.clearInterval(interval)
+    }
+  }, [viewMode])
 
   const filteredProviders = store.providers.filter((provider) => {
     const matchesSearch =
@@ -502,7 +547,8 @@ export function Providers() {
         const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
         countMap[account.providerId] = {
           total: providerAccounts.length,
-          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
+          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false)
+            .length,
         }
       }
       useProvidersStore.getState().setAccountCounts(countMap)
@@ -555,6 +601,88 @@ export function Providers() {
         description: error instanceof Error ? error.message : t('providers.operationFailed'),
         variant: 'destructive',
       })
+    }
+  }
+
+  const handleReauthenticateAccount = async (id: string, credentials: Record<string, string>) => {
+    if (!credentials.token) throw new Error(t('providers.credentialsInvalid'))
+    const account = store.getAccountById(id)
+    const nextCredentials: Record<string, string> =
+      account?.providerId === 'kimi-ai'
+        ? { token: credentials.token, refresh_token: credentials.refresh_token }
+        : { token: credentials.token }
+    if (account?.providerId === 'kimi-ai' && !nextCredentials.refresh_token) {
+      throw new Error(t('providers.credentialsInvalid'))
+    }
+    const updates: Partial<Account> = {
+      credentials: nextCredentials,
+      status: 'active',
+      errorMessage: undefined,
+      lastStatusCheck: Date.now(),
+    }
+    const updated = await window.electronAPI.accounts.update(id, updates)
+    if (!updated) throw new Error(t('providers.updateFailed'))
+
+    store.updateAccount(id, updates)
+    if (store.selectedProviderId) {
+      const providerAccounts = store.getAccountsByProvider(store.selectedProviderId)
+      store.updateAccountCount(
+        store.selectedProviderId,
+        providerAccounts.length,
+        providerAccounts.filter(
+          (account) => account.status === 'active' && account.enabled !== false,
+        ).length,
+      )
+    }
+    toast({
+      title: t('providers.updateSuccess'),
+      description: t('providers.accountUpdated'),
+    })
+  }
+
+  const handleReLoginAccount = async (account: Account) => {
+    if (window.electronAPI.platform === 'web') {
+      try {
+        const fullAccount = await window.electronAPI.accounts.getById(account.id, true)
+        setEditingAccount(fullAccount || account)
+        setWebReauthenticationAccountId(account.id)
+        setViewMode('accounts')
+        setShowAddAccountDialog(true)
+      } catch (error) {
+        toast({
+          title: t('providers.loginFailed'),
+          description: error instanceof Error ? error.message : t('providers.operationFailed'),
+          variant: 'destructive',
+        })
+      }
+      return
+    }
+
+    if (reauthenticatingAccountId) return
+    setReauthenticatingAccountId(account.id)
+    try {
+      const result = await window.electronAPI.oauth.startInAppLogin(
+        account.providerId,
+        account.providerId as ProviderVendor,
+      )
+      if (!result?.success) {
+        if (
+          result?.error === 'Login window was closed' ||
+          result?.error === 'Login cancelled by user'
+        )
+          return
+        throw new Error(result?.error || t('providers.loginFailed'))
+      }
+      if (!result.credentials?.token) throw new Error(t('providers.credentialsInvalid'))
+      await handleReauthenticateAccount(account.id, result.credentials)
+    } catch (error) {
+      toast({
+        title: t('providers.loginFailed'),
+        description: error instanceof Error ? error.message : t('providers.operationFailed'),
+        variant: 'destructive',
+      })
+    } finally {
+      setReauthenticatingAccountId(null)
     }
   }
 
@@ -667,7 +795,8 @@ export function Providers() {
         const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
         countMap[account.providerId] = {
           total: providerAccounts.length,
-          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
+          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false)
+            .length,
         }
       }
       useProvidersStore.getState().setAccountCounts(countMap)
@@ -727,7 +856,8 @@ export function Providers() {
         const providerAccounts = accounts.filter((a) => a.providerId === account.providerId)
         countMap[account.providerId] = {
           total: providerAccounts.length,
-          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false).length,
+          active: providerAccounts.filter((a) => a.status === 'active' && a.enabled !== false)
+            .length,
         }
       }
       useProvidersStore.getState().setAccountCounts(countMap)
@@ -793,11 +923,14 @@ export function Providers() {
     ? store.getAccountsByProvider(store.selectedProviderId)
     : []
 
-  const supportsBatchRegister = (provider: Provider) =>
-    provider.capabilities?.batchRegister ??
-    store.builtinProviders.find((builtin) => builtin.id === provider.id)?.capabilities
-      ?.batchRegister ??
-    false
+  const supportsBatchRegister = (provider: Provider) => {
+    const capabilities =
+      provider.capabilities ??
+      store.builtinProviders.find((builtin) => builtin.id === provider.id)?.capabilities
+    return window.electronAPI.platform === 'web'
+      ? (capabilities?.webBatchRegister ?? false)
+      : (capabilities?.batchRegister ?? false)
+  }
 
   const batchRegisterProviders = (() => {
     const map = new Map<string, Provider>()
@@ -805,7 +938,7 @@ export function Providers() {
       if (supportsBatchRegister(provider)) map.set(provider.id, provider)
     }
     for (const builtin of store.builtinProviders) {
-      if (!map.has(builtin.id) && builtin.capabilities?.batchRegister) {
+      if (!map.has(builtin.id) && supportsBatchRegister(builtin as unknown as Provider)) {
         map.set(builtin.id, builtin as unknown as Provider)
       }
     }
@@ -827,6 +960,8 @@ export function Providers() {
           }}
           onDelete={() => handleDeleteAccount(selectedAccount.id)}
           onValidate={() => handleValidateAccount(selectedAccount.id)}
+          onReauthenticate={() => handleReLoginAccount(selectedAccount)}
+          isReauthenticating={reauthenticatingAccountId === selectedAccount.id}
           onToggleEnabled={(enabled) => handleUpdateAccount(selectedAccount.id, { enabled })}
         />
       </div>
@@ -874,6 +1009,8 @@ export function Providers() {
           }}
           onDeleteAccount={handleDeleteAccount}
           onValidateAccount={handleValidateAccount}
+          onReauthenticateAccount={handleReLoginAccount}
+          reauthenticatingAccountId={reauthenticatingAccountId}
           onViewDetail={handleViewAccountDetail}
           onToggleAccount={(id, enabled) => handleUpdateAccount(id, { enabled })}
           onExportAccounts={() => handleExportAccounts(selectedProvider.id)}
@@ -884,13 +1021,18 @@ export function Providers() {
           open={showAddAccountDialog}
           onOpenChange={(open) => {
             setShowAddAccountDialog(open)
-            if (!open) setEditingAccount(null)
+            if (!open) {
+              setEditingAccount(null)
+              setWebReauthenticationAccountId(null)
+            }
           }}
           provider={selectedProvider}
           onAddAccount={handleAddAccount}
           onValidateToken={handleValidateToken}
           editingAccount={editingAccount}
+          reauthenticationMode={webReauthenticationAccountId === editingAccount?.id}
           onUpdateAccount={handleUpdateAccount}
+          onReauthenticateAccount={handleReauthenticateAccount}
         />
 
         <BatchRegisterDialog

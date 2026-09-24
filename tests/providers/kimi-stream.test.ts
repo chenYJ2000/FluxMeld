@@ -75,3 +75,23 @@ test('Kimi maps an invalid user token to HTTP 401 without echoing a credential',
     return true
   })
 })
+
+test('Kimi streaming auth errors notify account handling with 401 or 403', async () => {
+  for (const [code, expectedStatus] of [
+    ['unauthenticated', 401],
+    ['permission_denied', 403],
+  ] as const) {
+    const upstream = new PassThrough()
+    const handler = new KimiStreamHandler('Kimi-K3', 'conversation-test')
+    let statuses: number[] = []
+    const transformed = await handler.handleStream(upstream, (status) => {
+      statuses = [...statuses, status]
+    })
+    transformed.resume()
+    const ended = new Promise<void>((resolve) => transformed.once('end', resolve))
+
+    upstream.end(frame({ error: { code } }))
+    await ended
+    assert.deepEqual(statuses, [expectedStatus])
+  }
+})

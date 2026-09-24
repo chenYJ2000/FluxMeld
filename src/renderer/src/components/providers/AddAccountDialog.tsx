@@ -62,7 +62,9 @@ interface AddAccountDialogProps {
     }
   }>
   editingAccount?: Account | null
+  reauthenticationMode?: boolean
   onUpdateAccount?: (id: string, updates: Partial<Account>) => Promise<void>
+  onReauthenticateAccount?: (id: string, credentials: Record<string, string>) => Promise<void>
 }
 
 export function AddAccountDialog({
@@ -72,7 +74,9 @@ export function AddAccountDialog({
   onAddAccount,
   onValidateToken,
   editingAccount,
+  reauthenticationMode = false,
   onUpdateAccount,
+  onReauthenticateAccount,
 }: AddAccountDialogProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<string>('manual')
@@ -98,20 +102,27 @@ export function AddAccountDialog({
   const builtinProvider = provider as BuiltinProviderConfig | null
   const credentialFields: CredentialField[] =
     builtinProvider?.credentialFields || getDefaultCredentialFields(provider?.authType, t)
-  const supportsOAuth = provider?.type === 'builtin'
+  const supportsOAuth = provider?.type === 'builtin' && window.electronAPI?.platform !== 'web'
 
   useEffect(() => {
     if (open) {
       if (editingAccount) {
         setName(editingAccount.name)
         setDailyLimit(editingAccount.dailyLimit?.toString() || '')
-        setCredentials(editingAccount.credentials || {})
-        setActiveTab('manual')
+        setCredentials(reauthenticationMode ? { token: '' } : editingAccount.credentials || {})
+        setValidationResult({})
+        setActiveTab(
+          supportsOAuth &&
+            (provider?.id === 'kimi' || provider?.id === 'kimi-ai') &&
+            (editingAccount.status === 'error' || editingAccount.status === 'expired')
+            ? 'oauth'
+            : 'manual',
+        )
       } else {
         resetForm()
       }
     }
-  }, [open, editingAccount])
+  }, [open, editingAccount, provider?.id, reauthenticationMode, supportsOAuth])
 
   const resetForm = () => {
     setName('')
@@ -135,7 +146,7 @@ export function AddAccountDialog({
     if (!provider) return
 
     const requiredFields = credentialFields.filter((f) => f.required)
-    const missingFields = requiredFields.filter((f) => !credentials[f.name])
+    const missingFields = requiredFields.filter((f) => !credentials[f.name]?.trim())
 
     if (missingFields.length > 0) {
       setValidationResult({
@@ -170,7 +181,7 @@ export function AddAccountDialog({
   }
 
   const handleSubmit = async () => {
-    if (!name.trim()) {
+    if (!reauthenticationMode && !name.trim()) {
       setValidationResult({
         valid: false,
         error: t('providers.enterAccountName'),
@@ -179,7 +190,7 @@ export function AddAccountDialog({
     }
 
     const requiredFields = credentialFields.filter((f) => f.required)
-    const missingFields = requiredFields.filter((f) => !credentials[f.name])
+    const missingFields = requiredFields.filter((f) => !credentials[f.name]?.trim())
 
     if (missingFields.length > 0) {
       setValidationResult({
@@ -194,6 +205,27 @@ export function AddAccountDialog({
     setIsSubmitting(true)
 
     try {
+      if (reauthenticationMode) {
+        if (!provider || !editingAccount || !onReauthenticateAccount) {
+          throw new Error(t('providers.updateFailed'))
+        }
+        const nextCredentials = Object.fromEntries(
+          credentialFields.map((field) => [field.name, credentials[field.name]?.trim() || '']),
+        )
+        const validation = await onValidateToken(provider.id, nextCredentials)
+        if (!validation.valid) {
+          setValidationResult({
+            valid: false,
+            error: validation.error || t('providers.credentialsInvalid'),
+          })
+          return
+        }
+        await onReauthenticateAccount(editingAccount.id, nextCredentials)
+        onOpenChange(false)
+        resetForm()
+        return
+      }
+
       const data = {
         name: name.trim(),
         credentials,
@@ -232,7 +264,8 @@ export function AddAccountDialog({
 
       if (result?.success && result.credentials) {
         // Main process normalizes OAuth credentials to canonical field names.
-        setCredentials(result.credentials)
+        const nextCredentials = result.credentials
+        setCredentials(nextCredentials)
 
         if (result.accountInfo?.name) {
           setName(result.accountInfo.name)
@@ -251,11 +284,16 @@ export function AddAccountDialog({
 
         setOAuthStatus(t('providers.saving'))
 
-        await onAddAccount({
-          name: accountName,
-          email: result.accountInfo?.email,
-          credentials: result.credentials,
-        })
+        if (isEditing && editingAccount) {
+          if (!onReauthenticateAccount) throw new Error(t('providers.updateFailed'))
+          await onReauthenticateAccount(editingAccount.id, nextCredentials)
+        } else {
+          await onAddAccount({
+            name: accountName,
+            email: result.accountInfo?.email,
+            credentials: nextCredentials,
+          })
+        }
 
         onOpenChange(false)
         resetForm()
@@ -269,10 +307,12 @@ export function AddAccountDialog({
               : errorMsg.includes('Guest account')
                 ? t('providers.guestAccountNotAllowed')
                 : errorMsg || t('providers.loginFailed')
+        setValidationResult({ valid: false })
         setOAuthStatus(translatedError)
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : t('providers.loginFailed')
+      setValidationResult({ valid: false })
       setOAuthStatus(errorMessage)
     } finally {
       setIsOAuthLoading(false)
@@ -296,79 +336,99 @@ export function AddAccountDialog({
           </DialogHeader>
 
           <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">{t('providers.accountName')} *</Label>
-              <Input
-                id="name"
-                placeholder={t('providers.accountNamePlaceholder')}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dailyLimit">{t('providers.dailyLimitOptional')}</Label>
-              <Input
-                id="dailyLimit"
-                type="number"
-                placeholder={t('providers.dailyLimitPlaceholder')}
-                value={dailyLimit}
-                onChange={(e) => setDailyLimit(e.target.value)}
-              />
-            </div>
-
-            {supportsOAuth && !isEditing && (
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="manual">{t('providers.manualInput')}</TabsTrigger>
-                  <TabsTrigger value="oauth">{t('providers.oauthLogin')}</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="manual" className="mt-4">
-                  <CredentialFieldsForm
-                    fields={credentialFields}
-                    credentials={credentials}
-                    onChange={handleCredentialChange}
-                    t={t}
-                    />
-                </TabsContent>
-
-                <TabsContent value="oauth" className="mt-4">
-                  <div className="flex flex-col items-center justify-center py-6 space-y-4">
-                    <div className="text-center">
-                      <p className="text-sm text-muted-foreground mb-4">
-                        {t('providers.clickToOpenOAuth')}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {t('providers.oauthAutoCapture')}
-                      </p>
-                    </div>
-                    <Button onClick={handleOpenOAuthBrowser} disabled={isOAuthLoading}>
-                      {isOAuthLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {oauthStatus || t('providers.loggingIn')}
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="mr-2 h-4 w-4" />
-                          {t('providers.openOAuthLogin')}
-                        </>
-                      )}
-                    </Button>
-                    {oauthStatus && !isOAuthLoading && (
-                      <p
-                        className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}
-                      >
-                        {oauthStatus}
-                      </p>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
+            {!reauthenticationMode && (
+              <div className="space-y-2">
+                <Label htmlFor="name">{t('providers.accountName')} *</Label>
+                <Input
+                  id="name"
+                  placeholder={t('providers.accountNamePlaceholder')}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
             )}
 
-            {(!supportsOAuth || isEditing) && (
+            {!reauthenticationMode && (
+              <div className="space-y-2">
+                <Label htmlFor="dailyLimit">{t('providers.dailyLimitOptional')}</Label>
+                <Input
+                  id="dailyLimit"
+                  type="number"
+                  placeholder={t('providers.dailyLimitPlaceholder')}
+                  value={dailyLimit}
+                  onChange={(e) => setDailyLimit(e.target.value)}
+                />
+              </div>
+            )}
+
+            {reauthenticationMode && (
+              <div className="rounded-md bg-muted p-3 text-sm">
+                <p>{t(`${builtinProvider?.ui?.i18nPrefix || 'kimi'}.webReauthenticationHelp`)}</p>
+                <a
+                  href={provider.apiEndpoint}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-primary underline"
+                >
+                  {t(`${builtinProvider?.ui?.i18nPrefix || 'kimi'}.openWebsite`)}
+                </a>
+              </div>
+            )}
+
+            {supportsOAuth &&
+              (!isEditing || provider.id === 'kimi' || provider.id === 'kimi-ai') && (
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="manual">{t('providers.manualInput')}</TabsTrigger>
+                    <TabsTrigger value="oauth">{t('providers.oauthLogin')}</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="manual" className="mt-4">
+                    <CredentialFieldsForm
+                      fields={credentialFields}
+                      credentials={credentials}
+                      onChange={handleCredentialChange}
+                      t={t}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="oauth" className="mt-4">
+                    <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          {t('providers.clickToOpenOAuth')}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {t('providers.oauthAutoCapture')}
+                        </p>
+                      </div>
+                      <Button onClick={handleOpenOAuthBrowser} disabled={isOAuthLoading}>
+                        {isOAuthLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            {oauthStatus || t('providers.loggingIn')}
+                          </>
+                        ) : (
+                          <>
+                            <ExternalLink className="mr-2 h-4 w-4" />
+                            {t('providers.openOAuthLogin')}
+                          </>
+                        )}
+                      </Button>
+                      {oauthStatus && !isOAuthLoading && (
+                        <p
+                          className={`text-sm ${validationResult.valid ? 'text-green-600' : 'text-red-500'}`}
+                        >
+                          {oauthStatus}
+                        </p>
+                      )}
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              )}
+
+            {(!supportsOAuth ||
+              (isEditing && provider.id !== 'kimi' && provider.id !== 'kimi-ai')) && (
               <CredentialFieldsForm
                 fields={credentialFields}
                 credentials={credentials}
@@ -427,6 +487,8 @@ export function AddAccountDialog({
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {t('providers.saving')}
                 </>
+              ) : reauthenticationMode ? (
+                t('providers.relogin')
               ) : isEditing ? (
                 t('providers.saveChanges')
               ) : (
@@ -447,12 +509,7 @@ interface CredentialFieldsFormProps {
   t: (key: string, options?: { defaultValue?: string }) => string
 }
 
-function CredentialFieldsForm({
-  fields,
-  credentials,
-  onChange,
-  t,
-}: CredentialFieldsFormProps) {
+function CredentialFieldsForm({ fields, credentials, onChange, t }: CredentialFieldsFormProps) {
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({})
   const [copiedFields, setCopiedFields] = useState<Record<string, boolean>>({})
 

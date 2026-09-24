@@ -63,6 +63,8 @@ const updaterManager = UpdaterManager.getInstance()
 
 /** Set by the cancel handler to stop a running batch registration loop. */
 let batchRegistrationCancelled = false
+let batchRegistrationAbortController: AbortController | null = null
+let batchRegistrationRunning = false
 
 interface BatchRegistrationItemResult {
   phone: string
@@ -1118,6 +1120,8 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         providerType: ProviderVendor
         count: number
         timeout?: number
+        countryCode?: string
+        acceptedTerms?: boolean
       },
     ): Promise<{ results: BatchRegistrationItemResult[] }> => {
       const config = storeManager.getConfig()
@@ -1125,7 +1129,37 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       const apiConfig = config.registrationApi
       const total = Math.max(1, Math.floor(data.count || 0))
       const results: BatchRegistrationItemResult[] = []
+      if (batchRegistrationRunning) {
+        return {
+          results: [
+            { phone: '', success: false, error: 'A registration batch is already running' },
+          ],
+        }
+      }
       batchRegistrationCancelled = false
+      const providerModule = getProviderModule(data.providerType)
+      const webMode = process.env.FLUXMELD_WEB_MODE === '1'
+
+      if (!providerModule?.registration || providerModule.id !== data.providerId) {
+        return {
+          results: [{ phone: '', success: false, error: 'Provider does not support registration' }],
+        }
+      }
+      if (providerModule.registration.requiresTermsConsent && !data.acceptedTerms) {
+        return {
+          results: [{ phone: '', success: false, error: 'Provider terms must be accepted' }],
+        }
+      }
+      if (webMode && !providerModule.webRegistration) {
+        return {
+          results: [{ phone: '', success: false, error: 'Web registration is not available' }],
+        }
+      }
+      if (webMode && !/^\+[1-9]\d{0,3}$/.test(data.countryCode?.trim() || '')) {
+        return {
+          results: [{ phone: '', success: false, error: 'A valid country code is required' }],
+        }
+      }
 
       if (!isRegistrationApiReady(apiConfig)) {
         const error = 'Registration number API is not configured'
@@ -1145,92 +1179,121 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         console.error('[BatchRegister] Failed to ensure provider exists:', error)
       }
 
-      for (let index = 0; index < total; index++) {
-        if (batchRegistrationCancelled) break
+      const controller = new AbortController()
+      batchRegistrationAbortController = controller
+      batchRegistrationRunning = true
 
-        let phone = ''
-        let masked = ''
-        try {
-          phone = await fetchRegistrationPhone(apiConfig)
-          masked = maskPhone(phone)
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to fetch phone number'
-          results.push({ phone: '', success: false, error: message })
-          oauthManager.emitProgress({
-            status: 'error',
-            message,
-            data: { index, total, phase: 'failed', error: message },
-          })
-          break
-        }
+      try {
+        for (let index = 0; index < total; index++) {
+          if (batchRegistrationCancelled) break
 
-        const password = generateRegistrationPassword()
-        oauthManager.emitProgress({
-          status: 'pending',
-          message: `(${index + 1}/${total}) ${masked}`,
-          data: { index, total, phone: masked, password, phase: 'opening' },
-        })
-
-        try {
-          const result = await oauthManager.startInAppRegistration(
-            data.providerId,
-            data.providerType as ProviderType,
-            phone,
-            password,
-            data.timeout,
-            proxyMode,
-            () => pollRegistrationCode(apiConfig, phone),
-          )
-
-          if (result.success && result.credentials) {
-            const normalized = normalizeOAuthResult(data.providerId, result)
-            const account = AccountManager.create({
-              providerId: data.providerId,
-              name: masked,
-              credentials: normalized.credentials || result.credentials,
-            })
-            results.push({ phone: masked, success: true, accountId: account.id })
-            oauthManager.emitProgress({
-              status: 'success',
-              message: `${masked} registered`,
-              data: {
-                index,
-                total,
-                phone: masked,
-                password,
-                phase: 'saved',
-                accountId: account.id,
-                account,
-              },
-            })
-          } else {
-            results.push({ phone: masked, success: false, error: result.error })
+          let phone = ''
+          let masked = ''
+          try {
+            phone = await fetchRegistrationPhone(apiConfig)
+            masked = maskPhone(phone)
+          } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to fetch phone number'
+            results.push({ phone: '', success: false, error: message })
             oauthManager.emitProgress({
               status: 'error',
-              message: `${masked}: ${result.error || 'Registration failed'}`,
-              data: { index, total, phone: masked, password, phase: 'failed', error: result.error },
+              message,
+              data: { index, total, phase: 'failed', error: message },
             })
+            break
           }
-        } finally {
-          await releaseRegistrationPhone(apiConfig, phone)
+
+          const password = providerModule.registration.fields?.some(
+            (field) => field.value === 'password',
+          )
+            ? generateRegistrationPassword()
+            : ''
+          oauthManager.emitProgress({
+            status: 'pending',
+            message: `(${index + 1}/${total}) ${masked}`,
+            data: { index, total, phone: masked, password, phase: 'opening' },
+          })
+
+          try {
+            const result = webMode
+              ? await providerModule.webRegistration!({
+                  providerId: data.providerId,
+                  phone,
+                  countryCode: data.countryCode || '',
+                  timeout: data.timeout,
+                  resolveCode: (signal) => pollRegistrationCode(apiConfig, phone, signal),
+                  signal: controller.signal,
+                })
+              : await oauthManager.startInAppRegistration(
+                  data.providerId,
+                  data.providerType as ProviderType,
+                  phone,
+                  password,
+                  data.timeout,
+                  proxyMode,
+                  () => pollRegistrationCode(apiConfig, phone),
+                )
+
+            if (result.success && result.credentials) {
+              const normalized = normalizeOAuthResult(data.providerId, result)
+              const account = AccountManager.create({
+                providerId: data.providerId,
+                name: masked,
+                credentials: normalized.credentials || result.credentials,
+              })
+              results.push({ phone: masked, success: true, accountId: account.id })
+              oauthManager.emitProgress({
+                status: 'success',
+                message: `${masked} registered`,
+                data: {
+                  index,
+                  total,
+                  phone: masked,
+                  password,
+                  phase: 'saved',
+                  accountId: account.id,
+                },
+              })
+            } else {
+              results.push({ phone: masked, success: false, error: result.error })
+              oauthManager.emitProgress({
+                status: 'error',
+                message: `${masked}: ${result.error || 'Registration failed'}`,
+                data: {
+                  index,
+                  total,
+                  phone: masked,
+                  password,
+                  phase: 'failed',
+                  error: result.error,
+                },
+              })
+            }
+          } finally {
+            await releaseRegistrationPhone(apiConfig, phone)
+          }
         }
+
+        const cancelled = batchRegistrationCancelled
+        oauthManager.emitProgress({
+          status: cancelled ? 'cancelled' : 'success',
+          message: cancelled ? 'Batch registration cancelled' : 'Batch registration finished',
+          data: { done: true, total },
+        })
+
+        return { results }
+      } finally {
+        batchRegistrationRunning = false
+        batchRegistrationCancelled = false
+        if (batchRegistrationAbortController === controller) batchRegistrationAbortController = null
       }
-
-      const cancelled = batchRegistrationCancelled
-      batchRegistrationCancelled = false
-      oauthManager.emitProgress({
-        status: cancelled ? 'cancelled' : 'success',
-        message: cancelled ? 'Batch registration cancelled' : 'Batch registration finished',
-        data: { done: true, total },
-      })
-
-      return { results }
     },
   )
 
   ipcMain.handle(IpcChannels.OAUTH_CANCEL_BATCH_REGISTRATION, async (): Promise<void> => {
     console.log('Cancel batch registration')
     batchRegistrationCancelled = true
+    batchRegistrationAbortController?.abort()
     oauthManager.cancelInAppLogin()
   })
 
