@@ -170,9 +170,27 @@ export async function createInbox(config: EmailApiConfig): Promise<EmailInbox> {
       // 215.im: POST /v1/accounts -> { data: { address, id, token } }
       const body: Record<string, string> = {}
       if (domain) body.domain = domain
-      const response = await axios.post(`${baseUrl(config)}/v1/accounts`, body, {
-        headers: authHeaders(config),
-        timeout: REQUEST_TIMEOUT_MS,
+      const allocate = (allocation: Record<string, string>) =>
+        axios.post(`${baseUrl(config)}/v1/accounts`, allocation, {
+          headers: authHeaders(config),
+          timeout: REQUEST_TIMEOUT_MS,
+        })
+      const response = await allocate(body).catch((error: unknown) => {
+        // The public domain list can include domains closed to new addresses.
+        // With automatic selection, let the service allocate an eligible domain.
+        // Explicit domains and other failures must remain visible to the user.
+        if (
+          !config.domain?.trim() &&
+          domain &&
+          axios.isAxiosError(error) &&
+          /shared domain is currently restricted and not accepting new public addresses/i.test(
+            extractErrorMessage(error),
+          )
+        ) {
+          console.warn('Email API rejected an automatically selected domain; requesting allocation')
+          return allocate({})
+        }
+        throw error
       })
       const data = response.data?.data
       const address = data?.address

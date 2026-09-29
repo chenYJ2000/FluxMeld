@@ -102,6 +102,7 @@
     "batchRegisterCount": "Number of accounts",
     "batchRegisterProvider": "Provider",
     "batchRegisterNoProvider": "No provider supports batch registration in this runtime yet.",
+    "batchRegisterEmailApiNotConfigured": "Email API is not configured. Enable Email API (batch registration) in Settings and enter its API Token first.",
     "batchRegisterApiNotConfigured": "The number API is not configured. Enable it and set the key in Settings - Batch Registration Number API.",
     "batchRegisterKeyWordMissing": "keyWord is empty; getPhone will fail with \"keyWord不能为空\". Set it in Settings - Batch Registration Number API.",
     "batchRegisterCodeAuto": "Code endpoint configured: the SMS code is filled automatically.",
@@ -305,8 +306,8 @@
     "batchRegisterTermsConsent": "I have read and agree to the provider's",
     "batchRegisterTermsAnd": "and",
     "batchRegisterEmail": "Email",
-    "batchRegisterEmailCode": "Inboxes are created automatically by the configured email API. The signup page is prefilled with the email and password, and the code from the email is filled in automatically.",
-    "qwenAiBatchRegisterDescription": "Qwen AI (international) registers with an email. Each signup page is prefilled with the email and password, the code from the verification email is filled in automatically, and any captcha is left for you to solve."
+    "batchRegisterEmailCode": "The email API creates inboxes and reads verification codes automatically. Required signup fields are filled according to the page.",
+    "qwenAiBatchRegisterDescription": "Qwen AI registers using an email verification code and saves the account, refresh token and Cookies. Configure the email API in Settings first. Human verification stops automatic registration. Legacy password forms use the generated password."
   },
   "loginGuide": {
     "getToken": "Get {{provider}} Credentials",

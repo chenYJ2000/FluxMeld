@@ -145,6 +145,8 @@ export interface WebRegistrationOptions {
   phone: string
   /** Email address for email-based registration flows (empty for SMS). */
   email?: string
+  /** Generated password for providers that still offer a password signup form. */
+  password?: string
   countryCode: string
   timeout?: number
   resolveCode: (signal: AbortSignal) => Promise<string | null>

@@ -9,6 +9,7 @@ import { getProviderToolProfile } from '../common/toolCalling'
 import { checkQwenAiToken } from './tokenCheck.ts'
 import { normalizeQwenAiCredentials } from './session'
 import { maintainQwenAiSessions } from './maintenance'
+import { registerQwenAiOnWeb } from './webRegistration'
 import type { ProviderModule } from '../types.ts'
 
 export const qwenAiModule: ProviderModule = {
@@ -38,7 +39,7 @@ export const qwenAiModule: ProviderModule = {
   maintainSessions: maintainQwenAiSessions,
   registration: {
     // Qwen AI (international) registers with an email address + emailed code.
-    registrationUrl: 'https://chat.qwen.ai/auth',
+    registrationUrl: 'https://chat.qwen.ai/auth?action=signup',
     codeSource: 'email',
     // chat.qwen.ai resets TLS when routed through a system proxy; connect direct.
     forceDirectConnection: true,
@@ -53,6 +54,7 @@ export const qwenAiModule: ProviderModule = {
     descriptionKey: 'providers.qwenAiBatchRegisterDescription',
   },
   normalizeOAuthCredentials: normalizeQwenAiCredentials,
+  webRegistration: registerQwenAiOnWeb,
   capabilities: {
     clearChats: async (provider, account) => new QwenAiAdapter(provider, account).deleteAllChats(),
   },

@@ -102,6 +102,7 @@
     "batchRegisterCount": "注册数量",
     "batchRegisterProvider": "选择供应商",
     "batchRegisterNoProvider": "暂无支持当前运行方式批量注册的供应商。",
+    "batchRegisterEmailApiNotConfigured": "尚未配置邮箱 API，请先在「设置 - 邮箱 API（批量注册）」中启用并填写 API Token。",
     "batchRegisterApiNotConfigured": "尚未配置号码 API，请先在「设置 - 批量注册号码 API」中启用并填写密钥。",
     "batchRegisterKeyWordMissing": "尚未填写 keyWord，取号接口会报「keyWord不能为空」，请到「设置 - 批量注册号码 API」中填写。",
     "batchRegisterCodeAuto": "已配置验证码接口：短信验证码将自动填入。",
@@ -305,8 +306,8 @@
     "batchRegisterTermsConsent": "我已阅读并同意该供应商的",
     "batchRegisterTermsAnd": "和",
     "batchRegisterEmail": "邮箱",
-    "batchRegisterEmailCode": "邮箱由配置的邮箱 API 自动创建（不显示完整地址）。注册页打开后自动填入邮箱与密码，验证码从邮箱自动获取并填入。",
-    "qwenAiBatchRegisterDescription": "国际版 Qwen 使用邮箱注册。逐个打开注册页并自动填写邮箱与密码，验证邮件中的验证码会自动获取并填入，你只需完成人机验证；成功后自动保存账号。"
+    "batchRegisterEmailCode": "邮箱 API 会自动创建收件箱，并读取注册邮件中的验证码填入网页。注册所需的信息会按页面要求自动填写。",
+    "qwenAiBatchRegisterDescription": "国际版 Qwen 使用邮箱验证码注册，成功后自动保存账号、刷新令牌和 Cookies。请先在设置中配置邮箱 API；遇到人机验证时自动注册会停止。旧版密码表单使用生成的密码。"
   },
   "loginGuide": {
     "getToken": "获取 {{provider}} 凭证",

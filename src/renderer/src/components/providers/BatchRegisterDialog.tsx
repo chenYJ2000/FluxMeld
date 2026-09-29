@@ -341,7 +341,13 @@ export function BatchRegisterDialog({
           {apiReady === false && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{t('providers.batchRegisterApiNotConfigured')}</AlertDescription>
+              <AlertDescription>
+                {t(
+                  usesEmail
+                    ? 'providers.batchRegisterEmailApiNotConfigured'
+                    : 'providers.batchRegisterApiNotConfigured',
+                )}
+              </AlertDescription>
             </Alert>
           )}
 

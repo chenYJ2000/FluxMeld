@@ -1304,6 +1304,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
                   providerId: data.providerId,
                   phone,
                   email,
+                  password,
                   countryCode:
                     data.countryCode?.trim() || registration.defaultCountryCode?.trim() || '',
                   timeout: data.timeout,
