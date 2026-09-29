@@ -6,6 +6,7 @@ import { registerIpcHandlers } from './ipc/handlers'
 import { UpdaterManager } from './updater'
 import { storeManager } from './store/store'
 import { isAppQuitting as getAppQuittingState, markAppQuitting } from './lib/appLifecycle'
+import { startProviderSessionMaintenance } from './providers/maintenance'
 
 // Prevent uncaught exceptions from crashing the app
 process.on('uncaughtException', (error) => {
@@ -49,6 +50,7 @@ if (!gotTheLock) {
 }
 
 let trayManager: TrayManager | null = null
+let stopSessionMaintenance: (() => void) | undefined
 
 async function initializeApp(): Promise<void> {
   app.on('ready', async () => {
@@ -71,6 +73,7 @@ async function initializeApp(): Promise<void> {
   })
 
   app.on('before-quit', () => {
+    stopSessionMaintenance?.()
     markAppQuitting()
     trayManager?.destroy()
   })
@@ -91,6 +94,7 @@ async function setupApp(): Promise<void> {
   })
 
   await registerIpcHandlers(mainWindow)
+  stopSessionMaintenance = startProviderSessionMaintenance()
 
   trayManager = createTrayManager(mainWindow)
 

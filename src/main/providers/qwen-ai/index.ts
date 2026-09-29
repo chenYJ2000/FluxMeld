@@ -7,6 +7,8 @@ import { createQwenAiForwarder } from './forwarder.ts'
 import { QwenAiAdapter as QwenAiOAuthAdapter } from './oauth.ts'
 import { getProviderToolProfile } from '../common/toolCalling'
 import { checkQwenAiToken } from './tokenCheck.ts'
+import { normalizeQwenAiCredentials } from './session'
+import { maintainQwenAiSessions } from './maintenance'
 import type { ProviderModule } from '../types.ts'
 
 export const qwenAiModule: ProviderModule = {
@@ -23,15 +25,17 @@ export const qwenAiModule: ProviderModule = {
     tokenSources: [
       { type: 'localStorage', key: 'token' },
       { type: 'cookie', key: 'token' },
+      { type: 'cookie', key: 'refresh_token' },
     ],
     // The chat endpoint sits behind Aliyun WAF, which rejects requests that
     // carry a valid token but lack the site's anti-bot cookies.
     collectCookies: true,
-    targetDomains: ['.qwen.ai', 'qwen.ai', 'chat.qwen.ai'],
+    targetDomains: ['.qwen.ai', 'qwen.ai', 'chat.qwen.ai', 'auth.qwen.ai'],
     successUrlPatterns: [/chat\.qwen\.ai/i, /qwen\.ai/i],
     windowTitle: 'Qwen AI Login',
   },
   tokenChecker: checkQwenAiToken,
+  maintainSessions: maintainQwenAiSessions,
   registration: {
     // Qwen AI (international) registers with an email address + emailed code.
     registrationUrl: 'https://chat.qwen.ai/auth',
@@ -48,8 +52,7 @@ export const qwenAiModule: ProviderModule = {
     windowTitle: 'Qwen AI Registration',
     descriptionKey: 'providers.qwenAiBatchRegisterDescription',
   },
-  normalizeOAuthCredentials: (credentials) =>
-    credentials.tongyi_sso_ticket ? { ticket: credentials.tongyi_sso_ticket } : credentials,
+  normalizeOAuthCredentials: normalizeQwenAiCredentials,
   capabilities: {
     clearChats: async (provider, account) => new QwenAiAdapter(provider, account).deleteAllChats(),
   },

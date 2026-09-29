@@ -415,7 +415,10 @@
     "tokenHelp": "从 chat.qwen.ai 网页版 Local Storage 获取 (key: \"token\")",
     "cookies": "Cookies (可选)",
     "cookiesPlaceholder": "可选的 Cookies 用于增强兼容性",
-    "cookiesHelp": "从浏览器 DevTools 获取的完整 Cookie 字符串（可选但推荐）",
+    "cookiesHelp": "从浏览器 DevTools 获取完整 Cookies（含 refresh_token 时可自动续期，建议填写）",
+    "refreshToken": "Refresh Token（可选）",
+    "refreshTokenPlaceholder": "自动从 Cookies 提取，也可粘贴 refresh_token",
+    "refreshTokenHelp": "用于自动续期；网页登录会自动收集，仍建议保留完整 Cookies",
     "thinkingMode": "思考模式",
     "thinkingModeDesc": "启用思考模式，在回答前输出推理过程"
   },

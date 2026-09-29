@@ -415,7 +415,10 @@
     "tokenHelp": "JWT token obtained from chat.qwen.ai Local Storage (key: \"token\")",
     "cookies": "Cookies (Optional)",
     "cookiesPlaceholder": "Optional cookies for enhanced compatibility",
-    "cookiesHelp": "Full cookie string from browser DevTools (optional but recommended)",
+    "cookiesHelp": "Full browser Cookies enable automatic renewal when they include refresh_token (recommended)",
+    "refreshToken": "Refresh Token (Optional)",
+    "refreshTokenPlaceholder": "Extracted from Cookies, or paste refresh_token",
+    "refreshTokenHelp": "Used for automatic renewal; browser login collects it automatically. Full Cookies are still recommended.",
     "thinkingMode": "Thinking Mode",
     "thinkingModeDesc": "Enable thinking mode to get reasoning process before answer"
   },

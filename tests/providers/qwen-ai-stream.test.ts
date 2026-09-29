@@ -33,8 +33,10 @@ test('Qwen AI applies the effective request deadline to chat creation and comple
       modelMappings: {},
     } as any,
     {
-      id: 'account-1',
-      credentials: { token: 'test-token' },
+      id: 'temp',
+      credentials: {
+        token: `eyJhbGciOiJIUzI1NiJ9.${Buffer.from(JSON.stringify({ sub: 'test-user' })).toString('base64url')}.signature`,
+      },
     } as any,
   )
   const requestConfigs: any[] = []

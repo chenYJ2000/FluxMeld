@@ -42,6 +42,17 @@ export const qwenAiConfig: BuiltinProviderConfig = {
       helpText: 'JWT token obtained from chat.qwen.ai Local Storage (key: "token")',
     },
     {
+      name: 'refresh_token',
+      labelKey: 'qwen-ai.refreshToken',
+      placeholderKey: 'qwen-ai.refreshTokenPlaceholder',
+      helpTextKey: 'qwen-ai.refreshTokenHelp',
+      label: 'Refresh Token (Optional)',
+      type: 'password',
+      required: false,
+      placeholder: 'Automatically extracted from Cookies, or paste refresh_token',
+      helpText: 'Used for automatic renewal. Full browser Cookies are still recommended.',
+    },
+    {
       name: 'cookies',
       labelKey: 'qwen-ai.cookies',
       placeholderKey: 'qwen-ai.cookiesPlaceholder',

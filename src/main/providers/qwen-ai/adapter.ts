@@ -5,6 +5,7 @@
  */
 
 import type { AxiosResponse } from 'axios'
+import { isAxiosError } from 'axios'
 import { createEgressAxios } from '../../egress/http'
 import { PassThrough } from 'stream'
 import { createParser } from 'eventsource-parser'
@@ -17,6 +18,8 @@ import {
 } from '../common/toolCalling'
 import { uuid } from '../common/crypto'
 import { extractTextContent } from '../common/text'
+import { getQwenAiCredentialError, QwenAiAuthenticationError } from './auth'
+import { resolveQwenAiCredentials } from './session'
 
 const QWEN_AI_BASE = 'https://chat.qwen.ai'
 const QWEN_AI_WEB_VERSION = '0.2.35'
@@ -441,6 +444,33 @@ export class QwenAiAdapter {
     title: string = 'New Chat',
     requestOptions: QwenAiRequestOptions = {},
   ): Promise<string> {
+    const credentials = await resolveQwenAiCredentials(this.account, requestOptions)
+    this.account = { ...this.account, credentials }
+    const failedToken = this.getToken()
+    try {
+      return await this.createChatOnce(modelId, title, requestOptions)
+    } catch (error) {
+      const authenticationFailure =
+        error instanceof QwenAiAuthenticationError ||
+        (isAxiosError(error) && [401, 403].includes(error.response?.status || 0))
+      if (!authenticationFailure || !credentials.refresh_token) throw error
+      const refreshed = await resolveQwenAiCredentials(this.account, {
+        ...requestOptions,
+        force: true,
+        failedToken,
+      })
+      this.account = { ...this.account, credentials: refreshed }
+      return this.createChatOnce(modelId, title, requestOptions)
+    }
+  }
+
+  private async createChatOnce(
+    modelId: string,
+    title: string,
+    requestOptions: QwenAiRequestOptions,
+  ): Promise<string> {
+    const credentialError = getQwenAiCredentialError(this.getToken())
+    if (credentialError) throw new QwenAiAuthenticationError(credentialError)
     const url = `${QWEN_AI_BASE}/api/v2/chats/new`
     const payload = {
       title,
@@ -477,6 +507,11 @@ export class QwenAiAdapter {
         throw new Error(WAF_CHALLENGE_ERROR)
       }
       const details = response.data?.data?.details || response.data?.data?.code
+      if (response.data?.success === false && response.data?.data?.code === 'unauthorized') {
+        throw new QwenAiAuthenticationError(
+          typeof details === 'string' ? details : 'Qwen token expired or invalid',
+        )
+      }
       if (typeof details === 'string' && details) {
         throw new Error(`Failed to create chat: ${details}`)
       }
@@ -552,6 +587,24 @@ export class QwenAiAdapter {
     chatId: string
     parentId: string | null
   }> {
+    const result = await this.chatCompletionOnce(request, requestOptions)
+    if (![401, 403].includes(result.response.status) || !this.account.credentials.refresh_token)
+      return result
+    if (typeof result.response.data?.destroy === 'function') result.response.data.destroy()
+    const credentials = await resolveQwenAiCredentials(this.account, {
+      ...requestOptions,
+      force: true,
+      failedToken: this.getToken(),
+    })
+    this.account = { ...this.account, credentials }
+    await this.deleteChat(result.chatId)
+    return this.chatCompletionOnce(request, requestOptions)
+  }
+
+  private async chatCompletionOnce(
+    request: ChatCompletionRequest,
+    requestOptions: QwenAiRequestOptions,
+  ): Promise<{ response: AxiosResponse; chatId: string; parentId: string | null }> {
     const token = this.getToken()
     if (!token) {
       throw new Error('Qwen AI token not configured, please add token in account settings')

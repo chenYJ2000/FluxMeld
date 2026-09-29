@@ -5,9 +5,10 @@
 
 import axios from 'axios'
 import { BaseOAuthAdapter } from '../common/oauthBase'
+import { checkQwenAiCredentials, parseQwenAiAuthResponse } from './auth'
+import { exchangeQwenAiRefreshToken, getQwenAiJwtExpiry } from './session'
 import {
   OAuthResult,
-  OAuthOptions,
   TokenValidationResult,
   CredentialInfo,
   AdapterConfig,
@@ -80,88 +81,31 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
     }
   }
 
-  protected async processCallback(data: OAuthCallbackData): Promise<void> {
+  protected async processCallback(_data: OAuthCallbackData): Promise<void> {
     // Qwen AI does not support OAuth callback
   }
 
   async validateToken(credentials: Record<string, string>): Promise<TokenValidationResult> {
-    const token = credentials.token
+    const validation = await checkQwenAiCredentials(credentials)
+    if (!validation.valid) return { valid: false, error: validation.error }
 
-    if (!token) {
-      return {
-        valid: false,
-        error: 'Token cannot be empty',
-      }
-    }
-
-    if (token.startsWith('eyJ') && token.split('.').length === 3) {
-      try {
-        const parts = token.split('.')
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString())
-
-        if (payload.email && payload.email.includes('@guest.com')) {
-          return {
-            valid: false,
-            error: 'Guest account not allowed, please login with a real account',
-          }
-        }
-
-        if (payload && (payload.sub || payload.id || payload.user_id || payload.uid)) {
-          const userId = payload.sub || payload.id || payload.user_id || payload.uid
-
-          try {
-            const userInfo = await this.getUserInfo(token)
-            console.log('[QwenAi OAuth] User info:', userInfo)
-
-            if (userInfo && userInfo.is_guest === true) {
-              return {
-                valid: false,
-                error: 'Guest account not allowed, please login with a real account',
-              }
-            }
-
-            return {
-              valid: true,
-              tokenType: 'access',
-              accountInfo: {
-                userId: userId,
-                email: payload.email || userInfo?.email || '',
-                name: payload.name || userInfo?.name || payload.email || userId,
-              },
-            }
-          } catch (apiError) {
-            console.log(
-              '[QwenAi OAuth] API validation failed, using JWT payload only:',
-              apiError instanceof Error ? apiError.message : 'Unknown error',
-            )
-            return {
-              valid: true,
-              tokenType: 'access',
-              accountInfo: {
-                userId: userId,
-                email: payload.email || '',
-                name: payload.name || payload.email || userId,
-              },
-            }
-          }
-        }
-      } catch {
-        return {
-          valid: false,
-          error: 'Invalid JWT token',
-        }
-      }
-    }
-
+    const token = credentials.token || credentials.accessToken || credentials.apiKey
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
     return {
-      valid: false,
-      error: 'Token is invalid',
+      valid: true,
+      tokenType: 'access',
+      expiresAt: (getQwenAiJwtExpiry(token) ?? 0) * 1000 || undefined,
+      accountInfo: {
+        userId: payload.sub || payload.id || payload.user_id || payload.uid,
+        email: validation.userInfo?.email || '',
+        name: validation.userInfo?.name || validation.userInfo?.email || '',
+      },
     }
   }
 
   async getUserInfo(token: string): Promise<Record<string, unknown> | null> {
     try {
-      const response = await axios.get(`${QWEN_AI_API_BASE}/api/v2/user/info`, {
+      const response = await axios.get(`${QWEN_AI_API_BASE}/api/v1/auths/`, {
         headers: {
           Authorization: `Bearer ${token}`,
           ...FAKE_HEADERS,
@@ -170,18 +114,25 @@ export class QwenAiAdapter extends BaseOAuthAdapter {
         validateStatus: () => true,
       })
 
-      if (response.status !== 200 || !response.data?.success) {
+      if (!parseQwenAiAuthResponse(response.status, response.data).valid) {
         return null
       }
 
-      return response.data.data
+      return response.data
     } catch {
       return null
     }
   }
 
   async refreshToken(credentials: Record<string, string>): Promise<CredentialInfo | null> {
-    return null
+    const refreshed = await exchangeQwenAiRefreshToken(credentials)
+    return {
+      type: 'access',
+      value: refreshed.token,
+      expiresAt: (getQwenAiJwtExpiry(refreshed.token) ?? 0) * 1000 || undefined,
+      refreshToken: refreshed.refresh_token,
+      extra: refreshed,
+    }
   }
 }
 

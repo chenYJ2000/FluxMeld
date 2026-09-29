@@ -1,46 +1,28 @@
-import axios, { AxiosError } from 'axios'
+import { checkQwenAiCredentials } from './auth'
 import type { Account, Provider } from '../../../shared/types'
 import type { TokenCheckResult } from '../types'
-
-const CHECK_TIMEOUT = 15000
+import { resolveQwenAiCredentials } from './session'
 
 export async function checkQwenAiToken(
   _provider: Provider,
   account: Account,
 ): Promise<TokenCheckResult> {
-  const token = account.credentials.token
-
   try {
-    const response = await axios.get('https://chat.qwen.ai/api/v2/user', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        source: 'web',
-      },
-      timeout: CHECK_TIMEOUT,
-      validateStatus: () => true,
-    })
-
-    if (response.status === 200 && response.data?.data) {
-      return {
-        valid: true,
-        userInfo: {
-          name: response.data.data.name || response.data.data.email,
-          email: response.data.data.email,
-        },
-      }
+    let credentials = await resolveQwenAiCredentials(account)
+    let result = await checkQwenAiCredentials(credentials)
+    if (
+      !result.valid &&
+      credentials.refresh_token &&
+      /expired|invalid|session/i.test(result.error || '')
+    ) {
+      credentials = await resolveQwenAiCredentials(account, {
+        force: true,
+        failedToken: credentials.token,
+      })
+      result = await checkQwenAiCredentials(credentials)
     }
-
-    if (response.status === 401) {
-      return { valid: false, error: 'Token expired or invalid' }
-    }
-
-    return { valid: false, error: `Validation failed: HTTP ${response.status}` }
+    return result
   } catch (error) {
-    return {
-      valid: false,
-      error: error instanceof AxiosError ? error.message : 'Connection failed',
-    }
+    return { valid: false, error: error instanceof Error ? error.message : 'Qwen 自动续期失败' }
   }
 }
