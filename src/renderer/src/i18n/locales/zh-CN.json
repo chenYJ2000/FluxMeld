@@ -299,7 +299,14 @@
     "deleteAllAccounts": "一键删除全部账户",
     "deleteAllAccountsConfirm": "确定要删除当前供应商的全部 {{count}} 个账户吗？",
     "deleteAllAccountsWarning": "此操作不可撤销，删除后需要重新添加或导入账户。",
-    "accountsDeleted": "已删除 {{count}} 个账户"
+    "accountsDeleted": "已删除 {{count}} 个账户",
+    "batchRegisterCountryCode": "国家/地区代码",
+    "batchRegisterCountryCodeHelp": "国际站点注册需要填写区号，例如 +1（美国）、+86（中国）。",
+    "batchRegisterTermsConsent": "我已阅读并同意该供应商的",
+    "batchRegisterTermsAnd": "和",
+    "batchRegisterEmail": "邮箱",
+    "batchRegisterEmailCode": "邮箱由配置的邮箱 API 自动创建（不显示完整地址）。注册页打开后自动填入邮箱与密码，验证码从邮箱自动获取并填入。",
+    "qwenAiBatchRegisterDescription": "国际版 Qwen 使用邮箱注册。逐个打开注册页并自动填写邮箱与密码，验证邮件中的验证码会自动获取并填入，你只需完成人机验证；成功后自动保存账号。"
   },
   "loginGuide": {
     "getToken": "获取 {{provider}} 凭证",
@@ -928,7 +935,16 @@
       "apiDocumentation": "API 文档",
       "apiEndpoint": "API 端点",
       "exampleUsage": "使用示例"
-    }
+    },
+    "emailApi": "邮箱 API（批量注册）",
+    "emailApiHelp": "用于邮箱注册的临时邮箱服务（当前支持 tigrmail）。批量注册时自动创建邮箱并读取注册验证码。",
+    "emailApiEnabled": "启用邮箱 API",
+    "emailApiBaseUrl": "API 地址",
+    "emailApiToken": "API Token",
+    "emailApiDomain": "邮箱域名",
+    "emailApiPollTimeout": "收信超时（毫秒）",
+    "emailApiDomainHelp": "留空时自动获取全部可用域名并每次随机选择一个（可用逗号分隔固定多个域名）。",
+    "emailApiService": "邮箱服务"
   },
   "common": {
     "save": "保存",
@@ -960,7 +976,8 @@
     "previous": "上一步",
     "submit": "提交",
     "reset": "重置",
-    "optional": "可选"
+    "optional": "可选",
+    "saved": "已保存"
   },
   "proxyStatus": {
     "enabled": "已启用",

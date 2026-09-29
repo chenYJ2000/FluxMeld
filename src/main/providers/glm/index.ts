@@ -29,6 +29,7 @@ export const glmModule: ProviderModule = {
     registrationUrl: 'https://chatglm.cn/login',
     fields: [{ value: 'phone' }, { value: 'password' }, { value: 'code' }],
     windowTitle: 'GLM Registration',
+    smsKeyword: '智谱',
   },
   tokenChecker: checkGLMToken,
   normalizeOAuthCredentials: (credentials) =>

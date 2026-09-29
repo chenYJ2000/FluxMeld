@@ -57,7 +57,7 @@ export const minimaxConfig: BuiltinProviderConfig = {
   ],
   tokenCheckEndpoint: '/v1/api/user/device/register',
   tokenCheckMethod: 'POST',
-  capabilities: { clearChats: true, credits: true },
+  capabilities: { clearChats: true, credits: true, batchRegister: true },
   ui: { iconKey: 'minimax', i18nPrefix: 'minimax' },
 }
 

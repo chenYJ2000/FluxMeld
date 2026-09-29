@@ -33,6 +33,20 @@ export const kimiAiModule: ProviderModule = {
     fields: [{ value: 'phone' }, { value: 'code' }],
     windowTitle: 'Kimi AI Registration',
     requiresTermsConsent: true,
+    smsKeyword: 'Kimi',
+    needsCountryCode: true,
+    defaultCountryCode: '+1',
+    descriptionKey: 'providers.kimiAiBatchRegisterDescription',
+    termsLinks: [
+      {
+        labelKey: 'providers.kimiAiTermsLink',
+        url: 'https://www.kimi.ai/user/agreement/modelUse?version=v2',
+      },
+      {
+        labelKey: 'providers.kimiPrivacyLink',
+        url: 'https://www.kimi.ai/user/agreement/userPrivacy?version=v2',
+      },
+    ],
   },
   webRegistration: registerKimiAiOnWeb,
   tokenChecker: checkKimiAiToken,

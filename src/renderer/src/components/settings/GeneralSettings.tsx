@@ -12,6 +12,7 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useSettingsStore, CloseBehavior, OAuthProxyMode } from '@/stores/settingsStore'
 import { RegistrationApiSettings } from './RegistrationApiSettings'
+import { EmailApiSettings } from './EmailApiSettings'
 import { Bell, Minimize2, Power, Globe } from 'lucide-react'
 
 export function GeneralSettings() {
@@ -159,6 +160,8 @@ export function GeneralSettings() {
       </Card>
 
       <RegistrationApiSettings />
+
+      <EmailApiSettings />
     </div>
   )
 }

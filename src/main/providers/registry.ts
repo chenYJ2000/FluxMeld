@@ -21,7 +21,7 @@ import { qwenModule } from './qwen/index.ts'
 import { qwenAiModule } from './qwen-ai/index.ts'
 import { zaiModule } from './zai/index.ts'
 
-import type { Provider } from '../../shared/types'
+import type { Provider, ProviderRegistrationInfo } from '../../shared/types'
 import type { ProviderModule, BuiltinProviderConfig, RegistrationConfig } from './types.ts'
 import type { ForwarderServices, ProviderForwarder } from '../proxy/forwarders/types.ts'
 import type { BaseOAuthAdapter } from './common/oauthBase.ts'
@@ -103,6 +103,40 @@ export function getSupportedAuthMethods(providerType: ProviderType): string[] {
 /** Assisted registration rules for a provider type, or `null` when unsupported. */
 export function getRegistrationConfig(providerType: ProviderType): RegistrationConfig | null {
   return providerModuleMap[providerType]?.registration ?? null
+}
+
+/**
+ * Serializable registration descriptors for every provider that supports
+ * assisted batch registration. The renderer dialog renders itself from this,
+ * so no component branches on a provider id.
+ */
+export function getRegistrationInfos(): ProviderRegistrationInfo[] {
+  const infos: ProviderRegistrationInfo[] = []
+
+  for (const module of providerModules) {
+    const registration = module.registration
+    if (!registration) continue
+
+    const fieldValues = (registration.fields ?? [{ value: 'phone' }, { value: 'password' }]).map(
+      (field) => field.value,
+    )
+    const generatesPassword = registration.generatePassword ?? fieldValues.includes('password')
+
+    infos.push({
+      providerId: module.id,
+      fields: fieldValues,
+      generatesPassword,
+      needsCountryCode: !!registration.needsCountryCode,
+      defaultCountryCode: registration.defaultCountryCode,
+      requiresTermsConsent: !!registration.requiresTermsConsent,
+      termsLinks: registration.termsLinks,
+      descriptionKey: registration.descriptionKey,
+      codeHintKey: registration.codeHintKey,
+      usesEmail: registration.codeSource === 'email' || fieldValues.includes('email'),
+    })
+  }
+
+  return infos
 }
 
 /** Tool-calling profile for a provider. */

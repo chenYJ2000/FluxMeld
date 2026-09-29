@@ -299,7 +299,14 @@
     "deleteAllAccounts": "Delete All Accounts",
     "deleteAllAccountsConfirm": "Delete all {{count}} accounts of this provider?",
     "deleteAllAccountsWarning": "This action cannot be undone. You will need to re-add or import accounts.",
-    "accountsDeleted": "Deleted {{count}} accounts"
+    "accountsDeleted": "Deleted {{count}} accounts",
+    "batchRegisterCountryCode": "Country code",
+    "batchRegisterCountryCodeHelp": "International sites require a region code, e.g. +1 (US), +86 (China).",
+    "batchRegisterTermsConsent": "I have read and agree to the provider's",
+    "batchRegisterTermsAnd": "and",
+    "batchRegisterEmail": "Email",
+    "batchRegisterEmailCode": "Inboxes are created automatically by the configured email API. The signup page is prefilled with the email and password, and the code from the email is filled in automatically.",
+    "qwenAiBatchRegisterDescription": "Qwen AI (international) registers with an email. Each signup page is prefilled with the email and password, the code from the verification email is filled in automatically, and any captcha is left for you to solve."
   },
   "loginGuide": {
     "getToken": "Get {{provider}} Credentials",
@@ -928,7 +935,16 @@
       "apiDocumentation": "API Documentation",
       "apiEndpoint": "API Endpoint",
       "exampleUsage": "Example Usage"
-    }
+    },
+    "emailApi": "Email API (batch registration)",
+    "emailApiHelp": "Disposable email service used for email-based registration (tigrmail supported). Inboxes are created and verification emails read automatically during batch registration.",
+    "emailApiEnabled": "Enable email API",
+    "emailApiBaseUrl": "API base URL",
+    "emailApiToken": "API token",
+    "emailApiDomain": "Email domain",
+    "emailApiPollTimeout": "Message timeout (ms)",
+    "emailApiDomainHelp": "Leave empty to fetch all available domains and pick one at random each time (or list fixed domains separated by commas).",
+    "emailApiService": "Email service"
   },
   "common": {
     "save": "Save",
@@ -960,7 +976,8 @@
     "previous": "Previous",
     "submit": "Submit",
     "reset": "Reset",
-    "optional": "Optional"
+    "optional": "Optional",
+    "saved": "Saved"
   },
   "proxyStatus": {
     "enabled": "Enabled",

@@ -26,6 +26,7 @@ import type {
   ValidationResult,
   AccountImportResult,
   ProviderUiMeta,
+  ProviderRegistrationInfo,
   BatchDeleteAccountsResponse,
 } from './types'
 
@@ -436,6 +437,8 @@ export function createClientApi(
   const providersAPI = {
     getAll: (): Promise<Provider[]> => transport.invoke('providers:getAll'),
     getBuiltin: (): Promise<any[]> => transport.invoke('providers:getBuiltin'),
+    getRegistrationInfos: (): Promise<ProviderRegistrationInfo[]> =>
+      transport.invoke('providers:getRegistrationInfos'),
     add: (data: {
       name: string
       authType: AuthType

@@ -40,6 +40,7 @@ export const IpcChannels = {
 
   PROVIDERS_GET_ALL: 'providers:getAll',
   PROVIDERS_GET_BUILTIN: 'providers:getBuiltin',
+  PROVIDERS_GET_REGISTRATION_INFOS: 'providers:getRegistrationInfos',
   PROVIDERS_ADD: 'providers:add',
   PROVIDERS_UPDATE: 'providers:update',
   PROVIDERS_DELETE: 'providers:delete',

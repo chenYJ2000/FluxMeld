@@ -18,8 +18,10 @@ import {
   pollRegistrationCode,
   releaseRegistrationPhone,
   maskPhone,
+  maskEmail,
   generateRegistrationPassword,
 } from '../oauth/registrationApi'
+import { isEmailApiReady, createInbox, waitForMessage, extractEmailCode } from '../oauth/emailApi'
 import { ProxyServer } from '../proxy/server'
 import { proxyStatusManager } from '../proxy/status'
 import { initializeEgress, egressManager } from '../egress'
@@ -29,7 +31,7 @@ import { ConfigManager } from '../store/config'
 import { generateManagementSecret } from '../proxy/middleware/managementAuth'
 import { UpdaterManager } from '../updater'
 import { markAppQuitting } from '../lib/appLifecycle'
-import { getProviderModule } from '../providers/registry'
+import { getProviderModule, getRegistrationInfos } from '../providers/registry'
 import { normalizeOAuthResult } from '../providers/oauthCredentials'
 import type {
   Provider,
@@ -547,6 +549,10 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
 
   ipcMain.handle(IpcChannels.PROVIDERS_GET_BUILTIN, async () => {
     return getBuiltinProviders()
+  })
+
+  ipcMain.handle(IpcChannels.PROVIDERS_GET_REGISTRATION_INFOS, async () => {
+    return getRegistrationInfos()
   })
 
   ipcMain.handle(
@@ -1165,7 +1171,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
     ): Promise<{ results: BatchRegistrationItemResult[] }> => {
       const config = storeManager.getConfig()
       const proxyMode = (config as any).oauthProxyMode || 'system'
-      const apiConfig = config.registrationApi
+      const baseApiConfig = config.registrationApi
       const total = Math.max(1, Math.floor(data.count || 0))
       const results: BatchRegistrationItemResult[] = []
       if (batchRegistrationRunning) {
@@ -1184,7 +1190,8 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           results: [{ phone: '', success: false, error: 'Provider does not support registration' }],
         }
       }
-      if (providerModule.registration.requiresTermsConsent && !data.acceptedTerms) {
+      const registration = providerModule.registration
+      if (registration.requiresTermsConsent && !data.acceptedTerms) {
         return {
           results: [{ phone: '', success: false, error: 'Provider terms must be accepted' }],
         }
@@ -1194,14 +1201,36 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           results: [{ phone: '', success: false, error: 'Web registration is not available' }],
         }
       }
-      if (webMode && !/^\+[1-9]\d{0,3}$/.test(data.countryCode?.trim() || '')) {
-        return {
-          results: [{ phone: '', success: false, error: 'A valid country code is required' }],
+      if ((webMode || registration.needsCountryCode) && registration.needsCountryCode) {
+        const code = data.countryCode?.trim() || registration.defaultCountryCode?.trim() || ''
+        if (webMode && !/^\+[1-9]\d{0,3}$/.test(code)) {
+          return {
+            results: [{ phone: '', success: false, error: 'A valid country code is required' }],
+          }
         }
       }
 
-      if (!isRegistrationApiReady(apiConfig)) {
-        const error = 'Registration number API is not configured'
+      // Each provider keeps its own SMS keyword so one number API can serve
+      // every provider without re-editing the global keyword. Priority:
+      // provider-declared keyword > global keyword.
+      const providerKeyword = registration.smsKeyword?.trim()
+      const apiConfig =
+        providerKeyword && providerKeyword !== baseApiConfig.keyWord
+          ? { ...baseApiConfig, keyWord: providerKeyword }
+          : baseApiConfig
+
+      const emailMode = registration.codeSource === 'email'
+      // Providers may require a direct connection (their signup page resets TLS
+      // through a system proxy); they override the app-wide proxy mode.
+      const effectiveProxyMode: 'system' | 'none' = registration.forceDirectConnection
+        ? 'none'
+        : proxyMode
+      const emailConfig = config.emailApi
+
+      if (emailMode ? !isEmailApiReady(emailConfig) : !isRegistrationApiReady(apiConfig)) {
+        const error = emailMode
+          ? 'Registration email API is not configured'
+          : 'Registration number API is not configured'
         oauthManager.emitProgress({
           status: 'error',
           message: error,
@@ -1227,12 +1256,28 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           if (batchRegistrationCancelled) break
 
           let phone = ''
+          let email = ''
           let masked = ''
+          // `identifier` is whichever value identifies the account: a phone
+          // number for SMS flows or an email address for email flows.
+          const identifierType: 'phone' | 'email' = emailMode ? 'email' : 'phone'
+
           try {
-            phone = await fetchRegistrationPhone(apiConfig)
-            masked = maskPhone(phone)
+            if (emailMode) {
+              const inbox = await createInbox(emailConfig)
+              email = inbox.address
+              masked = maskEmail(email)
+            } else {
+              phone = await fetchRegistrationPhone(apiConfig)
+              masked = maskPhone(phone)
+            }
           } catch (error) {
-            const message = error instanceof Error ? error.message : 'Failed to fetch phone number'
+            const message =
+              error instanceof Error
+                ? error.message
+                : emailMode
+                  ? 'Failed to create inbox'
+                  : 'Failed to fetch phone number'
             results.push({ phone: '', success: false, error: message })
             oauthManager.emitProgress({
               status: 'error',
@@ -1242,15 +1287,15 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
             break
           }
 
-          const password = providerModule.registration.fields?.some(
-            (field) => field.value === 'password',
-          )
-            ? generateRegistrationPassword()
-            : ''
+          const wantsPassword =
+            registration.generatePassword ??
+            registration.fields?.some((field) => field.value === 'password') ??
+            false
+          const password = wantsPassword ? generateRegistrationPassword() : ''
           oauthManager.emitProgress({
             status: 'pending',
             message: `(${index + 1}/${total}) ${masked}`,
-            data: { index, total, phone: masked, password, phase: 'opening' },
+            data: { index, total, phone: masked, email: masked, password, phase: 'opening' },
           })
 
           try {
@@ -1258,9 +1303,17 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
               ? await providerModule.webRegistration!({
                   providerId: data.providerId,
                   phone,
-                  countryCode: data.countryCode || '',
+                  email,
+                  countryCode:
+                    data.countryCode?.trim() || registration.defaultCountryCode?.trim() || '',
                   timeout: data.timeout,
-                  resolveCode: (signal) => pollRegistrationCode(apiConfig, phone, signal),
+                  resolveCode: (signal) =>
+                    emailMode
+                      ? waitForMessage(emailConfig, email, {
+                          signal,
+                          timeoutMs: emailConfig.pollTimeoutMs,
+                        }).then((message) => extractEmailCode(message))
+                      : pollRegistrationCode(apiConfig, phone, signal),
                   signal: controller.signal,
                 })
               : await oauthManager.startInAppRegistration(
@@ -1269,8 +1322,14 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
                   phone,
                   password,
                   data.timeout,
-                  proxyMode,
-                  () => pollRegistrationCode(apiConfig, phone),
+                  effectiveProxyMode,
+                  () =>
+                    emailMode
+                      ? waitForMessage(emailConfig, email, {
+                          timeoutMs: emailConfig.pollTimeoutMs,
+                        }).then((message) => extractEmailCode(message))
+                      : pollRegistrationCode(apiConfig, phone),
+                  email,
                 )
 
             if (result.success && result.credentials) {
@@ -1309,7 +1368,9 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
               })
             }
           } finally {
-            await releaseRegistrationPhone(apiConfig, phone)
+            if (identifierType === 'phone' && phone) {
+              await releaseRegistrationPhone(apiConfig, phone)
+            }
           }
         }
 

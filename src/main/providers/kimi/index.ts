@@ -44,6 +44,18 @@ export const kimiModule: ProviderModule = {
     termsCheckboxSelector: 'input[type="checkbox"]',
     sendCodeSelector: '[data-testid="login-send-code"]',
     submitSelector: '[data-testid="login-submit"]',
+    smsKeyword: '月之暗面',
+    descriptionKey: 'providers.kimiComBatchRegisterDescription',
+    termsLinks: [
+      {
+        labelKey: 'providers.kimiAiTermsLink',
+        url: 'https://www.kimi.com/user/agreement/modelUse?version=v2',
+      },
+      {
+        labelKey: 'providers.kimiPrivacyLink',
+        url: 'https://www.kimi.com/user/agreement/userPrivacy?version=v2',
+      },
+    ],
   },
   webRegistration: registerKimiOnWeb,
   tokenChecker: checkKimiToken,

@@ -266,6 +266,17 @@ export function maskPhone(phone: string): string {
   return `${value.slice(0, 3)}****${value.slice(-4)}`
 }
 
+/** Mask an email address for display: `ab***@domain`. */
+export function maskEmail(email: string): string {
+  const value = (email || '').trim()
+  const at = value.indexOf('@')
+  if (at <= 0) return value || ''
+  const local = value.slice(0, at)
+  const domain = value.slice(at)
+  const head = local.slice(0, Math.min(2, local.length))
+  return `${head}***${domain}`
+}
+
 /** Generate a strong random password for a newly registered account. */
 export function generateRegistrationPassword(length = 16): string {
   const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ'

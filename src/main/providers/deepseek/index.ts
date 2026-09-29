@@ -29,6 +29,13 @@ export const deepseekModule: ProviderModule = {
     windowTitle: 'DeepSeek Login',
   },
   tokenChecker: checkDeepSeekToken,
+  registration: {
+    registrationUrl: 'https://chat.deepseek.com/sign_up',
+    // DeepSeek's signup asks for the password twice (password + confirm).
+    fields: [{ value: 'phone' }, { value: 'password' }, { value: 'password' }, { value: 'code' }],
+    windowTitle: 'DeepSeek Registration',
+    smsKeyword: 'DeepSeek',
+  },
   normalizeOAuthCredentials: (credentials) => {
     const raw = credentials.userToken
     if (!raw) return credentials

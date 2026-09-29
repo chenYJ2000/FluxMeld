@@ -87,6 +87,14 @@ export class OAuthManager extends EventEmitter {
     }
   }
 
+  /** Serialise a cookie jar to a `name=value; name2=value2` header string. */
+  private serializeCookies(cookies: Record<string, string>): string {
+    return Object.entries(cookies)
+      .filter(([, value]) => value != null && value !== '')
+      .map(([name, value]) => `${name}=${value}`)
+      .join('; ')
+  }
+
   /**
    * Start OAuth login flow
    */
@@ -289,7 +297,7 @@ export class OAuthManager extends EventEmitter {
     proxyMode?: 'system' | 'none',
     extra?: {
       mode?: 'login' | 'register'
-      prefill?: { phone?: string; password?: string }
+      prefill?: { phone?: string; email?: string; password?: string }
       registration?: RegistrationConfig | null
       codeResolver?: () => Promise<string | null>
     },
@@ -372,9 +380,10 @@ export class OAuthManager extends EventEmitter {
         // Store the token
         collectedTokens[event.key] = event.value
 
-        // Store all cookies if provided (needed for Cloudflare-protected requests)
+        // Store all cookies if provided (needed for WAF/anti-bot protected
+        // requests). Serialised to a `name=value; name2=value2` header string.
         if (event.allCookies) {
-          collectedTokens['cookies'] = event.allCookies as any
+          collectedTokens['cookies'] = this.serializeCookies(event.allCookies)
           console.log(
             '[OAuthManager] Stored all cookies:',
             Object.keys(event.allCookies).length,
@@ -602,7 +611,11 @@ export class OAuthManager extends EventEmitter {
           providerId,
           providerType,
           timeout: timeout || DEFAULT_TIMEOUT,
-          proxyMode,
+          // A provider may require a direct connection (its page resets TLS
+          // through a system proxy); honor it for login and registration alike.
+          proxyMode: getRegistrationConfig(providerType)?.forceDirectConnection
+            ? 'none'
+            : proxyMode,
           mode: extra?.mode,
           prefill: extra?.prefill,
           registration: extra?.registration,
@@ -631,6 +644,7 @@ export class OAuthManager extends EventEmitter {
     timeout?: number,
     proxyMode?: 'system' | 'none',
     codeResolver?: () => Promise<string | null>,
+    email?: string,
   ): Promise<OAuthResult> {
     const registration = getRegistrationConfig(providerType)
     if (!registration) {
@@ -644,7 +658,7 @@ export class OAuthManager extends EventEmitter {
 
     return this.startInAppLogin(providerId, providerType, timeout, proxyMode, {
       mode: 'register',
-      prefill: { phone, password },
+      prefill: { phone, email, password },
       registration,
       codeResolver,
     })

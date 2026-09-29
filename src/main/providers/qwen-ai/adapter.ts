@@ -21,6 +21,44 @@ import { extractTextContent } from '../common/text'
 const QWEN_AI_BASE = 'https://chat.qwen.ai'
 const QWEN_AI_WEB_VERSION = '0.2.35'
 const EMPTY_RESPONSE_ERROR = 'Qwen upstream completed without assistant content'
+const WAF_CHALLENGE_ERROR =
+  'Qwen 触发了人机验证（Aliyun WAF），请为该账号补充浏览器 cookie 或更换账号/IP'
+const RISK_VALIDATE_ERROR =
+  'Qwen 触发了阿里风控人机校验（FAIL_SYS_USER_VALIDATE），该账号/IP 需要验证码才能继续，请更换账号或出口 IP'
+
+/**
+ * Aliyun WAF serves a captcha HTML page (instead of SSE) when the request lacks
+ * the site's anti-bot cookies. Detect it so the failure is actionable rather
+ * than surfacing as an empty completion.
+ */
+function detectWafChallenge(raw: string): boolean {
+  if (!raw) return false
+  return (
+    raw.includes('AliyunCaptcha') ||
+    raw.includes('aliyun_waf') ||
+    raw.includes('capthca-logo') ||
+    raw.includes('u_atoken') ||
+    (raw.includes('<!doctype html') && raw.includes('captcha'))
+  )
+}
+
+/** Alibaba risk control ("punish") page: FAIL_SYS_USER_VALIDATE / RGV587. */
+function detectRiskValidate(raw: string): boolean {
+  if (!raw) return false
+  return (
+    raw.includes('FAIL_SYS_USER_VALIDATE') ||
+    raw.includes('RGV587') ||
+    raw.includes('_____tmd_____') ||
+    raw.includes('punish?x5secdata')
+  )
+}
+
+/** Pick the most specific actionable message for a non-JSON upstream body. */
+function describeUpstreamBody(raw: string): string {
+  if (detectRiskValidate(raw)) return RISK_VALIDATE_ERROR
+  if (detectWafChallenge(raw)) return WAF_CHALLENGE_ERROR
+  return EMPTY_RESPONSE_ERROR
+}
 
 const DEFAULT_HEADERS = {
   Accept: 'application/json',
@@ -427,6 +465,21 @@ export class QwenAiAdapter {
         return response.data.data.id
       }
 
+      // The body may be non-JSON (an Aliyun WAF captcha page) or a JSON error
+      // envelope; surface whichever is actionable instead of a generic message.
+      const raw = typeof response.data === 'string' ? response.data : JSON.stringify(response.data)
+      console.error('[QwenAI] createChat unexpected response:', raw.slice(0, 500))
+
+      if (detectRiskValidate(raw)) {
+        throw new Error(RISK_VALIDATE_ERROR)
+      }
+      if (detectWafChallenge(raw)) {
+        throw new Error(WAF_CHALLENGE_ERROR)
+      }
+      const details = response.data?.data?.details || response.data?.data?.code
+      if (typeof details === 'string' && details) {
+        throw new Error(`Failed to create chat: ${details}`)
+      }
       throw new Error('Failed to create chat: no chat ID returned')
     } catch (error) {
       console.error(
@@ -888,6 +941,7 @@ export class QwenAiStreamHandler {
     let lastCompletionTokens = 0
     let answerTokenBaseline: number | undefined
     let terminal = false
+    let upstreamFailureMessage = ''
     let readySettled = false
     let resolveReady!: (value: PassThrough) => void
     let rejectReady!: (reason: Error) => void
@@ -924,7 +978,7 @@ export class QwenAiStreamHandler {
       if (terminal) return
 
       if (!this.content.trim()) {
-        failStream(new Error(EMPTY_RESPONSE_ERROR))
+        failStream(new Error(upstreamFailureMessage || EMPTY_RESPONSE_ERROR))
         return
       }
 
@@ -1195,8 +1249,13 @@ export class QwenAiStreamHandler {
     })
 
     stream.on('data', (buffer: Buffer) => {
-      console.log('[QwenAI] Raw stream chunk bytes:', buffer.length)
-      parser.feed(buffer.toString())
+      const text = buffer.toString()
+      if (!upstreamFailureMessage) {
+        const detected = describeUpstreamBody(text)
+        if (detected !== EMPTY_RESPONSE_ERROR) upstreamFailureMessage = detected
+      }
+      console.log('[QwenAI] Raw stream chunk bytes:', buffer.length, text.slice(0, 300))
+      parser.feed(text)
     })
     stream.once('error', (err: Error) => {
       console.error('[QwenAI] Stream error:', err)
@@ -1246,6 +1305,7 @@ export class QwenAiStreamHandler {
       let lastCompletionTokens = 0
       let answerTokenBaseline: number | undefined
       let resolved = false
+      let upstreamFailureMessage = ''
 
       const resolveOnce = (value: any) => {
         if (!resolved) {
@@ -1271,7 +1331,7 @@ export class QwenAiStreamHandler {
         }
 
         if (!data.choices[0].message.content.trim()) {
-          rejectOnce(new Error(EMPTY_RESPONSE_ERROR))
+          rejectOnce(new Error(upstreamFailureMessage || EMPTY_RESPONSE_ERROR))
           return
         }
 
@@ -1416,7 +1476,15 @@ export class QwenAiStreamHandler {
         },
       })
 
-      stream.on('data', (buffer: Buffer) => parser.feed(buffer.toString()))
+      stream.on('data', (buffer: Buffer) => {
+        const text = buffer.toString()
+        if (!upstreamFailureMessage) {
+          const detected = describeUpstreamBody(text)
+          if (detected !== EMPTY_RESPONSE_ERROR) upstreamFailureMessage = detected
+        }
+        console.log('[QwenAI] Non-stream raw bytes:', buffer.length, text.slice(0, 300))
+        parser.feed(text)
+      })
       stream.once('error', (err: Error) => {
         console.error('[QwenAI] Non-stream error:', err)
         rejectOnce(err)

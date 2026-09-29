@@ -50,7 +50,7 @@ export const deepseekConfig: BuiltinProviderConfig = {
   ],
   tokenCheckEndpoint: '/v0/users/current',
   tokenCheckMethod: 'GET',
-  capabilities: { clearChats: true, toolCalling: true },
+  capabilities: { clearChats: true, toolCalling: true, batchRegister: true },
   ui: { iconKey: 'deepseek', i18nPrefix: 'deepseek' },
 }
 

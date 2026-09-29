@@ -34,8 +34,8 @@ export interface InAppLoginOptions {
    * instead of the normal login page. Credential sniffing is identical.
    */
   mode?: 'login' | 'register'
-  /** Values injected into the registration form (phone + password). */
-  prefill?: { phone?: string; password?: string }
+  /** Values injected into the registration form (phone/email + password). */
+  prefill?: { phone?: string; email?: string; password?: string }
   /** Explicit registration rules from the provider module. */
   registration?: RegistrationConfig | null
   /**
@@ -56,6 +56,8 @@ export class InAppLoginManager extends EventEmitter {
   private config: TokenExtractionConfig | null = null
   private isCompleted: boolean = false
   private timeoutId: NodeJS.Timeout | null = null
+  /** Fallback timer that reveals the window even without `ready-to-show`. */
+  private revealTimer: NodeJS.Timeout | null = null
   private resolvePromise: ((result: InAppLoginResult) => void) | null = null
   private loginStartTime: number = 0
   private lastTokenCheckTime: number = 0
@@ -125,6 +127,7 @@ export class InAppLoginManager extends EventEmitter {
       width: 500,
       height: 700,
       show: false,
+      alwaysOnTop: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -136,10 +139,34 @@ export class InAppLoginManager extends EventEmitter {
       autoHideMenuBar: true,
     })
 
-    this.loginWindow.once('ready-to-show', () => {
-      this.loginWindow?.show()
+    // Some SPAs never emit `ready-to-show` (heavy bundles, in-page auth overlays,
+    // slow first paint). Reveal on the first load event and also on a timer so
+    // the operator is never left with an invisible window.
+    const revealWindow = () => {
+      if (!this.loginWindow || this.loginWindow.isDestroyed()) return
+      // Always (re)assert stacking + focus; a plain `isVisible()` guard would
+      // skip this when the window was created but opened behind the main window.
+      if (!this.loginWindow.isVisible()) {
+        this.loginWindow.show()
+      }
+      this.loginWindow.center()
+      this.loginWindow.setAlwaysOnTop(true, 'screen-saver')
+      this.loginWindow.moveTop()
+      this.loginWindow.restore?.()
+      this.loginWindow.focus()
+      const bounds = this.loginWindow.getBounds()
+      console.log('[InAppLogin] Revealed registration/login window', {
+        url: this.loginWindow.webContents.getURL(),
+        visible: this.loginWindow.isVisible(),
+        bounds,
+      })
       this.emit('status', { status: 'ready', message: 'Login window ready - please log in' })
-    })
+    }
+    this.loginWindow.webContents.once('did-finish-load', revealWindow)
+    this.loginWindow.webContents.once('did-fail-load', revealWindow)
+    this.loginWindow.once('ready-to-show', revealWindow)
+    this.revealTimer = setTimeout(revealWindow, 8000)
+    console.log('[InAppLogin] Registration window created, target:', this.resolveTargetUrl())
 
     this.loginWindow.on('closed', () => {
       if (!this.isCompleted) {
@@ -211,7 +238,7 @@ export class InAppLoginManager extends EventEmitter {
                   console.log('[InAppLogin] Found target cookie in Set-Cookie header:', name)
                   if (this.isValidToken(value)) {
                     console.log('[InAppLogin] Cookie token is valid from Set-Cookie header')
-                    this.emit('tokenFound', { key: source.key, value: value })
+                    this.emitTokenFound({ key: source.key, value: value })
                   }
                 }
               }
@@ -249,7 +276,7 @@ export class InAppLoginManager extends EventEmitter {
               token = authHeader.substring(7)
             }
             if (this.isValidToken(token)) {
-              this.emit('tokenFound', { key: source.key, value: token })
+              this.emitTokenFound({ key: source.key, value: token })
             }
           }
         }
@@ -281,7 +308,7 @@ export class InAppLoginManager extends EventEmitter {
           console.log('[InAppLogin] Cookie matches source key:', source.key)
           if (this.isValidToken(cookie.value)) {
             console.log('[InAppLogin] Cookie token is valid, emitting tokenFound')
-            this.emit('tokenFound', { key: source.key, value: cookie.value })
+            this.emitTokenFound({ key: source.key, value: cookie.value })
           } else {
             console.log('[InAppLogin] Cookie token is invalid:', source.key)
           }
@@ -303,6 +330,13 @@ export class InAppLoginManager extends EventEmitter {
       console.log('[InAppLogin] Page navigated, starting delayed token check')
       this.injectRegistrationAutofill()
       this.delayedTokenCheck()
+    })
+
+    // Registration forms frequently render in late-loading iframes (Aliyun
+    // passport, etc). Re-inject whenever any frame finishes so the autofill
+    // reaches the field once it exists.
+    this.loginWindow?.webContents.on('did-frame-finish-load', () => {
+      this.injectRegistrationAutofill()
     })
 
     // Some login pages update Local Storage without navigating. Keep checking
@@ -355,26 +389,31 @@ export class InAppLoginManager extends EventEmitter {
       { value: 'password' as const },
     ]
     const phoneField = fields.find((f) => f.value === 'phone')
+    const emailField = fields.find((f) => f.value === 'email')
     const passwordField = fields.find((f) => f.value === 'password')
     const codeField = fields.find((f) => f.value === 'code')
 
     const payload = {
       phone: phoneField ? prefill.phone : undefined,
+      email: emailField ? prefill.email : undefined,
       password: passwordField ? prefill.password : undefined,
       code: this.resolvedCode || undefined,
       phoneSelector: phoneField?.selector,
+      emailSelector: emailField?.selector,
       passwordSelector: passwordField?.selector,
       codeSelector: codeField?.selector,
+      codeSegmentedSelector: this.options?.registration?.codeSegmentedSelector,
       termsCheckboxSelector: this.options?.registration?.termsCheckboxSelector,
       sendCodeSelector: this.options?.registration?.sendCodeSelector,
       submitSelector: this.options?.registration?.submitSelector,
+      activateTabText: this.options?.registration?.activateTabText,
     }
 
-    if (!payload.phone && !payload.password && !payload.code) return
+    if (!payload.phone && !payload.email && !payload.password && !payload.code) return
 
     const script = `(() => {
       const payload = ${JSON.stringify(payload)};
-      const done = { phone: false, password: false, code: false };
+      const done = { phone: false, email: false, password: false, code: false };
 
       const isVisible = (el) => {
         if (!el) return false;
@@ -421,8 +460,20 @@ export class InAppLoginManager extends EventEmitter {
         ) || null;
       };
 
-      const findPassword = () => {
-        if (payload.passwordSelector) {
+      const findEmail = () => {
+        if (payload.emailSelector) {
+          const el = document.querySelector(payload.emailSelector);
+          if (el && isVisible(el)) return el;
+        }
+        const mail = document.querySelector('input[type="email"]');
+        if (mail && isVisible(mail)) return mail;
+        const hinted = visibleInputs().find((el) =>
+          /(邮箱|邮件|email|e-mail|mail)/.test(hint(el)),
+        );
+        return hinted || null;
+      };
+
+      const findPassword = () => {        if (payload.passwordSelector) {
           const el = document.querySelector(payload.passwordSelector);
           if (el && isVisible(el)) return el;
         }
@@ -449,12 +500,58 @@ export class InAppLoginManager extends EventEmitter {
         );
       };
 
+      const getVal = (el) => (el && typeof el.value === 'string' ? el.value : '');
+
+      // Some providers render the code as one box per digit (e.g. Qwen AI uses
+      // qwenchat-verification-code-inp elements). Detect that and fill each box.
+      const findCodeBoxes = () => {
+        if (payload.codeSegmentedSelector) {
+          const nodes = Array.from(document.querySelectorAll(payload.codeSegmentedSelector)).filter(isVisible);
+          if (nodes.length >= 2) return nodes;
+        }
+        const hinted = visibleInputs().filter((el) => el.className && /code-?(inp|box|cell|input)|otp-?(inp|box|cell)|pin-?(inp|box|cell)|verification-code/i.test(el.className));
+        return hinted.length >= 2 ? hinted : [];
+      };
+
+      const fillSegmentedCode = (boxes, value) => {
+        if (!boxes || boxes.length < 2) return false;
+        const digits = String(value).replace(/\\D/g, '');
+        if (digits.length < boxes.length) return false;
+        for (let i = 0; i < boxes.length; i++) {
+          const box = boxes[i];
+          if (!box) continue;
+          box.focus();
+          const proto = HTMLInputElement.prototype;
+          const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+          if (desc && desc.set) desc.set.call(box, digits[i]); else box.value = digits[i];
+          box.dispatchEvent(new Event('input', { bubbles: true }));
+          box.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        return true;
+      };
+
       const tick = () => {
         try {
+          // Activate the declared tab (e.g. Aliyun "手机号登录") until the phone
+          // field is present, so the form we fill is the one actually shown.
+          if (payload.activateTabText && !done.phone && !findPhone()) {
+            const want = payload.activateTabText;
+            const tab = [...document.querySelectorAll('div,span,a,li,button')].find(
+              (n) => (n.textContent || '').trim() === want && n.children.length === 0,
+            );
+            if (tab) tab.click();
+          }
           if (payload.phone && !done.phone) {
             const el = findPhone();
             if (el && !el.value && setValue(el, payload.phone)) {
               done.phone = true;
+              return;
+            }
+          }
+          if (payload.email && !done.email) {
+            const el = findEmail();
+            if (el && !el.value && setValue(el, payload.email)) {
+              done.email = true;
               return;
             }
           }
@@ -470,22 +567,35 @@ export class InAppLoginManager extends EventEmitter {
             return;
           }
 
-          const phone = findPhone();
-          const code = findCode();
+          const phoneEl = findPhone();
+          const emailEl = findEmail();
+          const codeEl = findCode();
           const send = payload.sendCodeSelector
             ? document.querySelector(payload.sendCodeSelector)
             : null;
           if (payload.sendCodeSelector && !window.__fluxmeldRegSendClicked) {
-            if (send && phone?.value && !code?.value && !send.disabled &&
+            // The input value may read empty on controlled inputs even after we
+            // set it, so treat "we already filled it" as sufficient.
+            const targetReady =
+              (!!phoneEl && (!!getVal(phoneEl) || done.phone)) ||
+              (!!emailEl && (!!getVal(emailEl) || done.email));
+            if (send && targetReady && !getVal(codeEl) && !send.disabled &&
                 (!payload.termsCheckboxSelector || terms?.checked)) {
               window.__fluxmeldRegSendClicked = true;
               send.click();
+              return;
             }
-            return;
           }
 
           if (payload.code && !done.code) {
-            if (code && !code.value && setValue(code, payload.code)) {
+            // Segmented boxes (one digit each) first, then a single input.
+            const boxes = findCodeBoxes();
+            if (boxes.length >= 2) {
+              if (fillSegmentedCode(boxes, payload.code)) {
+                done.code = true;
+                return;
+              }
+            } else if (codeEl && !getVal(codeEl) && setValue(codeEl, payload.code)) {
               done.code = true;
               return;
             }
@@ -494,7 +604,7 @@ export class InAppLoginManager extends EventEmitter {
           const submit = payload.submitSelector
             ? document.querySelector(payload.submitSelector)
             : null;
-          if (submit && payload.code && code?.value === payload.code && !submit.disabled && !window.__fluxmeldRegSubmitted) {
+          if (submit && payload.code && getVal(codeEl) === payload.code && !submit.disabled && !window.__fluxmeldRegSubmitted) {
             window.__fluxmeldRegSubmitted = true;
             submit.click();
           }
@@ -513,9 +623,24 @@ export class InAppLoginManager extends EventEmitter {
       window.__fluxmeldRegInterval = setInterval(tick, 1500);
     })()`
 
-    this.loginWindow.webContents.executeJavaScript(script).catch((error) => {
-      console.error('[InAppLogin] Failed to inject registration autofill:', error)
-    })
+    // The registration form often lives inside a cross-origin iframe (e.g.
+    // Aliyun passport embeds the phone/code inputs in `passport.aliyun.com`).
+    // Inject into every frame so the autofill can reach it; evaluating in the
+    // top frame alone finds none of those inputs.
+    const wc = this.loginWindow.webContents
+    const frames = (() => {
+      try {
+        return wc.mainFrame.framesInSubtree
+      } catch {
+        return [wc.mainFrame]
+      }
+    })()
+
+    for (const frame of frames) {
+      frame.executeJavaScript(script).catch(() => {
+        // Cross-origin frames that reject injection are expected; ignore.
+      })
+    }
   }
 
   private hasMinTimePassed(): boolean {
@@ -678,7 +803,7 @@ export class InAppLoginManager extends EventEmitter {
             const realUserID = parsed.realUserID || parsed.id
             if (realUserID) {
               console.log('[InAppLogin] Found realUserID from user_detail_agent')
-              this.emit('tokenFound', { key: 'realUserID', value: String(realUserID) })
+              this.emitTokenFound({ key: 'realUserID', value: String(realUserID) })
             }
           } catch (e) {
             console.error('[InAppLogin] Error parsing user_detail_agent:', e)
@@ -702,7 +827,7 @@ export class InAppLoginManager extends EventEmitter {
         if (tokenValue && typeof tokenValue === 'string' && this.isValidToken(tokenValue)) {
           console.log('[InAppLogin] Token found and valid from localStorage:', source.key)
           const emitKey = source.key === '_token' ? 'token' : source.key
-          this.emit('tokenFound', { key: emitKey, value: tokenValue })
+          this.emitTokenFound({ key: emitKey, value: tokenValue })
         }
       }
 
@@ -757,7 +882,7 @@ export class InAppLoginManager extends EventEmitter {
                 allCookiesObj[c.name] = c.value
               }
             }
-            this.emit('tokenFound', {
+            this.emitTokenFound({
               key: source.key,
               value: cookie.value,
               allCookies: allCookiesObj,
@@ -781,6 +906,59 @@ export class InAppLoginManager extends EventEmitter {
     })
   }
 
+  /**
+   * Emit a found token, attaching the full browser cookie jar when the provider
+   * requests it (`tokenExtraction.collectCookies`). Some APIs reject requests
+   * that carry a valid token but lack the site's anti-bot cookies.
+   */
+  private async emitTokenFound(event: {
+    key: string
+    value: string
+    allCookies?: Record<string, string>
+  }): Promise<void> {
+    let allCookies = event.allCookies
+
+    if (!allCookies && this.config?.collectCookies && this.loginSession) {
+      allCookies = await this.collectCookieJar()
+    }
+
+    this.emit('tokenFound', allCookies ? { ...event, allCookies } : event)
+  }
+
+  /** Build a `name -> value` map of the session's cookies for target domains. */
+  private async collectCookieJar(): Promise<Record<string, string>> {
+    const jar: Record<string, string> = {}
+    if (!this.loginSession) return jar
+
+    try {
+      const all = await this.loginSession.cookies.get({})
+      const seen = new Set<string>()
+      for (const cookie of all) {
+        if (cookie.value) {
+          jar[cookie.name] = cookie.value
+          seen.add(cookie.name)
+        }
+      }
+      for (const domain of this.config?.targetDomains || []) {
+        try {
+          const domainCookies = await this.loginSession.cookies.get({ domain })
+          for (const cookie of domainCookies) {
+            if (cookie.value && !seen.has(cookie.name)) {
+              jar[cookie.name] = cookie.value
+              seen.add(cookie.name)
+            }
+          }
+        } catch {
+          // Ignore domains the session cannot query.
+        }
+      }
+    } catch (error) {
+      console.error('[InAppLogin] Failed to collect cookie jar:', error)
+    }
+
+    return jar
+  }
+
   private complete(result: InAppLoginResult): void {
     if (this.isCompleted) return
     this.isCompleted = true
@@ -788,6 +966,10 @@ export class InAppLoginManager extends EventEmitter {
     if (this.timeoutId) {
       clearTimeout(this.timeoutId)
       this.timeoutId = null
+    }
+    if (this.revealTimer) {
+      clearTimeout(this.revealTimer)
+      this.revealTimer = null
     }
     if (this.tokenCheckInterval) {
       clearInterval(this.tokenCheckInterval)

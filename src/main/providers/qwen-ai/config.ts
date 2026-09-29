@@ -53,7 +53,7 @@ export const qwenAiConfig: BuiltinProviderConfig = {
       helpText: 'Full cookie string from browser DevTools (optional but recommended)',
     },
   ],
-  capabilities: { clearChats: true },
+  capabilities: { clearChats: true, batchRegister: true },
   ui: { iconKey: 'qwen', i18nPrefix: 'qwen-ai' },
 }
 

@@ -355,6 +355,14 @@ export class StoreManager {
         baseUrl:
           rawConfig.registrationApi?.baseUrl?.trim() || DEFAULT_CONFIG.registrationApi.baseUrl,
       },
+      emailApi: {
+        ...DEFAULT_CONFIG.emailApi,
+        ...(rawConfig.emailApi ?? {}),
+        // Backfill the service and default base URL for configs saved before
+        // the pluggable backends existed.
+        service: rawConfig.emailApi?.service || DEFAULT_CONFIG.emailApi.service,
+        baseUrl: rawConfig.emailApi?.baseUrl?.trim() || DEFAULT_CONFIG.emailApi.baseUrl,
+      },
       contextManagement: normalizeContextManagementConfig(rawConfig.contextManagement),
       outboundProxy: {
         ...DEFAULT_CONFIG.outboundProxy,

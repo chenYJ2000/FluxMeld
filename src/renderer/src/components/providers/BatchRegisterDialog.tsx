@@ -4,8 +4,13 @@
  * Phone numbers are confidential and fetched from a company API by the main
  * process; they are never shown to the operator (only a masked form). For each
  * account the dialog opens the provider's official registration page, prefills
- * the phone + a generated password, and lets the operator solve the captcha.
+ * the fields the provider declares, and lets the operator solve the captcha.
  * When a code API is configured the SMS code is filled automatically.
+ *
+ * Every provider renders through the same dialog: the per-provider rules
+ * (fields, country code, terms links, description, code hint) come from the
+ * `ProviderRegistrationInfo` descriptors returned by the main process, so this
+ * component never branches on a provider id.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -32,7 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { AlertCircle, Check, Copy, KeyRound, Loader2, Play, Square, X } from 'lucide-react'
-import type { Provider, ProviderVendor } from '@/types/electron'
+import type { Provider, ProviderVendor, ProviderRegistrationInfo } from '@/types/electron'
 
 interface BatchRegisterDialogProps {
   open: boolean
@@ -54,6 +59,8 @@ interface RegistrationRow {
   error?: string
 }
 
+const DEFAULT_COUNTRY_CODE = '+1'
+
 export function BatchRegisterDialog({
   open,
   onOpenChange,
@@ -71,19 +78,26 @@ export function BatchRegisterDialog({
   const [apiReady, setApiReady] = useState<boolean | null>(null)
   const [codeAutoFill, setCodeAutoFill] = useState(false)
   const [keyWordMissing, setKeyWordMissing] = useState(false)
-  const [countryCode, setCountryCode] = useState('+1')
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE)
   const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const [registrationInfos, setRegistrationInfos] = useState<ProviderRegistrationInfo[]>([])
   const unsubscribeRef = useRef<(() => void) | null>(null)
 
   const effectiveProvider =
     provider ?? providers?.find((item) => item.id === selectedProviderId) ?? null
-  const isKimiAiWeb = effectiveProvider?.id === 'kimi-ai' && window.electronAPI?.platform === 'web'
-  const isKimiCom = effectiveProvider?.id === 'kimi'
-  const isKimiComWeb = isKimiCom && window.electronAPI?.platform === 'web'
-  const isKimiRegistration = isKimiAiWeb || isKimiCom
+  const registrationInfo =
+    registrationInfos.find((info) => info.providerId === effectiveProvider?.id) ?? null
+
+  const needsCountryCode = !!registrationInfo?.needsCountryCode
+  const requiresTerms = !!registrationInfo?.requiresTermsConsent
+  const generatesPassword = registrationInfo?.generatesPassword ?? true
+  const usesEmail = !!registrationInfo?.usesEmail
+  const codeHintKey = registrationInfo?.codeHintKey
+  const descriptionKey = registrationInfo?.descriptionKey
 
   const savedCount = rows.filter((r) => r.status === 'saved').length
 
+  // Reset the terms acknowledgement whenever the target provider changes.
   useEffect(() => {
     setAcceptedTerms(false)
   }, [effectiveProvider?.id])
@@ -97,20 +111,22 @@ export function BatchRegisterDialog({
     }
   }, [open, provider, providers, selectedProviderId])
 
+  // Prefill the country code from the provider's declared default.
+  useEffect(() => {
+    setCountryCode(registrationInfo?.defaultCountryCode ?? DEFAULT_COUNTRY_CODE)
+  }, [registrationInfo?.defaultCountryCode])
+
+  // Load the provider registration descriptors once.
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    window.electronAPI?.config
-      .get()
-      .then((config) => {
-        if (cancelled) return
-        const api = config?.registrationApi
-        setApiReady(!!api?.enabled && !!api?.token?.trim())
-        setCodeAutoFill(!!api?.enabled && !!api?.token?.trim())
-        setKeyWordMissing(!api?.keyWord?.trim())
+    window.electronAPI?.providers
+      .getRegistrationInfos()
+      .then((infos) => {
+        if (!cancelled) setRegistrationInfos(infos || [])
       })
       .catch(() => {
-        if (!cancelled) setApiReady(false)
+        if (!cancelled) setRegistrationInfos([])
       })
     return () => {
       cancelled = true
@@ -118,11 +134,46 @@ export function BatchRegisterDialog({
   }, [open])
 
   useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    window.electronAPI?.config
+      .get()
+      .then((config) => {
+        if (cancelled) return
+        if (usesEmail) {
+          const email = config?.emailApi
+          const ready = !!email?.enabled && !!email?.token?.trim()
+          setApiReady(ready)
+          setCodeAutoFill(ready)
+          setKeyWordMissing(false)
+        } else {
+          const api = config?.registrationApi
+          setApiReady(!!api?.enabled && !!api?.token?.trim())
+          setCodeAutoFill(!!api?.enabled && !!api?.token?.trim())
+          setKeyWordMissing(!api?.keyWord?.trim())
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setApiReady(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open, usesEmail])
+
+  useEffect(() => {
     return () => {
       unsubscribeRef.current?.()
       unsubscribeRef.current = null
     }
   }, [])
+
+  const countryCodeValid = /^\+[1-9]\d{0,3}$/.test(countryCode.trim())
+  const canStart =
+    apiReady !== false &&
+    !!effectiveProvider &&
+    (!requiresTerms || acceptedTerms) &&
+    (!needsCountryCode || countryCodeValid)
 
   const handleOpenChange = (next: boolean) => {
     if (!next && isRunning) {
@@ -138,8 +189,8 @@ export function BatchRegisterDialog({
 
   const handleStart = async () => {
     if (!effectiveProvider) return
-    if (isKimiRegistration && !acceptedTerms) return
-    if (isKimiAiWeb && !/^\+[1-9]\d{0,3}$/.test(countryCode.trim())) return
+    if (requiresTerms && !acceptedTerms) return
+    if (needsCountryCode && !countryCodeValid) return
     const total = Math.max(1, Math.floor(Number(count) || 0))
 
     setRows(
@@ -188,11 +239,10 @@ export function BatchRegisterDialog({
         effectiveProvider.id as ProviderVendor,
         total,
         undefined,
-        isKimiAiWeb
-          ? { countryCode: countryCode.trim(), acceptedTerms }
-          : isKimiCom
-            ? { countryCode: '+86', acceptedTerms }
-            : undefined,
+        {
+          countryCode: needsCountryCode ? countryCode.trim() : undefined,
+          acceptedTerms,
+        },
       )
       if (response?.results?.length) {
         setRows((previous) =>
@@ -255,15 +305,7 @@ export function BatchRegisterDialog({
             {effectiveProvider ? ` - ${effectiveProvider.name}` : ''}
           </DialogTitle>
           <DialogDescription>
-            {t(
-              isKimiAiWeb
-                ? 'providers.kimiAiBatchRegisterDescription'
-                : isKimiComWeb
-                  ? 'providers.kimiComWebBatchRegisterDescription'
-                  : isKimiCom
-                    ? 'providers.kimiComBatchRegisterDescription'
-                    : 'providers.batchRegisterDescription',
-            )}
+            {descriptionKey ? t(descriptionKey) : t('providers.batchRegisterDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -303,7 +345,7 @@ export function BatchRegisterDialog({
             </Alert>
           )}
 
-          {apiReady === true && keyWordMissing && (
+          {apiReady === true && keyWordMissing && !usesEmail && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{t('providers.batchRegisterKeyWordMissing')}</AlertDescription>
@@ -321,65 +363,67 @@ export function BatchRegisterDialog({
               disabled={isRunning}
             />
             <p className="text-xs text-muted-foreground">
-              {isKimiAiWeb || isKimiComWeb
-                ? t('providers.kimiWebCodeRequired')
-                : codeAutoFill
-                  ? t('providers.batchRegisterCodeAuto')
-                  : t('providers.batchRegisterCodeManual')}
+              {codeHintKey
+                ? t(codeHintKey)
+                : usesEmail
+                  ? t('providers.batchRegisterEmailCode')
+                  : codeAutoFill
+                    ? t('providers.batchRegisterCodeAuto')
+                    : t('providers.batchRegisterCodeManual')}
             </p>
           </div>
 
-          {isKimiRegistration && (
+          {(needsCountryCode || requiresTerms) && (
             <div className="space-y-3">
-              {isKimiAiWeb && (
+              {needsCountryCode && (
                 <div className="space-y-2">
-                  <Label htmlFor="kimi-ai-country-code">{t('providers.kimiAiCountryCode')}</Label>
+                  <Label htmlFor="batch-country-code">
+                    {t('providers.batchRegisterCountryCode')}
+                  </Label>
                   <Input
-                    id="kimi-ai-country-code"
+                    id="batch-country-code"
                     value={countryCode}
                     onChange={(event) => setCountryCode(event.target.value)}
                     placeholder="+1"
                     disabled={isRunning}
                   />
                   <p className="text-xs text-muted-foreground">
-                    {t('providers.kimiAiCountryCodeHelp')}
+                    {t('providers.batchRegisterCountryCodeHelp')}
                   </p>
                 </div>
               )}
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={acceptedTerms}
-                  onChange={(event) => setAcceptedTerms(event.target.checked)}
-                  disabled={isRunning}
-                  className="mt-1"
-                />
-                <span>
-                  {t('providers.kimiAiTermsConsent')}{' '}
-                  <a
-                    href={`https://www.${isKimiCom ? 'kimi.com' : 'kimi.ai'}/user/agreement/modelUse?version=v2`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    {t('providers.kimiAiTermsLink')}
-                  </a>{' '}
-                  {t('providers.kimiTermsAnd')}{' '}
-                  <a
-                    href={`https://www.${isKimiCom ? 'kimi.com' : 'kimi.ai'}/user/agreement/userPrivacy?version=v2`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                  >
-                    {t('providers.kimiPrivacyLink')}
-                  </a>
-                </span>
-              </label>
+              {requiresTerms && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={acceptedTerms}
+                    onChange={(event) => setAcceptedTerms(event.target.checked)}
+                    disabled={isRunning}
+                    className="mt-1"
+                  />
+                  <span>
+                    {t('providers.batchRegisterTermsConsent')}{' '}
+                    {(registrationInfo?.termsLinks || []).map((link, index) => (
+                      <span key={link.url}>
+                        {index > 0 && <span> {t('providers.batchRegisterTermsAnd')} </span>}
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline"
+                        >
+                          {t(link.labelKey)}
+                        </a>
+                      </span>
+                    ))}
+                  </span>
+                </label>
+              )}
             </div>
           )}
 
           <div className="flex items-center gap-2">
-            {rows.some((row) => row.password) && (
+            {generatesPassword && rows.some((row) => row.password) && (
               <Button
                 variant="outline"
                 size="sm"
@@ -408,9 +452,11 @@ export function BatchRegisterDialog({
                       {t('providers.batchRegisterIndex')}
                     </th>
                     <th className="text-left font-medium px-3 py-2">
-                      {t('providers.batchRegisterPhone')}
+                      {usesEmail
+                        ? t('providers.batchRegisterEmail')
+                        : t('providers.batchRegisterPhone')}
                     </th>
-                    {!isKimiRegistration && (
+                    {generatesPassword && (
                       <th className="text-left font-medium px-3 py-2">
                         {t('providers.batchRegisterPassword')}
                       </th>
@@ -423,7 +469,7 @@ export function BatchRegisterDialog({
                     <tr key={index} className="border-t">
                       <td className="px-3 py-2">{index + 1}</td>
                       <td className="px-3 py-2 font-mono">{row.phone || '-'}</td>
-                      {!isKimiRegistration && (
+                      {generatesPassword && (
                         <td className="px-3 py-2 font-mono break-all">{row.password || '-'}</td>
                       )}
                       <td className="px-3 py-2">
@@ -451,15 +497,7 @@ export function BatchRegisterDialog({
               {t('common.cancel')}
             </Button>
           ) : (
-            <Button
-              onClick={handleStart}
-              disabled={
-                apiReady === false ||
-                !effectiveProvider ||
-                (isKimiRegistration && !acceptedTerms) ||
-                (isKimiAiWeb && !/^\+[1-9]\d{0,3}$/.test(countryCode.trim()))
-              }
-            >
+            <Button onClick={handleStart} disabled={!canStart}>
               <Play className="mr-2 h-4 w-4" />
               {t('providers.batchRegisterStart')}
             </Button>

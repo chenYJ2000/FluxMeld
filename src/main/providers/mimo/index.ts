@@ -30,6 +30,12 @@ export const mimoModule: ProviderModule = {
     windowTitle: 'Mimo AI Studio Login',
   },
   tokenChecker: checkMimoToken,
+  registration: {
+    registrationUrl: 'https://aistudio.xiaomimimo.com/',
+    fields: [{ value: 'phone' }, { value: 'code' }],
+    windowTitle: 'Mimo Registration',
+    smsKeyword: '小米',
+  },
   normalizeOAuthCredentials: (credentials) => {
     const result: Record<string, string> = {}
     if (credentials.service_token) result.service_token = credentials.service_token

@@ -55,6 +55,35 @@ export interface ProviderCapabilities {
   webBatchRegister?: boolean
 }
 
+/**
+ * Serializable, renderer-safe view of a provider's assisted-registration rules.
+ *
+ * Mirrors the main-process `RegistrationConfig` (which may carry functions and
+ * is not serializable) so the batch-register dialog can render itself purely
+ * from data — no provider-id branches.
+ */
+export interface ProviderRegistrationInfo {
+  providerId: string
+  /** Fields the flow autofills, e.g. ['phone', 'password', 'code']. */
+  fields: Array<'phone' | 'password' | 'code' | 'email'>
+  /** Whether a generated password is used for this provider. */
+  generatesPassword: boolean
+  /** Whether the dialog must collect a country/region code. */
+  needsCountryCode: boolean
+  /** Default country code prefilled when `needsCountryCode`. */
+  defaultCountryCode?: string
+  /** Whether the operator must accept the provider's terms before starting. */
+  requiresTermsConsent: boolean
+  /** Legal links shown next to the terms checkbox. */
+  termsLinks?: Array<{ labelKey: string; url: string }>
+  /** i18n key for the description shown at the top of the dialog. */
+  descriptionKey?: string
+  /** i18n key for the hint under the count input. */
+  codeHintKey?: string
+  /** Whether the code is delivered by email rather than SMS. */
+  usesEmail: boolean
+}
+
 /** Serializable UI metadata for a provider. */
 export interface ProviderUiMeta {
   /** Asset key under `renderer/src/assets/providers/<iconKey>.svg` */
@@ -286,6 +315,41 @@ export interface RegistrationApiConfig {
   codePollTimeoutMs: number
 }
 
+/**
+ * Disposable email service used for email-based account registration (e.g.
+ * Qwen AI international). The backend is pluggable:
+ *
+ * - `tigrmail` (default): https://api.tigrmail.com/v1
+ *     POST /v1/inboxes            -> { inbox }
+ *     GET  /v1/messages?inbox=... -> long-poll, { message: { to, from, subject, body } }
+ *     GET  /v1/domains            -> { domains: string[] }
+ *
+ * - `yyds` (215.im): https://maliapi.215.im/v1
+ *     POST /v1/accounts                 -> { data: { address, id, token } }
+ *     GET  /v1/messages/next?address=.. -> long-poll, { data: { message } } (+ verificationCode)
+ *     GET  /v1/domains                  -> { data: [{ domain }] }
+ *
+ * Inboxes are created per registration (each account needs a unique address),
+ * so the provider's quota applies. The master switch is separate from the
+ * phone API and can be enabled independently.
+ */
+export type EmailServiceKind = 'tigrmail' | 'yyds'
+
+export interface EmailApiConfig {
+  /** Master switch for email-based registration. */
+  enabled: boolean
+  /** Which backend to use. */
+  service: EmailServiceKind
+  /** API base URL. */
+  baseUrl: string
+  /** API credential: tigrmail Bearer token / 215.im `AC-...` API key. */
+  token: string
+  /** Domain to allocate inboxes on; empty = auto-discover and pick randomly. */
+  domain: string
+  /** How long to wait for a message before giving up (ms). */
+  pollTimeoutMs: number
+}
+
 export interface AppConfig {
   proxyPort: number
   proxyHost: string
@@ -313,6 +377,8 @@ export interface AppConfig {
   oauthProxyMode: 'system' | 'none'
   /** Assisted batch registration number/code API integration. */
   registrationApi: RegistrationApiConfig
+  /** Assisted batch registration disposable-email integration. */
+  emailApi: EmailApiConfig
   sessionConfig: SessionConfig
   toolCallingConfig: ToolCallingConfig
   toolPromptConfig?: LegacyToolPromptConfig

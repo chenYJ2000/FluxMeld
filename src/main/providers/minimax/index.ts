@@ -29,9 +29,14 @@ export const minimaxModule: ProviderModule = {
     windowTitle: 'MiniMax Login',
   },
   tokenChecker: checkMiniMaxToken,
+  registration: {
+    registrationUrl: 'https://agent.minimaxi.com/',
+    fields: [{ value: 'phone' }, { value: 'code' }],
+    windowTitle: 'MiniMax Registration',
+    smsKeyword: 'MiniMax',
+  },
   capabilities: {
-    clearChats: async (provider, account) =>
-      new MiniMaxAdapter(provider, account).deleteAllChats(),
+    clearChats: async (provider, account) => new MiniMaxAdapter(provider, account).deleteAllChats(),
     credits: async (provider, account) => new MiniMaxAdapter(provider, account).getCredits(),
   },
   toolProfile: getProviderToolProfile('minimax'),

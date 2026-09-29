@@ -26,6 +26,8 @@ import type {
   AccountImportResult,
   ProviderUiMeta,
   RegistrationApiConfig,
+  EmailApiConfig,
+  ProviderRegistrationInfo,
   BatchDeleteAccountsResponse,
 } from '../../../shared/types'
 
@@ -56,6 +58,8 @@ export type {
   ValidationResult,
   ProviderUiMeta,
   RegistrationApiConfig,
+  EmailApiConfig,
+  ProviderRegistrationInfo,
 }
 
 export interface CustomProviderFormData {
@@ -234,6 +238,7 @@ interface StoreAPI {
 interface ProvidersAPI {
   getAll: () => Promise<Provider[]>
   getBuiltin: () => Promise<BuiltinProviderConfig[]>
+  getRegistrationInfos: () => Promise<ProviderRegistrationInfo[]>
   add: (data: {
     id?: string
     name: string
