@@ -374,7 +374,8 @@ export function Providers() {
       targetProvider = newProvider
     }
 
-    if (credentials && Object.keys(credentials).length > 0) {
+    const hasCredentials = !!credentials && Object.keys(credentials).length > 0
+    if (hasCredentials) {
       const account = await window.electronAPI.accounts.add({
         providerId: targetProvider.id,
         name: `${provider.name} ${t('providers.accounts')}`,
@@ -393,7 +394,9 @@ export function Providers() {
     setShowAddProviderDialog(false)
     toast({
       title: t('providers.addSuccess'),
-      description: `${provider.name} ${t('providers.accounts')} ${t('providers.accountAdded')}`,
+      description: hasCredentials
+        ? `${provider.name} ${t('providers.accounts')} ${t('providers.accountAdded')}`
+        : `${provider.name} ${t('providers.providerAdded')}`,
     })
   }
 

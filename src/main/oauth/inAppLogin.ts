@@ -6,11 +6,7 @@
 import { BrowserWindow, session, Session } from 'electron'
 import { EventEmitter } from 'events'
 import { ProviderType } from './types'
-import {
-  TokenExtractionConfig,
-  getTokenExtractionConfig,
-  TokenSource,
-} from './tokenExtractionConfig'
+import { TokenExtractionConfig, getTokenExtractionConfig } from './tokenExtractionConfig'
 import type { RegistrationConfig } from '../providers/types.ts'
 
 export interface InAppLoginResult {
@@ -30,6 +26,13 @@ export interface InAppLoginOptions {
   timeout?: number
   proxyMode?: 'system' | 'none'
   /**
+   * Explicit upstream proxy for the login/registration window, e.g.
+   * `http://127.0.0.1:7890`. Takes precedence over `proxyMode`: the provider's
+   * signup page must load from the provider's egress exit (a clean IP) when the
+   * direct/system IP is rate-limited or risk-flagged by the provider.
+   */
+  proxyRules?: string
+  /**
    * `register` opens the provider's registration page and prefills the form
    * instead of the normal login page. Credential sniffing is identical.
    */
@@ -39,9 +42,10 @@ export interface InAppLoginOptions {
   /** Explicit registration rules from the provider module. */
   registration?: RegistrationConfig | null
   /**
-   * Optional resolver for the SMS verification code. Called once when the
-   * registration page loads; when it resolves with a code the code field is
-   * filled automatically. Resolve with `null` to leave it to the operator.
+   * Optional resolver for the SMS verification code. Retried while the
+   * registration window is open until it resolves with a code, which is then
+   * filled automatically. Resolve with `null` to indicate the code is not
+   * available yet (the flow keeps retrying).
    */
   codeResolver?: () => Promise<string | null>
 }
@@ -117,7 +121,13 @@ export class InAppLoginManager extends EventEmitter {
     const partition = `persist:oauth-${Date.now()}`
     this.loginSession = session.fromPartition(partition)
 
-    if (this.options?.proxyMode === 'none') {
+    if (this.options?.proxyRules) {
+      this.loginSession
+        .setProxy({ mode: 'fixed_servers', proxyRules: this.options.proxyRules })
+        .catch((error) => {
+          console.error('[InAppLogin] Failed to set window proxy rules:', error)
+        })
+    } else if (this.options?.proxyMode === 'none') {
       this.loginSession.setProxy({ mode: 'direct' }).catch((error) => {
         console.error('[InAppLogin] Failed to set direct proxy:', error)
       })
@@ -251,33 +261,51 @@ export class InAppLoginManager extends EventEmitter {
     })
 
     this.loginSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      if (this.isCompleted) {
+      if (this.isCompleted || !this.hasMinTimePassed()) {
         callback({ requestHeaders: details.requestHeaders })
         return
       }
 
-      if (!this.hasMinTimePassed()) {
-        callback({ requestHeaders: details.requestHeaders })
-        return
-      }
+      for (const source of this.config!.tokenSources) {
+        if (source.urlPattern && !new RegExp(source.urlPattern).test(details.url)) continue
 
-      const authHeader =
-        details.requestHeaders['Authorization'] || details.requestHeaders['authorization']
-      if (authHeader) {
-        for (const source of this.config!.tokenSources) {
-          if (source.type === 'networkHeader') {
-            let token = authHeader
-            if (source.extractPattern) {
-              const match = authHeader.match(new RegExp(source.extractPattern))
-              if (match && match[1]) {
-                token = match[1]
+        if (source.type === 'networkHeader') {
+          const headerName = (source.header || 'authorization').toLowerCase()
+          const raw = this.findHeader(details.requestHeaders, headerName)
+          if (!raw) continue
+          let token = raw
+          if (source.extractPattern) {
+            const match = raw.match(new RegExp(source.extractPattern))
+            if (match && match[1]) token = match[1]
+          } else if (headerName === 'authorization' && raw.startsWith('Bearer ')) {
+            token = raw.substring(7)
+          }
+          if (this.isValidToken(token)) {
+            this.emitTokenFound({ key: source.key, value: token })
+          }
+        } else if (source.type === 'queryParam') {
+          let value = ''
+          try {
+            value = new URL(details.url).searchParams.get(source.key) || ''
+          } catch {
+            value = ''
+          }
+          if (!value) {
+            const match = details.url.match(new RegExp(`[?&]${source.key}=([^&#]+)`))
+            if (match) {
+              try {
+                value = decodeURIComponent(match[1])
+              } catch {
+                value = match[1]
               }
-            } else if (authHeader.startsWith('Bearer ')) {
-              token = authHeader.substring(7)
             }
-            if (this.isValidToken(token)) {
-              this.emitTokenFound({ key: source.key, value: token })
-            }
+          }
+          if (source.extractPattern) {
+            const match = value.match(new RegExp(source.extractPattern))
+            value = match && match[1] ? match[1] : ''
+          }
+          if (value && this.isValidToken(value)) {
+            this.emitTokenFound({ key: source.key, value })
           }
         }
       }
@@ -339,9 +367,13 @@ export class InAppLoginManager extends EventEmitter {
       this.injectRegistrationAutofill()
     })
 
-    // Some login pages update Local Storage without navigating. Keep checking
-    // until the credentials are found or the login window closes.
-    if (this.config.tokenSources.some((source) => source.type === 'localStorage')) {
+    // Some login pages update Local Storage / the URL without a full navigation.
+    // Keep checking until the credentials are found or the login window closes.
+    if (
+      this.config.tokenSources.some(
+        (source) => source.type === 'localStorage' || source.type === 'urlPath',
+      )
+    ) {
       this.tokenCheckInterval = setInterval(() => {
         if (this.isCompleted || !this.hasMinTimePassed()) return
         void this.checkForTokens()
@@ -351,23 +383,43 @@ export class InAppLoginManager extends EventEmitter {
 
   /**
    * Resolve the SMS verification code through the provider-supplied resolver
-   * and inject it into the page once available. Runs at most once per window.
+   * and inject it into the page once available.
+   *
+   * The resolver is retried until it returns a code (or the window closes):
+   * the operator may only trigger the SMS after the page has been open for a
+   * while, so a single pass would otherwise miss the code.
    */
   private startCodeResolution(): void {
     const resolver = this.options?.codeResolver
     if (!this.isRegistrationMode() || !resolver || this.codeResolutionStarted) return
     this.codeResolutionStarted = true
 
-    resolver()
-      .then((code) => {
-        if (this.isCompleted || !code) return
-        this.resolvedCode = code
-        console.log('[InAppLogin] Verification code resolved, injecting into form')
-        this.injectRegistrationAutofill()
-      })
-      .catch((error) => {
-        console.error('[InAppLogin] Code resolver failed:', error)
-      })
+    const attempt = (): void => {
+      if (this.isCompleted || this.resolvedCode) return
+      if (!this.loginWindow || this.loginWindow.isDestroyed()) return
+      resolver()
+        .then((code) => {
+          if (this.isCompleted) return
+          if (code) {
+            this.resolvedCode = code
+            console.log('[InAppLogin] Verification code resolved, injecting into form')
+            this.emit('status', {
+              status: 'pending',
+              message: 'Verification code received — filling it in',
+            })
+            this.injectRegistrationAutofill()
+            return
+          }
+          setTimeout(attempt, 1500)
+        })
+        .catch((error) => {
+          console.error('[InAppLogin] Code resolver failed:', error)
+          setTimeout(attempt, 3000)
+        })
+    }
+
+    this.emit('status', { status: 'pending', message: 'Waiting for the SMS verification code...' })
+    attempt()
   }
 
   /**
@@ -406,6 +458,7 @@ export class InAppLoginManager extends EventEmitter {
       termsCheckboxSelector: this.options?.registration?.termsCheckboxSelector,
       sendCodeSelector: this.options?.registration?.sendCodeSelector,
       submitSelector: this.options?.registration?.submitSelector,
+      advanceSelector: this.options?.registration?.advanceSelector,
       activateTabText: this.options?.registration?.activateTabText,
     }
 
@@ -413,7 +466,7 @@ export class InAppLoginManager extends EventEmitter {
 
     const script = `(() => {
       const payload = ${JSON.stringify(payload)};
-      const done = { phone: false, email: false, password: false, code: false };
+      const done = { phone: false, email: false, password: false, code: false, advance: false };
 
       const isVisible = (el) => {
         if (!el) return false;
@@ -485,22 +538,82 @@ export class InAppLoginManager extends EventEmitter {
           const el = document.querySelector(payload.codeSelector);
           if (el && isVisible(el)) return el;
         }
-        const hinted = visibleInputs().find((el) =>
-          /(验证码|校验码|verification|\\bcode\\b)/.test(hint(el)),
+        const inputs = visibleInputs().filter((el) => el.tagName === 'INPUT');
+        const hinted = inputs.find((el) =>
+          /(验证码|校验码|verification|\\bcode\\b|\\botp\\b)/.test(hint(el)),
         );
         if (hinted) return hinted;
+        // Otherwise assume the numeric-ish field that is not the phone/password
+        // input is the verification-code field.
+        const phoneEl = findPhone();
+        const others = inputs.filter((el) => el !== phoneEl && el.type !== 'password');
         return (
-          visibleInputs().find(
+          others.find(
             (el) =>
-              el.tagName === 'INPUT' &&
-              (el.type === 'text' || el.type === 'number' || el.inputMode === 'numeric') &&
-              el.maxLength >= 4 &&
-              el.maxLength <= 6,
+              el.inputMode === 'numeric' ||
+              el.inputMode === 'decimal' ||
+              el.type === 'number' ||
+              el.type === 'tel' ||
+              (el.maxLength >= 4 && el.maxLength <= 6),
           ) || null
         );
       };
 
       const getVal = (el) => (el && typeof el.value === 'string' ? el.value : '');
+
+      // The "send code" control. Providers without an explicit selector still
+      // expose it as a labelled button/link (e.g. 获取验证码 / 发送验证码), so
+      // fall back to matching its text — this is what makes SMS providers that
+      // declare a sendCodeSelector (Kimi) and ones that don't behave the same.
+      const findSendButton = () => {
+        if (payload.sendCodeSelector) {
+          const el = document.querySelector(payload.sendCodeSelector);
+          return el && isVisible(el) ? el : null;
+        }
+        const nodes = Array.from(document.querySelectorAll('button,a,span,div,label'));
+        return (
+          nodes.find((n) => {
+            if (n.children.length > 0) return false;
+            const text = (n.textContent || '').trim();
+            const isSendLabel = /(获取|发送|重发|重新获取|重新发送).{0,8}(验证码|短信)|get ?code|send ?code|resend/i.test(
+              text,
+            );
+            return isSendLabel && isVisible(n);
+          }) || null
+        );
+      };
+
+      const clickableButtons = () =>
+        Array.from(document.querySelectorAll('button,a,[role="button"]')).filter(isVisible);
+
+      // The control that advances a two-step login from the phone step to the
+      // code step (Doubao's 下一步 / "next").
+      const findAdvanceButton = () => {
+        if (payload.advanceSelector) {
+          const el = document.querySelector(payload.advanceSelector);
+          return el && isVisible(el) ? el : null;
+        }
+        return (
+          clickableButtons().find((n) =>
+            /^(下一步|继续|next|continue)$/i.test((n.textContent || '').trim()),
+          ) || null
+        );
+      };
+
+      // The control that submits the code step. Only used once a code is filled.
+      const findSubmitButton = () => {
+        if (payload.submitSelector) {
+          const el = document.querySelector(payload.submitSelector);
+          return el && isVisible(el) ? el : null;
+        }
+        return (
+          clickableButtons().find((n) =>
+            /^(登录|登陆|确定|提交|验证|完成|login|sign ?in|submit|verify|continue)$/i.test(
+              (n.textContent || '').trim(),
+            ),
+          ) || null
+        );
+      };
 
       // Some providers render the code as one box per digit (e.g. Qwen AI uses
       // qwenchat-verification-code-inp elements). Detect that and fill each box.
@@ -532,14 +645,27 @@ export class InAppLoginManager extends EventEmitter {
 
       const tick = () => {
         try {
-          // Activate the declared tab (e.g. Aliyun "手机号登录") until the phone
-          // field is present, so the form we fill is the one actually shown.
+          // Activate the declared entry points (e.g. "登录" then "手机号登录")
+          // until the phone field is present, so the form we fill is the one
+          // actually shown. A comma-separated list is clicked in order, each
+          // entry at most once (they open a modal / switch a tab).
           if (payload.activateTabText && !done.phone && !findPhone()) {
-            const want = payload.activateTabText;
-            const tab = [...document.querySelectorAll('div,span,a,li,button')].find(
-              (n) => (n.textContent || '').trim() === want && n.children.length === 0,
-            );
-            if (tab) tab.click();
+            const wants = String(payload.activateTabText)
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean);
+            window.__fluxmeldRegTabsClicked = window.__fluxmeldRegTabsClicked || {};
+            for (const want of wants) {
+              if (window.__fluxmeldRegTabsClicked[want]) continue;
+              const tab = [...document.querySelectorAll('div,span,a,li,button')].find(
+                (n) => (n.textContent || '').trim() === want && n.children.length === 0,
+              );
+              if (tab) {
+                window.__fluxmeldRegTabsClicked[want] = true;
+                tab.click();
+                return;
+              }
+            }
           }
           if (payload.phone && !done.phone) {
             const el = findPhone();
@@ -562,7 +688,16 @@ export class InAppLoginManager extends EventEmitter {
           const terms = payload.termsCheckboxSelector
             ? document.querySelector(payload.termsCheckboxSelector)
             : null;
-          if (terms && isVisible(terms) && !terms.checked) {
+          // Agreements may be a native checkbox ("checked") or a custom button
+          // exposing aria-checked / data-state. Treat any of them as checked so
+          // a consent that is on by default is never toggled off.
+          const termsChecked =
+            !!terms &&
+            (terms.checked === true ||
+              terms.getAttribute('aria-checked') === 'true' ||
+              terms.getAttribute('data-state') === 'checked');
+          if (terms && isVisible(terms) && !window.__fluxmeldRegTermsClicked && !termsChecked) {
+            window.__fluxmeldRegTermsClicked = true;
             terms.click();
             return;
           }
@@ -570,17 +705,35 @@ export class InAppLoginManager extends EventEmitter {
           const phoneEl = findPhone();
           const emailEl = findEmail();
           const codeEl = findCode();
-          const send = payload.sendCodeSelector
-            ? document.querySelector(payload.sendCodeSelector)
-            : null;
-          if (payload.sendCodeSelector && !window.__fluxmeldRegSendClicked) {
+
+          // Two-step login: after the phone is filled, click "next" once to
+          // reveal the code step (Doubao: 手机号 -> 下一步 -> 验证码).
+          if (!done.advance) {
+            const phoneReady =
+              (!!phoneEl && (!!getVal(phoneEl) || done.phone)) ||
+              (!!emailEl && (!!getVal(emailEl) || done.email));
+            if (phoneReady && !codeEl) {
+              const advance = findAdvanceButton();
+              if (advance && !advance.disabled) {
+                done.advance = true;
+                advance.click();
+                return;
+              }
+            }
+          }
+
+          const send = findSendButton();
+          if (send && !window.__fluxmeldRegSendClicked) {
             // The input value may read empty on controlled inputs even after we
             // set it, so treat "we already filled it" as sufficient.
             const targetReady =
               (!!phoneEl && (!!getVal(phoneEl) || done.phone)) ||
               (!!emailEl && (!!getVal(emailEl) || done.email));
-            if (send && targetReady && !getVal(codeEl) && !send.disabled &&
-                (!payload.termsCheckboxSelector || terms?.checked)) {
+            const termsSatisfied =
+              !payload.termsCheckboxSelector ||
+              termsChecked ||
+              !!window.__fluxmeldRegTermsClicked;
+            if (targetReady && !getVal(codeEl) && !send.disabled && termsSatisfied) {
               window.__fluxmeldRegSendClicked = true;
               send.click();
               return;
@@ -596,15 +749,20 @@ export class InAppLoginManager extends EventEmitter {
                 return;
               }
             } else if (codeEl && !getVal(codeEl) && setValue(codeEl, payload.code)) {
+              // Press Enter so forms that submit on completion advance without a
+              // separate login button (Doubao's code step has none).
+              try {
+                codeEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true }));
+                codeEl.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', keyCode: 13, bubbles: true }));
+              } catch (e) {}
               done.code = true;
               return;
             }
           }
 
-          const submit = payload.submitSelector
-            ? document.querySelector(payload.submitSelector)
-            : null;
-          if (submit && payload.code && getVal(codeEl) === payload.code && !submit.disabled && !window.__fluxmeldRegSubmitted) {
+          const submit = findSubmitButton();
+          if (submit && payload.code && !submit.disabled && !window.__fluxmeldRegSubmitted &&
+              (done.code || getVal(codeEl) === payload.code)) {
             window.__fluxmeldRegSubmitted = true;
             submit.click();
           }
@@ -660,6 +818,15 @@ export class InAppLoginManager extends EventEmitter {
         this.checkForTokens()
       }
     }, 1000)
+  }
+
+  /** Case-insensitive lookup of a request header value. */
+  private findHeader(headers: Record<string, string>, name: string): string | undefined {
+    const target = name.toLowerCase()
+    for (const key of Object.keys(headers)) {
+      if (key.toLowerCase() === target) return headers[key]
+    }
+    return undefined
   }
 
   private isValidToken(value: string): boolean {
@@ -762,13 +929,22 @@ export class InAppLoginManager extends EventEmitter {
     }
 
     const localStorageSources = this.config.tokenSources.filter((s) => s.type === 'localStorage')
+    const urlPathSources = this.config.tokenSources.filter((s) => s.type === 'urlPath')
     const cookieSources = this.config.tokenSources.filter((s) => s.type === 'cookie')
 
-    if (localStorageSources.length === 0 && cookieSources.length === 0) return
+    if (
+      localStorageSources.length === 0 &&
+      urlPathSources.length === 0 &&
+      cookieSources.length === 0
+    ) {
+      return
+    }
 
     console.log(
       '[InAppLogin] Checking tokens, localStorage:',
       localStorageSources.map((s) => s.key),
+      'urlPath:',
+      urlPathSources.map((s) => s.key),
       'cookies:',
       cookieSources.map((s) => s.key),
     )
@@ -828,6 +1004,23 @@ export class InAppLoginManager extends EventEmitter {
           console.log('[InAppLogin] Token found and valid from localStorage:', source.key)
           const emitKey = source.key === '_token' ? 'token' : source.key
           this.emitTokenFound({ key: emitKey, value: tokenValue })
+        }
+      }
+
+      if (urlPathSources.length > 0 && !webContents.isDestroyed()) {
+        const currentUrl = await webContents.executeJavaScript('location.href')
+        for (const source of urlPathSources) {
+          if (webContents.isDestroyed() || this.isCompleted) return
+          if (source.urlPattern && !new RegExp(source.urlPattern).test(currentUrl)) continue
+          let value = currentUrl
+          if (source.extractPattern) {
+            const match = currentUrl.match(new RegExp(source.extractPattern))
+            value = match && match[1] ? match[1] : ''
+          }
+          if (value && this.isValidToken(value)) {
+            console.log('[InAppLogin] Token found from URL path:', source.key)
+            this.emitTokenFound({ key: source.key, value })
+          }
         }
       }
 

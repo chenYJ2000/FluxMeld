@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import axios, { AxiosError } from 'axios'
-import { createInbox } from '../../src/main/oauth/emailApi.ts'
+import { AxiosError } from 'axios'
+import { createInbox, emailApiHttp } from '../../src/main/oauth/emailApi.ts'
 
 const restricted = () =>
   new AxiosError('Domain restricted', undefined, undefined, undefined, {
@@ -23,9 +23,11 @@ function config(domain = '') {
 }
 
 test('automatic restricted domain delegates allocation to email service once', async (t) => {
-  t.mock.method(axios, 'get', async () => ({ data: { data: [{ domain: 'closed.example.test' }] } }))
+  t.mock.method(emailApiHttp, 'get', async () => ({
+    data: { data: [{ domain: 'closed.example.test' }] },
+  }))
   const bodies: unknown[] = []
-  t.mock.method(axios, 'post', async (_url, body) => {
+  t.mock.method(emailApiHttp, 'post', async (_url, body) => {
     bodies.push(body)
     if (bodies.length === 1) throw restricted()
     return {
@@ -42,7 +44,7 @@ test('automatic restricted domain delegates allocation to email service once', a
 
 test('explicit restricted domain is reported without changing domains', async (t) => {
   let calls = 0
-  t.mock.method(axios, 'post', async () => {
+  t.mock.method(emailApiHttp, 'post', async () => {
     calls++
     throw restricted()
   })
@@ -55,7 +57,7 @@ test('explicit restricted domain is reported without changing domains', async (t
 
 test('other authorization failures do not trigger another allocation', async (t) => {
   let calls = 0
-  t.mock.method(axios, 'post', async () => {
+  t.mock.method(emailApiHttp, 'post', async () => {
     calls++
     throw new AxiosError('Unauthorized', undefined, undefined, undefined, {
       data: { message: 'Invalid API key' },
@@ -68,7 +70,7 @@ test('other authorization failures do not trigger another allocation', async (t)
 
 test('failed service allocation is reported without an unbounded retry', async (t) => {
   let calls = 0
-  t.mock.method(axios, 'post', async () => {
+  t.mock.method(emailApiHttp, 'post', async () => {
     calls++
     throw restricted()
   })

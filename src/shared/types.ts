@@ -7,6 +7,7 @@ export type ProviderType = 'builtin' | 'custom'
 // Provider vendor type (for OAuth adapters)
 export type ProviderVendor =
   | 'deepseek'
+  | 'doubao'
   | 'glm'
   | 'kimi'
   | 'kimi-ai'

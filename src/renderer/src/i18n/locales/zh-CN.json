@@ -62,6 +62,9 @@
     "title": "供应商管理",
     "subtitle": "管理您的 API 供应商配置和账户",
     "addProvider": "添加供应商",
+    "addProviderOnly": "仅添加供应商",
+    "addProviderOnlyDesc": "先创建供应商，稍后导入账号；无需填写凭据",
+    "providerAdded": "供应商已添加",
     "editProvider": "编辑供应商",
     "deleteProvider": "删除供应商",
     "duplicateProvider": "复制供应商",
@@ -91,6 +94,7 @@
     "kimiAiBatchRegisterDescription": "网页服务将逐个使用号码 API、短信验证码和独立浏览器在 kimi.ai 注册，并验证后保存令牌。若出现人机验证，当前没有解题服务，该账号会失败。请先在设置中配置号码 API。",
     "kimiComBatchRegisterDescription": "使用号码 API 逐个打开 kimi.com 官方登录页，自动填写手机号和短信验证码。请完成可能出现的人机验证；登录成功并验证凭据后自动保存账号。仅支持中国大陆 +86 手机号。",
     "kimiComWebBatchRegisterDescription": "网页服务逐个使用 +86 手机号和短信验证码在 kimi.com 登录，并验证后保存访问与刷新令牌。若出现人机验证，该账号会失败。请先在设置中配置号码 API。",
+    "doubaoBatchRegisterDescription": "豆包无密码，使用手机号+短信验证码登录，未注册的号码首次登录会自动创建账号。逐个用号码 API 取号、打开豆包登录页，自动填入手机号与短信验证码（短信会自动读取），你只需完成可能出现的滑块/人机验证；登录成功后自动抓取会话凭据并保存账号。仅支持中国大陆 +86 手机号。",
     "kimiWebCodeRequired": "Kimi 网页批量注册需要号码 API 自动读取短信验证码。",
     "kimiAiCountryCode": "号码 API 的国际区号",
     "kimiAiCountryCodeHelp": "例如 +1、+852。须与取号接口提供的号码地区一致；kimi.ai 不提供中国大陆 +86。",
@@ -335,6 +339,30 @@
     "models": {
       "deepseek-v4-flash": "DeepSeek V4 Flash",
       "deepseek-v4-pro": "DeepSeek V4 Pro"
+    }
+  },
+  "doubao": {
+    "name": "豆包",
+    "description": "豆包（www.doubao.com）网页版助手，使用浏览器会话凭据接入，支持深度思考",
+    "cookie": "Cookie",
+    "cookiePlaceholder": "粘贴 www.doubao.com 完整的 Cookie 请求头",
+    "cookieHelp": "登录 www.doubao.com 后，开发者工具 → Network → 任意 samantha 请求 → Headers → Cookie，复制完整值",
+    "deviceId": "device_id",
+    "deviceIdPlaceholder": "samantha 请求参数中的 device_id",
+    "teaUuid": "tea_uuid",
+    "teaUuidPlaceholder": "samantha 请求参数中的 tea_uuid",
+    "webId": "web_id",
+    "webIdPlaceholder": "samantha 请求参数中的 web_id",
+    "roomId": "room_id",
+    "roomIdPlaceholder": "浏览器地址栏 /chat/<room_id> 中的值（可选）",
+    "roomIdHelp": "可选。取自浏览器地址 https://www.doubao.com/chat/<room_id>，仅用于请求 Referer；留空时回退为 https://www.doubao.com/chat/",
+    "xFlowTrace": "x-flow-trace",
+    "xFlowTracePlaceholder": "samantha 请求头 x-flow-trace",
+    "xFlowTraceHelp": "取自 samantha 请求 Headers → x-flow-trace",
+    "requestParamsHelp": "取自 samantha 请求的查询参数（登录豆包网页版后在 Network 面板查看）",
+    "models": {
+      "Doubao": "豆包",
+      "Doubao-DeepThink": "豆包（深度思考）"
     }
   },
   "glm": {
@@ -1142,7 +1170,9 @@
         "proxyPort": "代理端口",
         "proxyPortHelp": "Clash 混合代理端口（默认 7897）",
         "secret": "控制器密钥",
-        "secretHelp": "外部控制器的 Bearer 密钥，未设置可留空"
+        "secretHelp": "外部控制器的 Bearer 密钥，未设置可留空",
+        "nodeFilter": "节点名过滤",
+        "nodeFilterHelp": "仅使用名称包含任一关键字的节点（逗号分隔，如 GPT,英国）。留空则使用全部节点。用于避开被目标服务风控静默拒绝的节点"
       },
       "configFile": {
         "label": "配置文件",

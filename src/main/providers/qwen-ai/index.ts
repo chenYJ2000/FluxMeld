@@ -37,6 +37,9 @@ export const qwenAiModule: ProviderModule = {
   },
   tokenChecker: checkQwenAiToken,
   maintainSessions: maintainQwenAiSessions,
+  // Batch registration opens the signup page so the operator can solve the
+  // Aliyun WAF human verification; the email and its code are filled in
+  // automatically and the credentials are captured from the page afterwards.
   registration: {
     // Qwen AI (international) registers with an email address + emailed code.
     registrationUrl: 'https://chat.qwen.ai/auth?action=signup',

@@ -19,6 +19,7 @@ import { createAdapter, BaseOAuthAdapter } from './adapters'
 import { storeManager } from '../store/store'
 import { inAppLoginManager, InAppLoginResult } from './inAppLogin'
 import { getRegistrationConfig, getProviderModule } from '../providers/registry'
+import { egressManager } from '../egress/manager'
 import type { RegistrationConfig } from '../providers/types.ts'
 
 const DEFAULT_CALLBACK_PORT = 8311
@@ -307,6 +308,23 @@ export class OAuthManager extends EventEmitter {
       status: 'pending',
       message: 'Opening login window...',
     })
+
+    // Route the login/registration window through the provider's egress exit.
+    // Signup and login pages risk-control the client IP: once an IP has been
+    // used for several signups every attempt is challenged with a captcha. The
+    // window therefore loads through the same clean exit the provider's
+    // accounts use, so registration keeps working from a fresh IP.
+    let proxyRules: string | undefined
+    try {
+      const exit = await egressManager.resolveExitForProviderWindow(providerId)
+      if (exit) proxyRules = `${exit.protocol}://${exit.host}:${exit.port}`
+    } catch (error) {
+      // Egress enabled but unavailable: keep the legacy behaviour below.
+      console.warn(
+        '[OAuthManager] Egress exit unavailable for login window:',
+        error instanceof Error ? error.message : String(error),
+      )
+    }
 
     return new Promise((resolve) => {
       const adapter = this.getAdapter(providerId, providerType)
@@ -612,10 +630,12 @@ export class OAuthManager extends EventEmitter {
           providerType,
           timeout: timeout || DEFAULT_TIMEOUT,
           // A provider may require a direct connection (its page resets TLS
-          // through a system proxy); honor it for login and registration alike.
+          // through a system proxy); honor it for login and registration alike
+          // unless an egress exit was resolved above (a clean IP beats both).
           proxyMode: getRegistrationConfig(providerType)?.forceDirectConnection
             ? 'none'
             : proxyMode,
+          proxyRules,
           mode: extra?.mode,
           prefill: extra?.prefill,
           registration: extra?.registration,

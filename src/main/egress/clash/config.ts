@@ -41,6 +41,14 @@ export const CLASH_META: EgressSourceModuleMeta = {
       labelKey: 'egress.sources.clash.secret',
       helpKey: 'egress.sources.clash.secretHelp',
     },
+    {
+      key: 'nodeFilter',
+      type: 'text',
+      labelKey: 'egress.sources.clash.nodeFilter',
+      placeholder: 'GPT,英国',
+      helpKey: 'egress.sources.clash.nodeFilterHelp',
+      defaultValue: '',
+    },
   ],
   capabilities: {
     rotate: true,

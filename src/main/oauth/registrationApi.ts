@@ -31,6 +31,13 @@ import axios from 'axios'
 import { randomInt } from 'crypto'
 import type { RegistrationApiConfig } from '../../shared/types'
 
+/**
+ * Dedicated axios instance for the SMS number backend. The default instance
+ * carries the per-request egress interceptor; the number API is direct
+ * infrastructure and must never ride a provider's outbound exit.
+ */
+export const registrationApiHttp = axios.create()
+
 const REQUEST_TIMEOUT_MS = 15000
 const DEFAULT_MIN_INTERVAL_MS = 1500
 const MAX_RETRIES = 3
@@ -119,7 +126,7 @@ async function requestText(
     let body = ''
     let retryAfterHeader: string | undefined
     try {
-      const response = await axios.get(request.url, {
+      const response = await registrationApiHttp.get(request.url, {
         headers: request.headers,
         params: request.params,
         timeout: REQUEST_TIMEOUT_MS,

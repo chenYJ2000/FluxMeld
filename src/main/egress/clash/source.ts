@@ -25,6 +25,7 @@ interface ClashSettings {
   controllerPort: number
   proxyPort: number
   secret: string
+  nodeFilter: string
 }
 
 export class ClashSource implements EgressSource {
@@ -46,6 +47,7 @@ export class ClashSource implements EgressSource {
       controllerPort: Number(settings.controllerPort),
       proxyPort: Number(settings.proxyPort),
       secret: String(settings.secret),
+      nodeFilter: String(settings.nodeFilter ?? ''),
     }
   }
 
@@ -114,7 +116,18 @@ export class ClashSource implements EgressSource {
 
     const proxy = this.getProxyAddress()
     const entries = await controller.listNodes()
-    return entries.map((entry) => ({
+    const keywords = this.getSettings()
+      .nodeFilter.split(',')
+      .map((k) => k.trim().toLowerCase())
+      .filter(Boolean)
+    // An optional node-name filter lets an operator restrict exits to nodes
+    // known to pass the target provider's risk control (many otherwise-healthy
+    // nodes are silently rejected upstream).
+    const matches =
+      keywords.length === 0
+        ? entries
+        : entries.filter((entry) => keywords.some((k) => entry.name.toLowerCase().includes(k)))
+    return matches.map((entry) => ({
       id: entry.name,
       name: entry.name,
       protocol: 'http',

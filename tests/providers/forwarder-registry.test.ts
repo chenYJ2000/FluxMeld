@@ -31,6 +31,7 @@ function createRegistry() {
 
 const EXPECTED_PROVIDERS = [
   'deepseek',
+  'doubao',
   'glm',
   'kimi',
   'kimi-ai',

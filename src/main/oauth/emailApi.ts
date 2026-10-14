@@ -26,6 +26,17 @@ import axios from 'axios'
 import { randomInt } from 'crypto'
 import type { EmailApiConfig } from '../../shared/types'
 
+/**
+ * Dedicated axios instance for the email backend.
+ *
+ * The default axios instance carries the per-request egress interceptor, so
+ * requests issued inside a `runWithEgress()` registration context would be
+ * forced through the provider's outbound exit. The inbox API is a direct
+ * infrastructure service and must never ride that exit (routing it through a
+ * foreign node breaks delivery and times out). This instance has no interceptor.
+ */
+export const emailApiHttp = axios.create()
+
 const REQUEST_TIMEOUT_MS = 20000
 const DEFAULT_POLL_TIMEOUT_MS = 180000
 const DEFAULT_BASE_URLS: Record<EmailApiConfig['service'], string> = {
@@ -94,7 +105,7 @@ function extractErrorMessage(error: unknown): string {
 export async function listDomains(config: EmailApiConfig): Promise<string[]> {
   if (!isEmailApiReady(config)) throw new Error('Email API is not configured')
 
-  const response = await axios.get(`${baseUrl(config)}/v1/domains`, {
+  const response = await emailApiHttp.get(`${baseUrl(config)}/v1/domains`, {
     headers: authHeaders(config),
     timeout: REQUEST_TIMEOUT_MS,
   })
@@ -103,7 +114,25 @@ export async function listDomains(config: EmailApiConfig): Promise<string[]> {
   if (serviceOf(config) === 'yyds') {
     const list = data?.data
     if (!Array.isArray(list)) return []
-    return list
+    // Some shared domains are restricted (403 "not accepting new public
+    // addresses") or have broken DNS. Prefer entries the provider marks as
+    // ready to receive mail; fall back to the full list only if none qualify.
+    const usable = list.filter((entry: unknown) => {
+      if (typeof entry === 'string') return entry.includes('.')
+      const dom = entry as {
+        domain?: string
+        isPublic?: boolean
+        receivingReady?: boolean
+        dnsRecords?: { allPassed?: boolean }
+      }
+      if (typeof dom?.domain !== 'string' || !dom.domain.includes('.')) return false
+      if (dom.isPublic === false) return false
+      if (dom.receivingReady === false) return false
+      if (dom.dnsRecords?.allPassed === false) return false
+      return true
+    })
+    const source = usable.length ? usable : list
+    return source
       .map((entry: unknown) =>
         typeof entry === 'string' ? entry : (entry as { domain?: string })?.domain,
       )
@@ -162,16 +191,16 @@ export async function createInbox(config: EmailApiConfig): Promise<EmailInbox> {
   if (!isEmailApiReady(config)) throw new Error('Email API is not configured')
 
   const domains = await resolveDomains(config)
-  const domain = pickDomain(domains)
   const service = serviceOf(config)
 
   try {
     if (service === 'yyds') {
       // 215.im: POST /v1/accounts -> { data: { address, id, token } }
+      const domain = pickDomain(domains)
       const body: Record<string, string> = {}
       if (domain) body.domain = domain
       const allocate = (allocation: Record<string, string>) =>
-        axios.post(`${baseUrl(config)}/v1/accounts`, allocation, {
+        emailApiHttp.post(`${baseUrl(config)}/v1/accounts`, allocation, {
           headers: authHeaders(config),
           timeout: REQUEST_TIMEOUT_MS,
         })
@@ -203,9 +232,10 @@ export async function createInbox(config: EmailApiConfig): Promise<EmailInbox> {
     }
 
     // tigrmail: POST /v1/inboxes -> { inbox }
+    const domain = pickDomain(domains)
     const body: Record<string, string> = {}
     if (domain) body.domain = domain
-    const response = await axios.post(`${baseUrl(config)}/v1/inboxes`, body, {
+    const response = await emailApiHttp.post(`${baseUrl(config)}/v1/inboxes`, body, {
       headers: authHeaders(config),
       timeout: REQUEST_TIMEOUT_MS,
     })
@@ -253,7 +283,7 @@ async function waitTigrmail(
     if (signal?.aborted) return null
     const remaining = deadline - Date.now()
     try {
-      const response = await axios.get(`${baseUrl(config)}/v1/messages`, {
+      const response = await emailApiHttp.get(`${baseUrl(config)}/v1/messages`, {
         headers: authHeaders(config),
         params,
         timeout: remaining,
@@ -282,7 +312,7 @@ async function waitYyds(
     if (signal?.aborted) return null
     const remaining = Math.min(30000, deadline - Date.now())
     try {
-      const response = await axios.get(`${baseUrl(config)}/v1/messages/next`, {
+      const response = await emailApiHttp.get(`${baseUrl(config)}/v1/messages/next`, {
         headers: authHeaders(config),
         params: { address: inbox, wait: Math.max(0, Math.floor(remaining / 1000)) },
         timeout: remaining + 5000,

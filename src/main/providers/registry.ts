@@ -11,6 +11,7 @@
  */
 
 import { deepseekModule } from './deepseek/index.ts'
+import { doubaoModule } from './doubao/index.ts'
 import { glmModule } from './glm/index.ts'
 import { kimiModule } from './kimi/index.ts'
 import { kimiAiModule } from './kimi-ai/index.ts'
@@ -33,6 +34,7 @@ export type { ProviderModule } from './types.ts'
 /** All registered provider modules, in display order. */
 export const providerModules: ProviderModule[] = [
   deepseekModule,
+  doubaoModule,
   glmModule,
   kimiModule,
   kimiAiModule,

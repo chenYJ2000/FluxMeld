@@ -9,6 +9,7 @@
  * by appending its config module to the array below.
  */
 import deepseekConfig from '../deepseek/config.ts'
+import doubaoConfig from '../doubao/config.ts'
 import glmConfig from '../glm/config.ts'
 import kimiConfig from '../kimi/config.ts'
 import kimiAiConfig from '../kimi-ai/config.ts'
@@ -22,6 +23,7 @@ import type { BuiltinProviderConfig } from '../types.ts'
 
 export const builtinProviders: BuiltinProviderConfig[] = [
   deepseekConfig,
+  doubaoConfig,
   glmConfig,
   kimiConfig,
   kimiAiConfig,

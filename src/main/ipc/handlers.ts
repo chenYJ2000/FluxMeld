@@ -24,7 +24,7 @@ import {
 import { isEmailApiReady, createInbox, waitForMessage, extractEmailCode } from '../oauth/emailApi'
 import { ProxyServer } from '../proxy/server'
 import { proxyStatusManager } from '../proxy/status'
-import { initializeEgress, egressManager } from '../egress'
+import { initializeEgress, egressManager, runWithEgress } from '../egress'
 import { sessionManager } from '../proxy/sessionManager'
 import { TrayManager } from '../tray/TrayManager'
 import { ConfigManager } from '../store/config'
@@ -94,6 +94,26 @@ function syncProxyStatusEndpoint(config: AppConfig): void {
 /** Current outbound proxy settings from the store. */
 function getOutboundSettings(): AppConfig['outboundProxy'] {
   return storeManager.getConfig().outboundProxy
+}
+
+/**
+ * Newly created accounts inherit the provider's proxy group assignment so
+ * their traffic routes through the same egress exit as the provider's other
+ * accounts. Without it a fresh account would fall back to direct and hit the
+ * provider's IP risk control from the local address.
+ */
+function assignAccountToProviderGroup(providerId: string, accountId: string): void {
+  try {
+    const provider = storeManager.getProviderById(providerId)
+    const assignment = provider?.proxyAssignment
+    if (!assignment) return
+    const groupId = Object.values(assignment).find((value) => value)
+    if (!groupId) return
+    const next = { ...assignment, [accountId]: groupId }
+    storeManager.updateProvider(providerId, { proxyAssignment: next })
+  } catch (error) {
+    console.error('[IPC] Failed to assign account to provider proxy group:', error)
+  }
 }
 
 export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Promise<void> {
@@ -901,7 +921,9 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         dailyLimit?: number
       },
     ): Promise<Account> => {
-      return AccountManager.create(data)
+      const account = AccountManager.create(data)
+      assignAccountToProviderGroup(data.providerId, account.id)
+      return account
     },
   )
 
@@ -1183,7 +1205,6 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
       }
       batchRegistrationCancelled = false
       const providerModule = getProviderModule(data.providerType)
-      const webMode = process.env.FLUXMELD_WEB_MODE === '1'
 
       if (!providerModule?.registration || providerModule.id !== data.providerId) {
         return {
@@ -1191,6 +1212,11 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
         }
       }
       const registration = providerModule.registration
+      // Only the headless web runtime has no browser window. It uses the
+      // provider's `webRegistration` driver; the desktop app instead opens the
+      // provider's signup page so the operator can solve any human verification
+      // (e.g. Qwen AI's Aliyun WAF challenge) that a headless driver cannot.
+      const webMode = process.env.FLUXMELD_WEB_MODE === '1'
       if (registration.requiresTermsConsent && !data.acceptedTerms) {
         return {
           results: [{ phone: '', success: false, error: 'Provider terms must be accepted' }],
@@ -1299,24 +1325,38 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
           })
 
           try {
-            const result = webMode
-              ? await providerModule.webRegistration!({
-                  providerId: data.providerId,
-                  phone,
-                  email,
-                  password,
-                  countryCode:
-                    data.countryCode?.trim() || registration.defaultCountryCode?.trim() || '',
-                  timeout: data.timeout,
-                  resolveCode: (signal) =>
-                    emailMode
-                      ? waitForMessage(emailConfig, email, {
-                          signal,
-                          timeoutMs: emailConfig.pollTimeoutMs,
-                        }).then((message) => extractEmailCode(message))
-                      : pollRegistrationCode(apiConfig, phone, signal),
-                  signal: controller.signal,
+            // The headless registration rides the provider's egress exit (a
+            // clean IP) for every upstream call through the per-request axios
+            // interceptor; the direct/local IP is typically risk-flagged.
+            const webExit = webMode
+              ? await egressManager.resolveExitForProviderWindow(data.providerId).catch((error) => {
+                  throw new Error(
+                    `Headless registration needs the outbound proxy but it could not be activated: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`,
+                  )
                 })
+              : null
+            const result = webMode
+              ? await runWithEgress(webExit, () =>
+                  providerModule.webRegistration!({
+                    providerId: data.providerId,
+                    phone,
+                    email,
+                    password,
+                    countryCode:
+                      data.countryCode?.trim() || registration.defaultCountryCode?.trim() || '',
+                    timeout: data.timeout,
+                    resolveCode: (signal) =>
+                      emailMode
+                        ? waitForMessage(emailConfig, email, {
+                            signal,
+                            timeoutMs: emailConfig.pollTimeoutMs,
+                          }).then((message) => extractEmailCode(message))
+                        : pollRegistrationCode(apiConfig, phone, signal),
+                    signal: controller.signal,
+                  }),
+                )
               : await oauthManager.startInAppRegistration(
                   data.providerId,
                   data.providerType as ProviderType,
@@ -1340,6 +1380,7 @@ export async function registerIpcHandlers(mainWindow: BrowserWindow | null): Pro
                 name: masked,
                 credentials: normalized.credentials || result.credentials,
               })
+              assignAccountToProviderGroup(data.providerId, account.id)
               results.push({ phone: masked, success: true, accountId: account.id })
               oauthManager.emitProgress({
                 status: 'success',

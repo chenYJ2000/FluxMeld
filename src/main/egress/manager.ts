@@ -796,6 +796,42 @@ export class EgressManager {
     return this.deps?.getProviderAssignment(providerId)?.[accountId] ?? null
   }
 
+  /**
+   * Resolve the exit a provider's login/registration window must load through,
+   * or null when it should follow the ambient (direct/system) network.
+   *
+   * Signup and login pages risk-control the client IP: once an IP has been used
+   * for several signups it is challenged with a captcha on every attempt. The
+   * browser window therefore loads through the same clean exit the provider's
+   * accounts use:
+   *
+   * - master switch off -> null
+   * - group assignment off -> the single global exit
+   * - group assignment on -> the first group the provider's accounts use
+   */
+  async resolveExitForProviderWindow(providerId: string): Promise<EgressExit | null> {
+    const settings = this.getSettings()
+    if (!settings.enabled || !this.deps) return null
+
+    if (!settings.groupAssignmentEnabled) {
+      if (!this.proxyMode || !this.globalExit) {
+        const active = await this.activate()
+        if (!active && EGRESS_FAIL_FAST) {
+          throw new EgressUnavailableError(
+            'Outbound proxy is enabled but no exit could be activated.',
+          )
+        }
+      }
+      return this.proxyMode ? this.globalExit : null
+    }
+
+    const assignment = this.deps.getProviderAssignment(providerId)
+    if (!assignment) return null
+    const groupId = Object.values(assignment).find((value) => value)
+    if (!groupId) return null
+    return this.ensureGroupExit(groupId)
+  }
+
   /** Single-flight, lazy allocation of a group's dynamic exit. */
   private ensureGroupExit(groupId: string): Promise<EgressExit | null> {
     const existing = this.groupExits.get(groupId)

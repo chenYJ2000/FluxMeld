@@ -130,21 +130,9 @@ export function AddProviderDialog({
     ? providers.find((p) => p.id === selectedProvider)
     : null
 
-  const supportsOAuth =
-    window.electronAPI?.platform !== 'web' &&
-    selectedProviderData &&
-    [
-      'deepseek',
-      'glm',
-      'kimi',
-      'kimi-ai',
-      'mimo',
-      'minimax',
-      'qwen',
-      'qwen-ai',
-      'zai',
-      'perplexity',
-    ].includes(selectedProviderData.id)
+  // Every built-in provider ships an in-app browser login (token extraction),
+  // so no provider-id list is needed: the tab is available for all of them.
+  const supportsOAuth = window.electronAPI?.platform !== 'web' && !!selectedProviderData
 
   const toggleModelExpansion = (providerId: string) => {
     setExpandedModels((prev) => {
@@ -235,6 +223,30 @@ export function AddProviderDialog({
 
     try {
       await onSelectBuiltin(selectedProviderData, credentials)
+      onOpenChange(false)
+      setStep(1)
+      setSelectedProvider(null)
+      setSearchQuery('')
+      setCredentials({})
+      setValidationResult({})
+    } catch (error) {
+      setValidationResult({
+        valid: false,
+        error: error instanceof Error ? error.message : t('providers.saveFailed'),
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Create the provider without an account so accounts can be imported or added
+  // later — otherwise importing would require an account just to exist.
+  const handleCreateProviderOnly = async () => {
+    if (!selectedProviderData) return
+    setIsSubmitting(true)
+    setValidationResult({})
+    try {
+      await onSelectBuiltin(selectedProviderData, {})
       onOpenChange(false)
       setStep(1)
       setSelectedProvider(null)
@@ -457,7 +469,19 @@ export function AddProviderDialog({
               return providerTranslations[field.name]
             }
 
-            return { label: field.label, placeholder: field.placeholder, helpText: field.helpText }
+            // Fall back to the declarative i18n keys on the field itself, so new
+            // providers localize without editing this component.
+            return {
+              label: field.labelKey
+                ? t(field.labelKey, { defaultValue: field.label })
+                : field.label,
+              placeholder: field.placeholderKey
+                ? t(field.placeholderKey, { defaultValue: field.placeholder })
+                : field.placeholder,
+              helpText: field.helpTextKey
+                ? t(field.helpTextKey, { defaultValue: field.helpText })
+                : field.helpText,
+            }
           }
 
           const translated = getFieldTranslation()
@@ -812,7 +836,7 @@ export function AddProviderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto]">
         <DialogHeader>
           <DialogTitle>
             {step === 1 ? t('providers.addProvider') : t('providers.addAccount')}
@@ -822,7 +846,9 @@ export function AddProviderDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {step === 1 ? renderStep1() : renderStep2()}
+        <div className="overflow-y-auto min-h-0 -mr-2 pr-2">
+          {step === 1 ? renderStep1() : renderStep2()}
+        </div>
 
         <DialogFooter>
           {step === 1 ? (
@@ -840,6 +866,14 @@ export function AddProviderDialog({
               <Button variant="outline" onClick={handleBackStep}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 {t('common.previous')}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={handleCreateProviderOnly}
+                disabled={isSubmitting}
+                title={t('providers.addProviderOnlyDesc')}
+              >
+                {t('providers.addProviderOnly')}
               </Button>
               {onValidateToken && (
                 <Button

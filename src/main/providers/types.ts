@@ -18,14 +18,28 @@ import type { ForwarderServices, ProviderForwarder } from '../proxy/forwarders/t
 import type { ProviderToolProfile } from '../proxy/toolCalling/providerProfiles'
 
 /**
- * Where an in-app-login token can be sourced from.
+ * Where an in-app-login credential can be sourced from.
+ *
+ * - `networkHeader`: a request header (default `authorization`).
+ * - `queryParam`: a request URL query parameter.
+ * - `localStorage`: a browser Local Storage key.
+ * - `cookie`: a named browser cookie.
+ * - `urlPath`: the current page URL (used to derive ids embedded in the path).
  */
-export type TokenSourceType = 'networkHeader' | 'localStorage' | 'cookie'
+export type TokenSourceType = 'networkHeader' | 'queryParam' | 'localStorage' | 'cookie' | 'urlPath'
 
 export interface TokenSource {
   type: TokenSourceType
+  /** Credential key the extracted value is stored under. */
   key: string
+  /**
+   * Request header name for `networkHeader` sources. Defaults to
+   * `authorization`. Ignored by other source types.
+   */
+  header?: string
+  /** Only match requests/page URLs whose URL matches this regex. */
   urlPattern?: string
+  /** Optional capture group applied to the raw value (group 1 is used). */
   extractPattern?: string
 }
 
@@ -94,6 +108,13 @@ export interface RegistrationConfig {
   termsCheckboxSelector?: string
   sendCodeSelector?: string
   submitSelector?: string
+  /**
+   * Selector for the "advance" control of a two-step login (e.g. Doubao's
+   * `login_next_button` / 下一步). After the phone number is filled the flow
+   * clicks it once to reveal the code step. Falls back to matching a
+   * 下一步/继续/next button.
+   */
+  advanceSelector?: string
   /**
    * Selector for segmented code inputs (one box per digit, e.g. Qwen AI's
    * `qwenchat-verification-code-inp`). When set, the code is typed box by box.

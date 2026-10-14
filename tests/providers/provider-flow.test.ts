@@ -310,7 +310,10 @@ test('Kimi and domestic Qwen support account-level chat cleanup', () => {
   const qwenAdapterSource = readFileSync(join(root, 'src/main/providers/qwen/adapter.ts'), 'utf8')
 
   // Providers are dispatched through the registry, not hard-coded in the IPC layer.
-  assert.match(handlersSource, /import \{ getProviderModule \} from '\.\.\/providers\/registry'/)
+  assert.match(
+    handlersSource,
+    /import \{[^}]*\bgetProviderModule\b[^}]*\} from '\.\.\/providers\/registry'/,
+  )
   assert.match(handlersSource, /getProviderModule\(provider\.id\)\?\.capabilities\?\.clearChats/)
   assert.match(kimiModuleSource, /new KimiAdapter\(provider, account\)\.deleteAllChats\(\)/)
   assert.match(qwenModuleSource, /new QwenAdapter\(provider, account\)\.deleteAllChats\(\)/)

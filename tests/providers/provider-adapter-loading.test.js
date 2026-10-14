@@ -10,7 +10,10 @@ test('IPC handlers dispatch provider capabilities through the registry instead o
 
   assert.doesNotMatch(source, /await import\('\.\.\/proxy\/adapters\//)
   assert.doesNotMatch(source, /from '\.\.\/proxy\/adapters\//)
-  assert.match(source, /import \{ getProviderModule \} from '\.\.\/providers\/registry'/)
+  assert.match(
+    source,
+    /import \{[^}]*\bgetProviderModule\b[^}]*\} from '\.\.\/providers\/registry'/,
+  )
   assert.match(source, /getProviderModule\(provider\.id\)\?\.capabilities\?\.clearChats/)
   assert.match(source, /getProviderModule\(provider\.id\)\?\.capabilities\?\.credits/)
 })

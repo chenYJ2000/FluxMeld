@@ -138,7 +138,8 @@
     "files": [
       "out/**/*",
       "package.json",
-      "!node_modules/**/*"
+      "!node_modules/**/*",
+      "node_modules/playwright-core/**/*"
     ],
     "extraResources": [
       {

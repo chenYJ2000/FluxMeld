@@ -62,6 +62,9 @@
     "title": "Provider Management",
     "subtitle": "Manage your API provider configurations and accounts",
     "addProvider": "Add Provider",
+    "addProviderOnly": "Add provider only",
+    "addProviderOnlyDesc": "Create the provider first and import accounts later — no credentials needed",
+    "providerAdded": "Provider added",
     "editProvider": "Edit Provider",
     "deleteProvider": "Delete Provider",
     "duplicateProvider": "Duplicate Provider",
@@ -91,6 +94,7 @@
     "kimiAiBatchRegisterDescription": "The web server registers each account on kimi.ai in an isolated browser using the number API and SMS code, then validates and saves its tokens. If a human-verification challenge appears, that account fails because no solver is configured. Configure the number API in Settings first.",
     "kimiComBatchRegisterDescription": "Open the official kimi.com login page for each number from the number API and fill the phone and SMS code. Complete any human verification; valid credentials are saved after login. Only mainland China +86 numbers are supported.",
     "kimiComWebBatchRegisterDescription": "The web server signs in to kimi.com with each +86 number and SMS code, then validates and saves its access and refresh tokens. An account fails if a human verification challenge appears. Configure the number API in Settings first.",
+    "doubaoBatchRegisterDescription": "Doubao is passwordless: signup is a phone + SMS login, and an unregistered number auto-creates an account on first login. For each account the flow leases a number, opens the Doubao login page, and auto-fills the phone and SMS code (read from the number API); you only solve any slider / human verification. On success the session credentials are captured and the account is saved. Mainland China +86 numbers only.",
     "kimiWebCodeRequired": "Kimi web batch registration requires the number API to read SMS codes automatically.",
     "kimiAiCountryCode": "Number API calling code",
     "kimiAiCountryCodeHelp": "For example +1 or +852. It must match the leased numbers; kimi.ai does not offer mainland China +86.",
@@ -335,6 +339,30 @@
     "models": {
       "deepseek-v4-flash": "DeepSeek V4 Flash",
       "deepseek-v4-pro": "DeepSeek V4 Pro"
+    }
+  },
+  "doubao": {
+    "name": "Doubao",
+    "description": "Doubao (www.doubao.com) web assistant driven by browser session credentials, supports deep thinking",
+    "cookie": "Cookie",
+    "cookiePlaceholder": "Paste the full doubao.com Cookie request header",
+    "cookieHelp": "Log in at www.doubao.com, open DevTools -> Network -> any samantha request -> Headers -> Cookie and copy the full value",
+    "deviceId": "device_id",
+    "deviceIdPlaceholder": "device_id from the samantha request query",
+    "teaUuid": "tea_uuid",
+    "teaUuidPlaceholder": "tea_uuid from the samantha request query",
+    "webId": "web_id",
+    "webIdPlaceholder": "web_id from the samantha request query",
+    "roomId": "room_id",
+    "roomIdPlaceholder": "room_id from the address bar /chat/<room_id> (optional)",
+    "roomIdHelp": "Optional. Taken from https://www.doubao.com/chat/<room_id>; it only feeds the request Referer, so an empty value falls back to https://www.doubao.com/chat/",
+    "xFlowTrace": "x-flow-trace",
+    "xFlowTracePlaceholder": "x-flow-trace request header",
+    "xFlowTraceHelp": "Taken from the samantha request Headers -> x-flow-trace",
+    "requestParamsHelp": "Taken from the samantha request query string (visible in the Network panel after logging in to Doubao)",
+    "models": {
+      "Doubao": "Doubao",
+      "Doubao-DeepThink": "Doubao (Deep Think)"
     }
   },
   "glm": {
@@ -1142,7 +1170,9 @@
         "proxyPort": "Proxy port",
         "proxyPortHelp": "Clash mixed proxy port (default 7897)",
         "secret": "Controller secret",
-        "secretHelp": "Bearer secret of the external controller; leave empty if unset"
+        "secretHelp": "Bearer secret of the external controller; leave empty if unset",
+        "nodeFilter": "Node name filter",
+        "nodeFilterHelp": "Only use nodes whose name contains one of these keywords (comma-separated, e.g. GPT,UK). Empty = all nodes. Use it to avoid nodes silently rejected by the target service's risk control"
       },
       "configFile": {
         "label": "Config file",

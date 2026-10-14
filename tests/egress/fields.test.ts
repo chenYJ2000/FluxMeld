@@ -39,6 +39,7 @@ test('resolveSourceSettings fills declared defaults for a missing payload', () =
     controllerPort: 9097,
     proxyPort: 7897,
     secret: '',
+    nodeFilter: '',
   })
 })
 

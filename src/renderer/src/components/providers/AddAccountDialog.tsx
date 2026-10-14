@@ -324,7 +324,7 @@ export function AddAccountDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] grid-rows-[auto_minmax(0,1fr)_auto]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
@@ -335,7 +335,7 @@ export function AddAccountDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-4">
+          <div className="space-y-4 mt-4 overflow-y-auto min-h-0 -mr-2 pr-2">
             {!reauthenticationMode && (
               <div className="space-y-2">
                 <Label htmlFor="name">{t('providers.accountName')} *</Label>
